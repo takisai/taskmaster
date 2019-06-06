@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <title>test</title>
+        <meta charset="utf-8">
+        <link rel="stylesheet" href="style.css">
+        <script src="main.js"></script>
+    </head>
+    <body id="body">
+        <span id="clock">...</span>
+        <form name="form1" onsubmit="parseText();return false;">
+            <input type="text" name="input"></input>
+        </form>
+        <ol id="parent"></ol>
+    </body>
+    <script>
+document.getElementById('body').addEventListener('click', e => {
+    document.form1.input.focus();
+});
+    </script>
+</html>

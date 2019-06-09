@@ -1,4 +1,4 @@
-var n = 0, removeNo = [];
+var idCount = 0;
 var queue = [];
 
 var removeDom = id => {
@@ -10,10 +10,16 @@ var removeDom = id => {
 
 var playSound = (() => {
     var sounds = [];
-    for(var i = 0; i < 10; i++) {
-        var url = 'sound/alarm' + i + '.mp3';
-        sounds[url] = new Audio(url);
-    }
+    window.addEventListener('click', () => {
+        for(var i = 0; i < 10; i++) {
+            var url = 'sound/alarm' + i + '.mp3';
+            sounds[url] = new Audio(url);
+            sounds[url].muted = true;
+            sounds[url].onloadeddata = e => {
+                sounds[url].play();
+            };
+        }
+    }, {once: true});
     return url => {
         if(sounds[url] == undefined) {
             console.log('"' + url + '" is unregistered');
@@ -45,9 +51,13 @@ var replacer = (() => {
         },
         push: s => {
             var result = regex.exec(s);
-            replaceSet.push({key: new RegExp(result[1], 'gu')
-                    , value: result[2]});
-            console.log(result[1] + ' -> ' + result[2]);
+            var key = new RegExp(result[1], 'gu');
+            var index = replaceSet.findIndex(x => x.keyStr == result[1]);
+            if(index == -1) {
+                replaceSet.push({key: key, keyStr: result[1], value: result[2]});
+            } else {
+                replaceSet[index].value = result[2];
+            }
         },
         replace: s => {
             for(var item of replaceSet) {
@@ -81,7 +91,7 @@ var timer = (() => {
 })();
 
 var alarm = (() => {
-    var regex = /^(?:(?:(\d*):)??(\d*):(\d*):)?(\d*):(\d*)(?::(\d*))?$/;
+    var regex = /^(?:(?:(\d*)-)??(\d*)-(\d*),)?(\d*):(\d*)(?::(\d*))?$/;
     var isValid = n => n != '' && n != undefined;
     return {
         isMatch: s => {
@@ -166,14 +176,18 @@ var alarm = (() => {
     };
 })();
 
-var parseText = () => {
-    var liid = n => 'liid_' + n;
-    var text = document.form1.input.value;
+var getText = () => {
+    var input = document.form1.input.value;
     document.form1.input.value = '';
+    parseText(input);
+};
+
+// todo: 複数の命令に置換するときの;の処理等
+var parseText = (text) => {
     var num;
-    text = replacer.replace(text);
     if(replacer.isMatch(text)) {
         replacer.push(text);
+        return;
     }
     text = replacer.replace(text);
     if(timer.isMatch(text)) {
@@ -182,22 +196,16 @@ var parseText = () => {
         num = alarm.parse(text);
     } else return;
     if(num == undefined) return;
-    var i, newElem = document.createElement('li');
-    var liID;
-    if(removeNo.length == 0) {
-        liID = liid(n);
-        n++;
-    } else {
-        liID = liid(removeNo.shift());
-    }
+    var i, newElem = document.createElement('li'), id = '' + idCount;
+    idCount++;
     newElem.innerHTML =
-            '<input type="button" value="remove" onclick="removetext(\'' + liID
-            + '\');"> <span id="text_' + liID + '">' + text + '</span>';
-    newElem.setAttribute('id', liID);
-    var e = {value: num, id: liID, isAlerted: false, sound: undefined};
+            '<input type="button" value="remove" onclick="removeItem(\'' + id
+            + '\');"> <span id="text_' + id + '">' + text + '</span>';
+    newElem.setAttribute('id', 'item_' + id);
+    var e = {value: num, id: id, isAlerted: false, sound: undefined};
     for(i = 0; i < queue.length; i++) {
         if(queue[i].value > num) {
-            var target = document.getElementById(queue[i].id);
+            var target = document.getElementById('item_' + queue[i].id);
             target.parentNode.insertBefore(newElem, target);
             queue.splice(i, 0, e);
             return;
@@ -207,13 +215,11 @@ var parseText = () => {
     target.appendChild(newElem);
     queue.push(e);
 };
-var removetext = id => {
-    if(removeDom(id) == null) return;
-    stopSound(id);
+var removeItem = id => {
+    if(removeDom('item_' + id) == null) return;
     for(var i = 0; i < queue.length; i++) {
         if(queue[i].id == id) {
             queue.splice(i, 1);
-            removeNo.push(id.slice(5));
             break;
         }
     }
@@ -227,13 +233,13 @@ var clock = () => {
         if(!queue[i].isAlerted) {
             queue[i].isAlerted = true;
             queue[i].sound = playSound('sound/alarm0.mp3');
-            document.getElementById(queue[i].id).innerHTML
-                    += ' <input id="button_' + queue[i].id
+            var target = document.getElementById('item_' + queue[i].id);
+            target.innerHTML += ' <input id="button_' + queue[i].id
                     + '" type="button" value="stop" onclick="stopSound(\''
                     + queue[i].id + '\');">';
             document.getElementById('text_' + queue[i].id).className = 'strike';
             var id = queue[i].id;
-            setTimeout(removetext, 15000, id);
+            setTimeout(removeItem, 15000, id);
         }
     }
 };

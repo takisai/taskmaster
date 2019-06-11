@@ -1,3 +1,4 @@
+'use strict';
 var idCount = 0;
 var queue = [];
 
@@ -63,6 +64,10 @@ var replacer = (() => {
     };
 })();
 
+var task = (() => {
+    var regex = /^(.*)\/(\d!{0,2})\/
+})();
+
 var timer = (() => {
     var regex = /^(?:(\d+),)?(\d*?)(\d{1,2})(?:\.(\d+))?$/;
     return {
@@ -86,7 +91,7 @@ var timer = (() => {
 })();
 
 var alarm = (() => {
-    var regex = /^(?:(?:(\d*)-)??(\d*)-(\d*),)?(\d*):(\d*)(?::(\d*))?\/\d!{0,2}\/$/;
+    var regex = /^(?:(?:(\d*)-)??(\d*)-(\d*),)?(\d*):(\d*)(?::(\d*))?$/;
     var isValid = n => n != '' && n != undefined;
     return {
         isMatch: s => {

@@ -43,7 +43,7 @@ var stopSound = id => {
 }
 
 var replacer = (() => {
-    var regex = /^(.+?)->(.*)$/;
+    var regex = /^([^;]+?)->(.*)$/;
     var replaceSet = [];
     return {
         isMatch: s => {
@@ -51,13 +51,8 @@ var replacer = (() => {
         },
         push: s => {
             var result = regex.exec(s);
-            var key = new RegExp(result[1], 'gu');
-            var index = replaceSet.findIndex(x => x.keyStr == result[1]);
-            if(index == -1) {
-                replaceSet.push({key: key, keyStr: result[1], value: result[2]});
-            } else {
-                replaceSet[index].value = result[2];
-            }
+            replaceSet.push({key: new RegExp(result[1], 'gu'), keyStr: result[1]
+                    , value: result[2]});
         },
         replace: s => {
             for(var item of replaceSet) {
@@ -91,7 +86,7 @@ var timer = (() => {
 })();
 
 var alarm = (() => {
-    var regex = /^(?:(?:(\d*)-)??(\d*)-(\d*),)?(\d*):(\d*)(?::(\d*))?$/;
+    var regex = /^(?:(?:(\d*)-)??(\d*)-(\d*),)?(\d*):(\d*)(?::(\d*))?\/\d!{0,2}\/$/;
     var isValid = n => n != '' && n != undefined;
     return {
         isMatch: s => {
@@ -190,6 +185,11 @@ var parseText = (text) => {
         return;
     }
     text = replacer.replace(text);
+    var texts = text.split(';');
+    if(texts.length > 1) {
+        texts.forEach(element => parseText(element));
+        return;
+    }
     if(timer.isMatch(text)) {
         num = timer.parse(text);
     } else if(alarm.isMatch(text)) {

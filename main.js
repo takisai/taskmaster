@@ -65,7 +65,16 @@ var replacer = (() => {
 })();
 
 var task = (() => {
-    var regex = /^(.*)\/(\d!{0,2})\/
+    var regex = /^([^\/]*)(?:\/(?:([-\d]!{0,2})|!([^\/]*))?(?:\/(.*))?)?$/;
+    return {
+        isMatch: s => {
+            return regex.test(s);
+        },
+        parse: s => {
+            var result = regex.exec(s);
+            var plusSplit = /([^\+]*?)\+(.*)/.exec(result[1]);
+        }
+    }
 })();
 
 var timer = (() => {
@@ -91,7 +100,7 @@ var timer = (() => {
 })();
 
 var alarm = (() => {
-    var regex = /^(?:(?:(\d*)-)??(\d*)-(\d*),)?(\d*):(\d*)(?::(\d*))?$/;
+    var regex = /^(?:(?:(\d*)-)?(\d*)-(\d*),)?(\d*):(\d*)(?::(\d*))?$/;
     var isValid = n => n != '' && n != undefined;
     return {
         isMatch: s => {
@@ -182,7 +191,6 @@ var getText = () => {
     parseText(input);
 };
 
-// todo: 複数の命令に置換するときの;の処理等
 var parseText = (text) => {
     var num;
     if(replacer.isMatch(text)) {

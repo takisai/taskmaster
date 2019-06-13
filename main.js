@@ -65,16 +65,50 @@ var replacer = (() => {
 })();
 
 var task = (() => {
-    var regex = /^([^\/]*)(?:\/(?:([-\d]!{0,2})|!([^\/]*))?(?:\/(.*))?)?$/;
+    var defaultSound = "";
     return {
-        isMatch: s => {
-            return regex.test(s);
+        setSound: s => {
+            if(/[-\d]!{0,2}/.test(s)) {
+                defaultSound = s;
+            }
         },
         parse: s => {
+            var regex = /^([^\/]*)((?:\/(?:([-\d]!{0,2})|!([^\/]*))?(?:\/(.*))?)?)$/;
             var result = regex.exec(s);
-            var plusSplit = /([^\+]*?)\+(.*)/.exec(result[1]);
+            var plusSplit = /^([^\+]*?)(?:\+(.*))?$/.exec(result[1]);
+            plusSplit[1] = replacer.replace(plusSplit[1]);
+            var ret, execs = [];
+            if(timer.isMatch(plusSplit[1])) {
+                ret.deadline = timer.parse(plusSplit[1]);
+            } else if(alarm.isMatch(plusSplit[1])) {
+                ret.deadline = alarm.parse(plusSplit[1]);
+            } else return null;
+            switch(plusSplit[2]) {
+                case undefined:
+                    break;
+                case '':
+                    execs.push(plusSplit[1] + result[2]);
+                    break;
+                default:
+                    execs.push(plusSplit[2] + result[2]);
+                    break;
+            }
+            if(result[3] != undefined) {
+                execs.push('sound ' + result[3]);
+            } else if(result[4] != undefined) {
+                execs.push(result[4]);
+            } else {
+                execs.push('sound ' + defaultSound);
+            }
+            if(result[5] != undefined) {
+                ret.name = result[5];
+            } else {
+                ret.name = plusSplit[1];
+            }
+            ret.exec = execs.join(';');
+            return ret;
         }
-    }
+    };
 })();
 
 var timer = (() => {

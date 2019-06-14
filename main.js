@@ -1,13 +1,22 @@
 'use strict';
-var idCount = 0;
 var queue = [];
+var NameType = {None: 0, Timer: 1, Alarm: 2};
 
-var removeDom = id => {
-    var target = document.getElementById(id);
-    if(target == null) return null;
-    target.parentNode.removeChild(target);
-    return true;
-};
+var toTimeString = (() => {
+    return o => {
+        var hms = [o.getHours(), o.getMinutes(), o.getSeconds()];
+        return hms.map(x => ('0' + x).slice(-2)).join(':');
+    };
+})();
+
+var removeDom = (() => {
+    return id => {
+        var target = document.getElementById(id);
+        if(target == null) return false;
+        target.parentNode.removeChild(target);
+        return true;
+    };
+})();
 
 var playSound = (() => {
     var sounds = [];
@@ -33,15 +42,17 @@ var playSound = (() => {
         }
     };
 })();
-var stopSound = id => {
-    for(var i = 0; i < queue.length; i++) {
-        if(queue[i].id == id && queue[i].sound != undefined) {
-            queue[i].sound.pause();
-            removeDom('button_' + id);
-            return;
+var stopSound = (() => {
+    return id => {
+        for(var i = 0; i < queue.length; i++) {
+            if(queue[i].id == id && queue[i].sound != undefined) {
+                queue[i].sound.pause();
+                removeDom('button_' + id);
+                return;
+            }
         }
-    }
-}
+    };
+})();
 
 var replacer = (() => {
     var regex = /^([^;]+?)->(.*)$/;
@@ -65,24 +76,141 @@ var replacer = (() => {
 })();
 
 var task = (() => {
-    var defaultSound = "";
+    var defaultSound = '0';
+    var defaultImportance = 0;
+
+    var timer = (() => {
+        var regex = /^(?:(\d+),)?(\d*?)(\d{1,2})(?:\.(\d+))?$/;
+        return {
+            isMatch: s => {
+                return regex.test(s);
+            },
+            parse: s => {
+                var result = regex.exec(s);
+                var ret = 3600 * parseInt('0' + result[2])
+                        + 60 * parseInt('0' + result[3]);
+                if(result[1] != undefined) {
+                    ret += 86400 * parseInt(result[1]);
+                }
+                if(result[4] != undefined) {
+                    ret += parseInt(result[4]);
+                }
+                console.log(new Date(Date.now() + 1000 * ret).toString());
+                return Date.now() + 1000 * ret;
+            }
+        };
+    })();
+
+    var alarm = (() => {
+        var regex = /^(?:(?:(\d*)-)?(\d*)-(\d*),)?(\d*):(\d*)(?::(\d*))?$/;
+        var isValid = n => n != '' && n != undefined;
+        return {
+            isMatch: s => {
+                return regex.test(s);
+            },
+            parse: s => {
+                var result = regex.exec(s), ret = new Date(), isFind = false
+                        , now = Date.now(), isFree = [];
+                if(isValid(result[1])) {
+                    ret.setFullYear(parseInt(result[1]));
+                    isFind = true;
+                } else {
+                    isFree.push(1);
+                }
+                if(isValid(result[2])) {
+                    ret.setMonth(parseInt(result[2]) - 1);
+                    isFind = true;
+                } else if(isFind) {
+                    ret.setMonth(0);
+                } else {
+                    isFree.push(2);
+                }
+                if(isValid(result[3])) {
+                    ret.setDate(parseInt(result[3]));
+                    isFind = true;
+                } else if(isFind) {
+                    ret.setDate(1);
+                } else {
+                    isFree.push(3);
+                }
+                if(isValid(result[4])) {
+                    ret.setHours(parseInt(result[4]));
+                    isFind = true;
+                } else if(isFind) {
+                    ret.setHours(0);
+                } else {
+                    isFree.push(4);
+                }
+                if(isValid(result[5])) {
+                    ret.setMinutes(parseInt(result[5]));
+                    isFind = true;
+                } else if(isFind) {
+                    ret.setMinutes(0);
+                } else {
+                    isFree.push(5);
+                }
+                if(isValid(result[6])) {
+                    ret.setSeconds(parseInt(result[6]));
+                } else if(isFind) {
+                    ret.setSeconds(0);
+                } else {
+                    isFree.push(6);
+                }
+                while(now >= ret.getTime() && isFree != []) {
+                    var pop = isFree.pop(), tmp = ret;
+                    switch(pop) {
+                        case 1:
+                            tmp.setFullYear(ret.getFullYear() + 1);
+                            break;
+                        case 2:
+                            tmp.setMonth(ret.getMonth() + 1);
+                            break;
+                        case 3:
+                            tmp.setDate(ret.getDate() + 1);
+                            break;
+                        case 4:
+                            tmp.setHours(ret.getHours() + 1);
+                            break;
+                        case 5:
+                            tmp.setMinutes(ret.getMinutes() + 1);
+                            break;
+                        case 6:
+                            tmp.setSeconds(ret.getSeconds() + 1);
+                            break;
+                    }
+                    if(tmp.getTime() > ret.getTime()) ret = tmp;
+                }
+                if(now >= ret.getTime()) return undefined;
+                console.log(ret.toString());
+            return ret.getTime/^[-\d]!{0,2}$/();
+            }
+        };
+    })();
+
     return {
-        setSound: s => {
-            if(/[-\d]!{0,2}/.test(s)) {
-                defaultSound = s;
+        setDefault: s => {
+            var regex = /^([-\d])(!{0,2})$/
+            if(regex.test(s)) {
+                var result = regex.exec(s);
+                defaultSound = result[1];
+                defaultImportance = result[2];
             }
         },
         parse: s => {
-            var regex = /^([^\/]*)((?:\/(?:([-\d]!{0,2})|!([^\/]*))?(?:\/(.*))?)?)$/;
+            var regex = /^([^\/]*)((?:\/(?:([-\d])(!{0,2})|\*([^\/]*)(!{0,2}))?(?:\/(.*))?)?)$/;
             var result = regex.exec(s);
             var plusSplit = /^([^\+]*?)(?:\+(.*))?$/.exec(result[1]);
             plusSplit[1] = replacer.replace(plusSplit[1]);
             var ret, execs = [];
             if(timer.isMatch(plusSplit[1])) {
                 ret.deadline = timer.parse(plusSplit[1]);
+                ret.type = NameType.Timer;
             } else if(alarm.isMatch(plusSplit[1])) {
                 ret.deadline = alarm.parse(plusSplit[1]);
+                ret.type = NameType.Alarm;
             } else return null;
+            if(ret.deadline == undefined) return null;
+
             switch(plusSplit[2]) {
                 case undefined:
                     break;
@@ -95,13 +223,17 @@ var task = (() => {
             }
             if(result[3] != undefined) {
                 execs.push('sound ' + result[3]);
-            } else if(result[4] != undefined) {
-                execs.push(result[4]);
+                ret.importance = result[4].length;
+            } else if(result[5] != undefined) {
+                execs.push(result[5]);
+                ret.importance = result[6].length;
             } else {
                 execs.push('sound ' + defaultSound);
+                ret.importance = defaultImportance;
             }
-            if(result[5] != undefined) {
-                ret.name = result[5];
+            if(result[7] != undefined) {
+                ret.name = result[7];
+                ret.type = NameType.None;
             } else {
                 ret.name = plusSplit[1];
             }
@@ -111,184 +243,151 @@ var task = (() => {
     };
 })();
 
-var timer = (() => {
-    var regex = /^(?:(\d+),)?(\d*?)(\d{1,2})(?:\.(\d+))?$/;
-    return {
-        isMatch: s => {
-            return regex.test(s);
-        },
-        parse: s => {
-            var result = regex.exec(s);
-            var ret = 3600 * parseInt('0' + result[2])
-                    + 60 * parseInt('0' + result[3]);
-            if(result[1] != undefined) {
-                ret += 86400 * parseInt(result[1]);
-            }
-            if(result[4] != undefined) {
-                ret += parseInt(result[4]);
-            }
-            console.log(new Date(new Date().getTime() + 1000 * ret).toString());
-            return new Date().getTime() + 1000 * ret;
-        }
+var getText = (() => {
+    return () => {
+        var input = document.form1.input.value;
+        document.form1.input.value = '';
+        parseTask(input, 'global');
     };
 })();
 
-var alarm = (() => {
-    var regex = /^(?:(?:(\d*)-)?(\d*)-(\d*),)?(\d*):(\d*)(?::(\d*))?$/;
-    var isValid = n => n != '' && n != undefined;
-    return {
-        isMatch: s => {
-            return regex.test(s);
-        },
-        parse: s => {
-            var result = regex.exec(s), ret = new Date(), isFind = false
-                    , now = new Date().getTime(), isFree = [];
-            if(isValid(result[1])) {
-                ret.setFullYear(parseInt(result[1]));
-                isFind = true;
-            } else {
-                isFree.push(1);
-            }
-            if(isValid(result[2])) {
-                ret.setMonth(parseInt(result[2]) - 1);
-                isFind = true;
-            } else if(isFind) {
-                ret.setMonth(0);
-            } else {
-                isFree.push(2);
-            }
-            if(isValid(result[3])) {
-                ret.setDate(parseInt(result[3]));
-                isFind = true;
-            } else if(isFind) {
-                ret.setDate(1);
-            } else {
-                isFree.push(3);
-            }
-            if(isValid(result[4])) {
-                ret.setHours(parseInt(result[4]));
-                isFind = true;
-            } else if(isFind) {
-                ret.setHours(0);
-            } else {
-                isFree.push(4);
-            }
-            if(isValid(result[5])) {
-                ret.setMinutes(parseInt(result[5]));
-                isFind = true;
-            } else if(isFind) {
-                ret.setMinutes(0);
-            } else {
-                isFree.push(5);
-            }
-            if(isValid(result[6])) {
-                ret.setSeconds(parseInt(result[6]));
-            } else if(isFind) {
-                ret.setSeconds(0);
-            } else {
-                isFree.push(6);
-            }
-            while(now >= ret.getTime() && isFree != []) {
-                var pop = isFree.pop(), tmp = ret;
-                switch(pop) {
-                    case 1:
-                        tmp.setFullYear(ret.getFullYear() + 1);
-                        break;
-                    case 2:
-                        tmp.setMonth(ret.getMonth() + 1);
-                        break;
-                    case 3:
-                        tmp.setDate(ret.getDate() + 1);
-                        break;
-                    case 4:
-                        tmp.setHours(ret.getHours() + 1);
-                        break;
-                    case 5:
-                        tmp.setMinutes(ret.getMinutes() + 1);
-                        break;
-                    case 6:
-                        tmp.setSeconds(ret.getSeconds() + 1);
-                        break;
-                }
-                if(tmp.getTime() > ret.getTime()) ret = tmp;
-            }
-            if(now >= ret.getTime()) return undefined;
-            console.log(ret.toString());
-        return ret.getTime();
-        }
-    };
-})();
+var parseTask = (() => {
+    var idCount = 0;
 
-var getText = () => {
-    var input = document.form1.input.value;
-    document.form1.input.value = '';
-    parseText(input);
-};
-
-var parseText = (text) => {
-    var num;
-    if(replacer.isMatch(text)) {
-        replacer.push(text);
-        return;
-    }
-    text = replacer.replace(text);
-    var texts = text.split(';');
-    if(texts.length > 1) {
-        texts.forEach(element => parseText(element));
-        return;
-    }
-    if(timer.isMatch(text)) {
-        num = timer.parse(text);
-    } else if(alarm.isMatch(text)) {
-        num = alarm.parse(text);
-    } else return;
-    if(num == undefined) return;
-    var i, newElem = document.createElement('li'), id = '' + idCount;
-    idCount++;
-    newElem.innerHTML =
-            '<input type="button" value="remove" onclick="removeItem(\'' + id
-            + '\');"> <span id="text_' + id + '">' + text + '</span>';
-    newElem.setAttribute('id', 'item_' + id);
-    var e = {value: num, id: id, isAlerted: false, sound: undefined};
-    for(i = 0; i < queue.length; i++) {
-        if(queue[i].value > num) {
-            var target = document.getElementById('item_' + queue[i].id);
-            target.parentNode.insertBefore(newElem, target);
-            queue.splice(i, 0, e);
+    return (text, callFrom) => {
+        if(replacer.isMatch(text)) {
+            replacer.push(text);
             return;
         }
-    }
-    var target = document.getElementById('parent');
-    target.appendChild(newElem);
-    queue.push(e);
-};
-var removeItem = id => {
-    if(removeDom('item_' + id) == null) return;
-    for(var i = 0; i < queue.length; i++) {
-        if(queue[i].id == id) {
-            queue.splice(i, 1);
-            break;
+        text = replacer.replace(text);
+        var texts = text.split(';');
+        if(texts.length > 1) {
+            texts.forEach(element => parseTask(element, callFrom));
+            return;
         }
-    }
-};
-var clock = () => {
-    var date = new Date(), elem = document.getElementById('clock');
-    var hms = [date.getHours(), date.getMinutes(), date.getSeconds()];
-    elem.innerText = hms.map(x => ('0' + x).slice(-2)).join(':');
-    for(var i = 0; queue[i] != undefined
-            && new Date().getTime() - queue[i].value >= -250; i++) {
-        if(!queue[i].isAlerted) {
-            queue[i].isAlerted = true;
-            queue[i].sound = playSound('sound/alarm0.mp3');
-            var target = document.getElementById('item_' + queue[i].id);
-            target.innerHTML += ' <input id="button_' + queue[i].id
-                    + '" type="button" value="stop" onclick="stopSound(\''
-                    + queue[i].id + '\');">';
-            document.getElementById('text_' + queue[i].id).className = 'strike';
-            var id = queue[i].id;
-            setTimeout(removeItem, 15000, id);
+        var spaceSplit = texts.split(' ');
+        switch(spaceSplit[0]) {
+            case 'switch':
+            case 'remove':
+            case 'button':
+            case 'remove-macro':
+            case 'exit':
+            case 'sound':
+
         }
-    }
-};
+        var taskElement = task(texts);
+        if(taskElement == null) return;
+        var i, newLiElement = document.createElement('li'), id = '' + idCount;
+        idCount++;
+        taskElement.id = id;
+        taskElement.isAlerted = false;
+        newLiElement.innerHTML =
+                '<input type="button" value="remove" onclick="removeItem(\''
+                + id + '\');"> <span id="text_' + id + '">' + taskElement.name
+                + '<span id ="time_' + id + '"></span>';
+        newLiElement.setAttribute('id', 'item_' + id);
+        for(i = 0; i < queue.length; i++) {
+            if(queue[i].deadline > taskElement.deadline) {
+                var target = document.getElementById('item_' + queue[i].id);
+                target.parentNode.insertBefore(newLiElement, target);
+                queue.splice(i, 0, taskElement);
+                return;
+            }
+        }
+        var target = document.getElementById('parent');
+        target.appendChild(newLiElement);
+        queue.push(taskElement);
+    };
+})();
+
+var removeItem = (() => {
+    return id => {
+        if(!removeDom('item_' + id)) return;
+        for(var i = 0; i < queue.length; i++) {
+            if(queue[i].id == id) {
+                queue.splice(i, 1);
+                break;
+            }
+        }
+    };
+})();
+
+var display = (() = > {
+    var isShowDeadline = true;
+
+    var deadlineStr = (deadline, now) => {
+        var deadlineObj = new Date(deadline);
+        var ret = toTimeString(deadlineObj);
+        if(deadline - now >= 86400) {
+            ret = deadlineObj.getMonth() + '-' + deadlineObj.getDay()
+                    + ',' + ret;
+        }
+        if(deadline - now >= 86400000 * 365) {
+            ret = deadlineObj.getFullYear() + '-' + ret;
+        }
+        return '(' + ret + ')';
+    };
+    var restStr = rest => {
+        var day = Math.floor(rest / 86400000);
+        var hour = Math.floor(rest)
+    };
+
+    return {
+        toggle: () => {
+            isShowDeadline = !isShowDeadline;
+        },
+        show: () => {
+            var now = Date.now();
+            if(isShowDeadline) {
+                for(var i = 0; i < queue.length; i++) {
+                    if(queue[i].isAlerted
+                            || queue[i].type == TaskType.Alarm) continue;
+                    var target = document.getElementById('time_' + queue[i].id);
+                    target.innerText = deadlineStr(queue[i].deadline, now);
+                }
+            } else {
+                for(var i = 0; i < queue.length; i++) {
+                    if(queue[i].isAlerted) continue;
+                }
+            }
+        }
+    };
+})();
+
+var clock = (() => {
+    return () => {
+        document.getElementById('clock').innerText = toTimeString(new Date());
+
+        for(var i = 0; queue[i] != undefined
+                && Date.now() - queue[i].deadline >= -250; i++) {
+            if(!queue[i].isAlerted) {
+                var id = queue[i].id;
+                queue[i].isAlerted = true;
+                parseTask(queue[i].exec, id);
+
+                /*queue[i].sound = playSound('sound/alarm0.mp3');
+                var target = document.getElementById('item_' + queue[i].id);
+                target.innerHTML += ' <input id="button_' + queue[i].id
+                        + '" type="button" value="stop" onclick="stopSound(\''
+                        + queue[i].id + '\');">';*/
+                var textDom = document.getElementById('text_' + id);
+                textDom.className = 'strike';
+                document.getElementById('time_' + id).innerHTML = '';
+                switch(queue[i].importance) {
+                    case 0:
+                        setTimeout(removeItem, 15000, id);
+                        break;
+                    case 1:
+                        textDom.className += ' em';
+                        break;
+                    case 2:
+                        textDom.className += ' em';
+                        window.alert(id);
+                        break;
+                }
+            }
+        }
+    };
+})();
 
 setInterval(clock, 500);

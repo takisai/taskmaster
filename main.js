@@ -268,12 +268,22 @@ var parseTask = (() => {
         var spaceSplit = texts.split(' ');
         switch(spaceSplit[0]) {
             case 'switch':
+                display.toggle();
+                break;
             case 'remove':
+                var removeArray = [];
+                for(var i = 1; i < spaceSplit.length; i++) {
+                    removeArray.push(queue[parseInt(spaceSplit) - 1].id);
+                }
+                [...new Set(removeArray)].sort((a, b) => b - a)
+                        .forEach(x => removeItem(x));
+                break;
             case 'button':
             case 'remove-macro':
             case 'exit':
             case 'sound':
-
+            case 'stop':
+            case 'volume':
         }
         var taskElement = task(texts);
         if(taskElement == null) return;
@@ -328,8 +338,15 @@ var display = (() = > {
         return '(' + ret + ')';
     };
     var restStr = rest => {
-        var day = Math.floor(rest / 86400000);
-        var hour = Math.floor(rest)
+        var d = Math.floor(rest / 86400000);
+        rest -= d * 86400000;
+        var h = Math.floor(rest / 3600000);
+        rest -= h * 3600000;
+        var m = Math.floor(rest / 60000);
+        rest -= m * 60000;
+        var s = Math.round(rest / 1000);
+        var ret = [h, m, s].map(x => ('0' + x).slice(-2)).join(':');
+        return '[' + (d > 0 ? d + ',' : '' ) + ret + ']';
     };
 
     return {
@@ -348,6 +365,8 @@ var display = (() = > {
             } else {
                 for(var i = 0; i < queue.length; i++) {
                     if(queue[i].isAlerted) continue;
+                    var target = document.getElementById('time_' + queue[i].id);
+                    target.innerText = restStr(queue[i].deadline - now);
                 }
             }
         }
@@ -357,6 +376,7 @@ var display = (() = > {
 var clock = (() => {
     return () => {
         document.getElementById('clock').innerText = toTimeString(new Date());
+        display.show();
 
         for(var i = 0; queue[i] != undefined
                 && Date.now() - queue[i].deadline >= -250; i++) {
@@ -387,6 +407,35 @@ var clock = (() => {
                 }
             }
         }
+    };
+})();
+
+var focus = (() => {
+    return event => {
+        var target = event.target;
+        while(target != null) {
+            if(target.id == 'menu') return;
+                target = target.parentNode;
+            }
+            document.form1.input.focus();
+        }
+    };
+})();
+
+var showTimerGUI = (() => {
+    return () => {
+        document.getElementById('label_radio_timer').className = '';
+        document.getElementById('timer_setting').style.display = 'block';
+        document.getElementById('label_radio_alarm').className = 'gray';
+        document.getElementById('alarm_setting').style.display = 'none';
+    };
+})();
+var showAlarmGUI = (() => {
+    return () => {
+        document.getElementById('label_radio_alarm').className = '';
+        document.getElementById('alarm_setting').style.display = 'block';
+        document.getElementById('label_radio_timer').className = 'gray';
+        document.getElementById('timer_setting').style.display = 'none';
     };
 })();
 

@@ -2,10 +2,34 @@
     background-color: #ff4b00;
 }
 
+details {
+    display: inline-block;
+}
+
+details > div {
+    padding-left: 1em;
+}
+
 .strike {
     text-decoration: line-through;
 }
 
+.textbox_2digits {
+    width: 5em;
+}
+
+.gray {
+    color: #999999;
+}
+
 #clock {
     font-size: 200%;
+}
+
+#macros {
+    display: block;
+}
+
+#timer_setting, #alarm_setting {
+    display: none;
 }

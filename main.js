@@ -1,5 +1,4 @@
 'use strict';
-var queue = [];
 var NameType = {None: 0, Timer: 1, Alarm: 2};
 
 var toTimeString = (() => {
@@ -21,6 +20,7 @@ var removeDom = (() => {
 var Sound = (() => {
     var sounds = [];
     var volume = 1;
+    var globalSound;
     window.addEventListener('click', () => {
         for(var i = 0; i < 10; i++) {
             var url = 'sound/alarm' + i + '.mp3';
@@ -35,22 +35,37 @@ var Sound = (() => {
         volume: n => {
             volume = n / 100;
         },
-        play: url => {
+        play: (url, id) => {
             if(sounds[url] == undefined) {
                 console.log('"' + url + '" is unregistered');
             } else if(sounds[url].readyState == 4) {
                 var sound = new Audio();
                 sound.src = sounds[url].src;
+                sound.volume = volume;
                 sound.currentTime = 0;
                 sound.play();
-                return sound;
+                var target = document.getElementById(id);
+                target.innerHTML += ' <input id="stopButton_' + id
+                        + '" type="button" value="stop" onclick="Sound.stop(\''
+                        + id + '\');">';
+                if(id != 'global') {
+                    TaskQueue.setSound(sound, id);
+                } else {
+                    globalSound = sound;
+                }
             }
         },
         stop: id => {
-            for(var i = 0; i < queue.length; i++) {
-                if(queue[i].id == id && queue[i].sound != undefined) {
-                    queue[i].sound.pause();
-                    removeDom('button_' + id);
+            if(id == 'global') {
+                globalSound.pause();
+                removeDom('stopButton_global');
+                return;
+            }
+            var taskQueue = TaskQueue.get();
+            for(var i = 0; i < taskQueue.length; i++) {
+                if(taskQueue[i].id == id && taskQueue[i].sound != undefined) {
+                    taskQueue[i].sound.pause();
+                    removeDom('stopButton_' + id);
                     return;
                 }
             }
@@ -75,6 +90,90 @@ var Replacer = (() => {
                 s = s.replace(item.key, item.value);
             }
             return s;
+        }
+    };
+})();
+
+var TaskQueue = (() => {
+    var taskQueue = [], idCount = 0;
+
+    return {
+        get: () => {
+            return taskQueue;
+        },
+        setSound: (sound, id) => {
+            for(var i = 0; i < taskQueue.length; i++) {
+                if(taskQueue[i].id == id) {
+                    taskQueue[i].sound = sound;
+                    return;
+                }
+            }
+        },
+        insert: taskElement => {
+            var i, newLiElement = document.createElement('li');
+            var id = '' + idCount, target;
+            idCount++;
+            taskElement.id = id;
+            taskElement.isAlerted = false;
+            newLiElement.innerHTML =
+                    '<input type="button" value="remove" onclick="TaskQueue.remove(\''
+                    + id + '\');"> <span id="text_' + id + '">'
+                    + taskElement.name + '<span id ="time_' + id
+                    + '"></span></span>';
+            newLiElement.setAttribute('id', 'item_' + id);
+            for(i = 0; i < taskQueue.length; i++) {
+                if(taskQueue[i].deadline > taskElement.deadline) {
+                    target = document.getElementById('item_' + taskQueue[i].id);
+                    target.parentNode.insertBefore(newLiElement, target);
+                    taskQueue.splice(i, 0, taskElement);
+                    return;
+                }
+            }
+            target = document.getElementById('parent');
+            target.appendChild(newLiElement);
+            taskQueue.push(taskElement);
+            return;
+        },
+        remove: id => {
+            if(!removeDom('item_' + id)) return;
+            for(var i = 0; i < taskQueue.length; i++) {
+                if(taskQueue[i].id == id) {
+                    taskQueue.splice(i, 1);
+                    break;
+                }
+            }
+        },
+        removeById: locate => {
+            var id = taskQueue[i].id;
+            if(!removeDom('item_' + id)) return;
+            if(locate >= 0 && locate < taskQueue.length) {
+                taskQueue.splice(locate, 1);
+            }
+        },
+        checkDeadline: () => {
+            for(var i = 0; taskQueue[i] != undefined
+                    && Date.now() - taskQueue[i].deadline >= -250; i++) {
+                if(!taskQueue[i].isAlerted) {
+                    var id = taskQueue[i].id;
+                    taskQueue[i].isAlerted = true;
+                    parseMain(taskQueue[i].exec, id);
+                    var textDom = document.getElementById('text_' + id);
+                    textDom.className = 'strike';
+                    document.getElementById('time_' + id).innerHTML = '';
+                    switch(taskQueue[i].importance) {
+                        case 0:
+                            setTimeout(Taskqueue.remove, 15000, id);
+                            break;
+                        case 1:
+                            textDom.className += ' em';
+                            break;
+                        case 2:
+                            textDom.className += ' em';
+                            window.alert(id);
+                            break;
+                    }
+                }
+            }
         }
     };
 })();
@@ -272,24 +371,36 @@ var parseMain = (() => {
         var spaceSplit = texts.split(' ');
         switch(spaceSplit[0]) {
             case 'switch':
-                display.toggle();
+                Display.toggle();
                 return;
             case 'remove':
                 var removeArray = [];
                 for(var i = 1; i < spaceSplit.length; i++) {
-                    removeArray.push(queue[parseInt(spaceSplit[i], 10) - 1].id);
+                    removeArray.push(parseInt(spaceSplit[i], 10) - 1);
                 }
                 [...new Set(removeArray)].sort((a, b) => b - a)
-                        .forEach(x => removeItem(x));
+                        .forEach(x => TaskQueue.removeById(x));
                 return;
             case 'button':
+                makeButton()
             case 'remove-macro':
             case 'exit':
             case 'sound':
+                if(!/\d/.test(spaceSplit[1])) return;
+                Sound.play('sound/alarm' + spaceSplit[1] + '.mp3', callFrom);
+            /*taskQueue[i].sound = playSound('sound/alarm0.mp3');
+            var target = document.getElementById('item_' + taskQueue[i].id);
+            target.innerHTML += ' <input id="button_' + taskQueue[i].id
+                    + '" type="button" value="stop" onclick="stopSound(\''
+                    + taskQueue[i].id + '\');">';*/
+                return;
             case 'stop':
+
             case 'volume':
                 var volume = parseInt(spaceSplit[1], 10);
-                Sonund.volume(volume);
+                if(volume >= 0 && volume <= 100) {
+                    Sound.volume(volume);
+                }
                 return;
             case 'default':
                 Task.setDefault(spaceSplit[1]);
@@ -297,42 +408,11 @@ var parseMain = (() => {
         }
         var taskElement = Task.parse(texts);
         if(taskElement == null) return;
-        var i, newLiElement = document.createElement('li'), id = '' + idCount;
-        idCount++;
-        taskElement.id = id;
-        taskElement.isAlerted = false;
-        newLiElement.innerHTML =
-                '<input type="button" value="remove" onclick="removeItem(\''
-                + id + '\');"> <span id="text_' + id + '">' + taskElement.name
-                + '<span id ="time_' + id + '"></span>';
-        newLiElement.setAttribute('id', 'item_' + id);
-        for(i = 0; i < queue.length; i++) {
-            if(queue[i].deadline > taskElement.deadline) {
-                var target = document.getElementById('item_' + queue[i].id);
-                target.parentNode.insertBefore(newLiElement, target);
-                queue.splice(i, 0, taskElement);
-                return;
-            }
-        }
-        var target = document.getElementById('parent');
-        target.appendChild(newLiElement);
-        queue.push(taskElement);
+        TaskQueue.insert(taskElement);
     };
 })();
 
-var removeItem = (() => {
-    return id => {
-        if(!removeDom('item_' + id)) return;
-        for(var i = 0; i < queue.length; i++) {
-            if(queue[i].id == id) {
-                queue.splice(i, 1);
-                break;
-            }
-        }
-    };
-})();
-
-var display = (() = > {
+var Display = (() = > {
     var isShowDeadline = true;
 
     var deadlineStr = (deadline, now) => {
@@ -356,7 +436,7 @@ var display = (() = > {
         rest -= m * 60000;
         var s = Math.round(rest / 1000);
         var ret = [h, m, s].map(x => ('0' + x).slice(-2)).join(':');
-        return '[' + (d > 0 ? d + ',' : '' ) + ret + ']';
+        return '[' + (d > 0 ? d + ',' : '') + ret + ']';
     };
 
     return {
@@ -364,19 +444,20 @@ var display = (() = > {
             isShowDeadline = !isShowDeadline;
         },
         show: () => {
+            var taskQueue = TaskQueue.get();
             var now = Date.now();
             if(isShowDeadline) {
-                for(var i = 0; i < queue.length; i++) {
-                    if(queue[i].isAlerted
-                            || queue[i].type == TaskType.Alarm) continue;
-                    var target = document.getElementById('time_' + queue[i].id);
-                    target.innerText = deadlineStr(queue[i].deadline, now);
+                for(var i = 0; i < taskQueue.length; i++) {
+                    if(taskQueue[i].isAlerted
+                            || taskQueue[i].type == TaskType.Alarm) continue;
+                    var target = document.getElementById('time_' + taskQueue[i].id);
+                    target.innerText = deadlineStr(taskQueue[i].deadline, now);
                 }
             } else {
-                for(var i = 0; i < queue.length; i++) {
-                    if(queue[i].isAlerted) continue;
-                    var target = document.getElementById('time_' + queue[i].id);
-                    target.innerText = restStr(queue[i].deadline - now);
+                for(var i = 0; i < taskQueue.length; i++) {
+                    if(taskQueue[i].isAlerted) continue;
+                    var target = document.getElementById('time_' + taskQueue[i].id);
+                    target.innerText = restStr(taskQueue[i].deadline - now);
                 }
             }
         }
@@ -386,37 +467,8 @@ var display = (() = > {
 var clock = (() => {
     return () => {
         document.getElementById('clock').innerText = toTimeString(new Date());
-        display.show();
-
-        for(var i = 0; queue[i] != undefined
-                && Date.now() - queue[i].deadline >= -250; i++) {
-            if(!queue[i].isAlerted) {
-                var id = queue[i].id;
-                queue[i].isAlerted = true;
-                parseMain(queue[i].exec, id);
-
-                /*queue[i].sound = playSound('sound/alarm0.mp3');
-                var target = document.getElementById('item_' + queue[i].id);
-                target.innerHTML += ' <input id="button_' + queue[i].id
-                        + '" type="button" value="stop" onclick="stopSound(\''
-                        + queue[i].id + '\');">';*/
-                var textDom = document.getElementById('text_' + id);
-                textDom.className = 'strike';
-                document.getElementById('time_' + id).innerHTML = '';
-                switch(queue[i].importance) {
-                    case 0:
-                        setTimeout(removeItem, 15000, id);
-                        break;
-                    case 1:
-                        textDom.className += ' em';
-                        break;
-                    case 2:
-                        textDom.className += ' em';
-                        window.alert(id);
-                        break;
-                }
-            }
-        }
+        Display.show();
+        TaskQueue.checkDeadline();
     };
 })();
 

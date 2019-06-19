@@ -61,18 +61,11 @@ var Sound = (() => {
                 removeDom('stopButton_global');
                 return;
             }
-            var taskQueue = TaskQueue.get();
-            for(var i = 0; i < taskQueue.length; i++) {
-                if(taskQueue[i].id == id && taskQueue[i].sound != undefined) {
-                    taskQueue[i].sound.pause();
-                    removeDom('stopButton_' + id);
-                    return;
-                }
-            }
+            TaskQueue.stopSound(id);
         },
         stopAll: () => {
             Sound.stop('global');
-            TaskQueue.get().map(x => x.id).forEach(x => Sound.stop(x));
+            TaskQueue.stopAllSound();
         }
     };
 })();
@@ -102,9 +95,6 @@ var TaskQueue = (() => {
     var taskQueue = [], idCount = 0;
 
     return {
-        get: () => {
-            return taskQueue;
-        },
         getIdByIndex: index => {
             return taskQueue[index].id;
         },
@@ -176,6 +166,27 @@ var TaskQueue = (() => {
                     }
                 }
             }
+        },
+        show: (isShowDeadline, makeStr) => {
+            var now = Date.now();
+            taskQueue.forEach(x => {
+                if(x.isAlerted
+                        || (isShowDeadline && x.type == TaskType.Alarm)) return;
+                var target = document.getElementById('time_' + x.id);
+                target.innerText = makeStr(x.deadline, now);
+            });
+        },
+        stopSound: id => {
+            for(var i = 0; i < taskQueue.length; i++) {
+                if(taskQueue[i].id == id && taskQueue[i].sound != undefined) {
+                    taskQueue[i].sound.pause();
+                    removeDom('stopButton_' + id);
+                    return;
+                }
+            }
+        },
+        stopAllSound: () => {
+            taskQueue.map(x => x.id).forEach(x => TaskQueue.stopSound(x));
         }
     };
 })();
@@ -433,7 +444,8 @@ var Display = (() = > {
         }
         return '(' + ret + ')';
     };
-    var restStr = rest => {
+    var restStr = (deadline, now) => {
+        var rest = deadline - now;
         var d = Math.floor(rest / 86400000);
         rest -= d * 86400000;
         var h = Math.floor(rest / 3600000);
@@ -450,22 +462,8 @@ var Display = (() = > {
             isShowDeadline = !isShowDeadline;
         },
         show: () => {
-            var taskQueue = TaskQueue.get();
-            var now = Date.now();
-            if(isShowDeadline) {
-                for(var i = 0; i < taskQueue.length; i++) {
-                    if(taskQueue[i].isAlerted
-                            || taskQueue[i].type == TaskType.Alarm) continue;
-                    var target = document.getElementById('time_' + taskQueue[i].id);
-                    target.innerText = deadlineStr(taskQueue[i].deadline, now);
-                }
-            } else {
-                for(var i = 0; i < taskQueue.length; i++) {
-                    if(taskQueue[i].isAlerted) continue;
-                    var target = document.getElementById('time_' + taskQueue[i].id);
-                    target.innerText = restStr(taskQueue[i].deadline - now);
-                }
-            }
+            TaskQueue.show(isShowDeadline
+                    , isShowDeadline ? deadlineStr : restStr);
         }
     };
 })();

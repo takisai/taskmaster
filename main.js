@@ -69,6 +69,10 @@ var Sound = (() => {
                     return;
                 }
             }
+        },
+        stopAll: () => {
+            Sound.stop('global');
+            TaskQueue.get().map(x => x.id).forEach(x => Sound.stop(x));
         }
     };
 })();
@@ -101,6 +105,9 @@ var TaskQueue = (() => {
         get: () => {
             return taskQueue;
         },
+        getIdByIndex: index => {
+            return taskQueue[index].id;
+        },
         setSound: (sound, id) => {
             for(var i = 0; i < taskQueue.length; i++) {
                 if(taskQueue[i].id == id) {
@@ -132,7 +139,6 @@ var TaskQueue = (() => {
             target = document.getElementById('parent');
             target.appendChild(newLiElement);
             taskQueue.push(taskElement);
-            return;
         },
         remove: id => {
             if(!removeDom('item_' + id)) return;
@@ -143,12 +149,8 @@ var TaskQueue = (() => {
                 }
             }
         },
-        removeById: locate => {
-            var id = taskQueue[i].id;
-            if(!removeDom('item_' + id)) return;
-            if(locate >= 0 && locate < taskQueue.length) {
-                taskQueue.splice(locate, 1);
-            }
+        removeAll: () => {
+            taskQueue.map(x => x.id).forEach(x => TaskQueue.remove(x));
         },
         checkDeadline: () => {
             for(var i = 0; taskQueue[i] != undefined
@@ -285,7 +287,7 @@ var Task = (() => {
                 }
                 if(now >= ret.getTime()) return undefined;
                 console.log(ret.toString());
-            return ret.getTime/^[-\d]!{0,2}$/();
+            return ret.getTime();
             }
         };
     })();
@@ -368,34 +370,38 @@ var parseMain = (() => {
             texts.forEach(element => parseMain(element, callFrom));
             return;
         }
-        var spaceSplit = texts.split(' ');
-        switch(spaceSplit[0]) {
+        var spaceSplit = /^([^ ]*) (.*)$/.exec(texts);
+        switch(spaceSplit[1]) {
             case 'switch':
                 Display.toggle();
                 return;
             case 'remove':
-                var removeArray = [];
-                for(var i = 1; i < spaceSplit.length; i++) {
-                    removeArray.push(parseInt(spaceSplit[i], 10) - 1);
+                if(spaceSplit[2] == '*') {
+                    TaskQueue.removeAll();
+                    return;
                 }
-                [...new Set(removeArray)].sort((a, b) => b - a)
-                        .forEach(x => TaskQueue.removeById(x));
+                [...new Set(spaceSplit[2].split(' '))]
+                        .map(x => TaskQueue.getIdByIndex(parseInt(x, 10) - 1))
+                        .sort((a, b) => b - a)
+                        .forEach(x => TaskQueue.remove(x));
                 return;
             case 'button':
                 makeButton()
             case 'remove-macro':
             case 'exit':
             case 'sound':
-                if(!/\d/.test(spaceSplit[1])) return;
-                Sound.play('sound/alarm' + spaceSplit[1] + '.mp3', callFrom);
-            /*taskQueue[i].sound = playSound('sound/alarm0.mp3');
-            var target = document.getElementById('item_' + taskQueue[i].id);
-            target.innerHTML += ' <input id="button_' + taskQueue[i].id
-                    + '" type="button" value="stop" onclick="stopSound(\''
-                    + taskQueue[i].id + '\');">';*/
+                if(!/\d/.test(spaceSplit[2])) return;
+                Sound.play('sound/alarm' + spaceSplit[2] + '.mp3', callFrom);
                 return;
             case 'stop':
-
+                if(spaceSplit[2] == '*') {
+                    Sound.stopAll();
+                    return;
+                }
+                [...new Set(spaceSplit[2].split(' '))]
+                        .map(x => TaskQueue.getIdByIndex(parseInt(x, 10) - 1))
+                        .forEach(x => Sound.stop(x));
+                return;
             case 'volume':
                 var volume = parseInt(spaceSplit[1], 10);
                 if(volume >= 0 && volume <= 100) {

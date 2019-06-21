@@ -20,7 +20,6 @@ var removeDom = (() => {
 var Sound = (() => {
     var sounds = [];
     var volume = 1;
-    var globalSound;
     window.addEventListener('click', () => {
         for(var i = 0; i < 10; i++) {
             var url = 'sound/alarm' + i + '.mp3';
@@ -44,27 +43,23 @@ var Sound = (() => {
                 sound.volume = volume;
                 sound.currentTime = 0;
                 sound.play();
+                var isPlay = TaskQueue.isPlay(id);
+                TaskQueue.setSound(sound, id);
+                sound.addEventListener('ended', () => {
+                    if(TaskQueue.isPlay(id)) return;
+                    removeDom('stopButton_' + id);
+                }, {once: true});
+                if(isPlay) return;
                 var target = document.getElementById(id);
-                target.innerHTML += ' <input id="stopButton_' + id
+                target.innerHTML += '<input id="stopButton_' + id
                         + '" type="button" value="stop" onclick="Sound.stop(\''
                         + id + '\');">';
-                if(id != 'global') {
-                    TaskQueue.setSound(sound, id);
-                } else {
-                    globalSound = sound;
-                }
             }
         },
         stop: id => {
-            if(id == 'global') {
-                globalSound.pause();
-                removeDom('stopButton_global');
-                return;
-            }
             TaskQueue.stopSound(id);
         },
         stopAll: () => {
-            Sound.stop('global');
             TaskQueue.stopAllSound();
         }
     };
@@ -94,17 +89,26 @@ var Replacer = (() => {
 var TaskQueue = (() => {
     var taskQueue = [], idCount = 0;
 
+    taskQueue[-1] = new Object();
+    taskQueue[-1].id = 'global';
+    taskQueue[-1].sound = [];
+
+    var getIndexById = id => {
+        for(var i = -1; i < taskQueue.length; i++) {
+            if(taskQueue[i].id == id) return i;
+        }
+        return undefined;
+    };
+
     return {
         getIdByIndex: index => {
             return taskQueue[index].id;
         },
         setSound: (sound, id) => {
-            for(var i = 0; i < taskQueue.length; i++) {
-                if(taskQueue[i].id == id) {
-                    taskQueue[i].sound = sound;
-                    return;
-                }
-            }
+            taskQueue[getIndexById(id)].sound.push(sound);
+        },
+        isPlay: id => {
+            return taskQueue[getIndexById(id)].sound.length > 0;
         },
         insert: taskElement => {
             var i, newLiElement = document.createElement('li');
@@ -112,11 +116,12 @@ var TaskQueue = (() => {
             idCount++;
             taskElement.id = id;
             taskElement.isAlerted = false;
+            taskElement.sound = [];
             newLiElement.innerHTML =
                     '<input type="button" value="remove" onclick="TaskQueue.remove(\''
                     + id + '\');"> <span id="text_' + id + '">'
                     + taskElement.name + '<span id ="time_' + id
-                    + '"></span></span>';
+                    + '"></span></span> ';
             newLiElement.setAttribute('id', 'item_' + id);
             for(i = 0; i < taskQueue.length; i++) {
                 if(taskQueue[i].deadline > taskElement.deadline) {
@@ -132,12 +137,7 @@ var TaskQueue = (() => {
         },
         remove: id => {
             if(!removeDom('item_' + id)) return;
-            for(var i = 0; i < taskQueue.length; i++) {
-                if(taskQueue[i].id == id) {
-                    taskQueue.splice(i, 1);
-                    break;
-                }
-            }
+            taskQueue.splice(getIndexById(id), 1);
         },
         removeAll: () => {
             taskQueue.map(x => x.id).forEach(x => TaskQueue.remove(x));
@@ -154,14 +154,14 @@ var TaskQueue = (() => {
                     document.getElementById('time_' + id).innerHTML = '';
                     switch(taskQueue[i].importance) {
                         case 0:
-                            setTimeout(Taskqueue.remove, 15000, id);
+                            setTimeout(TaskQueue.remove, 15000, id);
                             break;
                         case 1:
                             textDom.className += ' em';
                             break;
                         case 2:
                             textDom.className += ' em';
-                            window.alert(id);
+                            window.alert(textDom.innerText);
                             break;
                     }
                 }
@@ -170,23 +170,26 @@ var TaskQueue = (() => {
         show: (isShowDeadline, makeStr) => {
             var now = Date.now();
             taskQueue.forEach(x => {
-                if(x.isAlerted
-                        || (isShowDeadline && x.type == TaskType.Alarm)) return;
+                if(x.isAlerted) return;
                 var target = document.getElementById('time_' + x.id);
-                target.innerText = makeStr(x.deadline, now);
+                if(isShowDeadline && x.type == NameType.Alarm) {
+                    target.innerText = '';
+                } else {
+                    target.innerText = makeStr(x.deadline, now);
+                }
             });
         },
         stopSound: id => {
-            for(var i = 0; i < taskQueue.length; i++) {
-                if(taskQueue[i].id == id && taskQueue[i].sound != undefined) {
-                    taskQueue[i].sound.pause();
-                    removeDom('stopButton_' + id);
-                    return;
-                }
-            }
+            var index = getIndexById(id);
+            taskQueue[index].sound.forEach(x => {
+                x.pause();
+            });
+            taskQueue[index].sound = [];
+            removeDom('stopButton_' + id);
         },
         stopAllSound: () => {
-            taskQueue.map(x => x.id).forEach(x => TaskQueue.stopSound(x));
+            ['global', ...taskQueue.map(x => x.id)]
+                    .forEach(x => TaskQueue.stopSound(x));
         }
     };
 })();
@@ -317,7 +320,7 @@ var Task = (() => {
             var result = regex.exec(s);
             var plusSplit = /^([^\+]*?)(?:\+(.*))?$/.exec(result[1]);
             plusSplit[1] = Replacer.replace(plusSplit[1]);
-            var ret, execs = [];
+            var ret = new Object(), execs = [];
             if(Timer.isMatch(plusSplit[1])) {
                 ret.deadline = Timer.parse(plusSplit[1]);
                 ret.type = NameType.Timer;
@@ -382,46 +385,50 @@ var parseMain = (() => {
             return;
         }
         var spaceSplit = /^([^ ]*) (.*)$/.exec(texts);
-        switch(spaceSplit[1]) {
-            case 'switch':
-                Display.toggle();
-                return;
-            case 'remove':
-                if(spaceSplit[2] == '*') {
-                    TaskQueue.removeAll();
+        if(spaceSplit != null) {
+            switch(spaceSplit[1]) {
+                case 'switch':
+                    Display.toggle();
                     return;
-                }
-                [...new Set(spaceSplit[2].split(' '))]
-                        .map(x => TaskQueue.getIdByIndex(parseInt(x, 10) - 1))
-                        .sort((a, b) => b - a)
-                        .forEach(x => TaskQueue.remove(x));
-                return;
-            case 'button':
-                makeButton()
-            case 'remove-macro':
-            case 'exit':
-            case 'sound':
-                if(!/\d/.test(spaceSplit[2])) return;
-                Sound.play('sound/alarm' + spaceSplit[2] + '.mp3', callFrom);
-                return;
-            case 'stop':
-                if(spaceSplit[2] == '*') {
-                    Sound.stopAll();
+                case 'remove':
+                    if(spaceSplit[2] == '*') {
+                        TaskQueue.removeAll();
+                        return;
+                    }
+                    [...new Set(spaceSplit[2].split(' '))]
+                            .map(x => TaskQueue.getIdByIndex(
+                                    parseInt(x, 10) - 1))
+                            .forEach(x => TaskQueue.remove(x));
                     return;
-                }
-                [...new Set(spaceSplit[2].split(' '))]
-                        .map(x => TaskQueue.getIdByIndex(parseInt(x, 10) - 1))
-                        .forEach(x => Sound.stop(x));
-                return;
-            case 'volume':
-                var volume = parseInt(spaceSplit[1], 10);
-                if(volume >= 0 && volume <= 100) {
-                    Sound.volume(volume);
-                }
-                return;
-            case 'default':
-                Task.setDefault(spaceSplit[1]);
-                return;
+            //case 'button':
+            //    makeButton()
+            //case 'remove-macro':
+            //case 'exit':
+                case 'sound':
+                    if(!/\d/.test(spaceSplit[2])) return;
+                    Sound.play('sound/alarm' + spaceSplit[2] + '.mp3'
+                            , callFrom);
+                    return;
+                case 'stop':
+                    if(spaceSplit[2] == '*') {
+                        Sound.stopAll();
+                        return;
+                    }
+                    [...new Set(spaceSplit[2].split(' '))]
+                            .map(x => TaskQueue.getIdByIndex(
+                                    parseInt(x, 10) - 1))
+                            .forEach(x => Sound.stop(x));
+                    return;
+                case 'volume':
+                    var volume = parseInt(spaceSplit[1], 10);
+                    if(volume >= 0 && volume <= 100) {
+                        Sound.volume(volume);
+                    }
+                    return;
+                case 'default':
+                    Task.setDefault(spaceSplit[1]);
+                    return;
+            }
         }
         var taskElement = Task.parse(texts);
         if(taskElement == null) return;
@@ -429,14 +436,14 @@ var parseMain = (() => {
     };
 })();
 
-var Display = (() = > {
+var Display = (() => {
     var isShowDeadline = true;
 
     var deadlineStr = (deadline, now) => {
         var deadlineObj = new Date(deadline);
         var ret = toTimeString(deadlineObj);
-        if(deadline - now >= 86400) {
-            ret = deadlineObj.getMonth() + '-' + deadlineObj.getDay()
+        if(deadline - now >= 86400000) {
+            ret = (deadlineObj.getMonth() + 1) + '-' + deadlineObj.getDate()
                     + ',' + ret;
         }
         if(deadline - now >= 86400000 * 365) {
@@ -481,10 +488,9 @@ var focus = (() => {
         var target = event.target;
         while(target != null) {
             if(target.id == 'menu') return;
-                target = target.parentNode;
-            }
-            document.form1.input.focus();
+            target = target.parentNode;
         }
+        document.form1.input.focus();
     };
 })();
 

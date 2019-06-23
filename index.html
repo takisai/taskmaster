@@ -7,33 +7,64 @@
         <script src="main.js"></script>
     </head>
     <body id="body">
-        <span id="clock">...</span>
-        <form name="form1" onsubmit="getText();return false;">
-            <input type="text" name="input"></input>
+        <div id="clock">
+            ...
+        </div>
+        <form name="cuiForm" onsubmit="getText();return false;">
+            <input type="text" name="input"></input><span id="item_global"> </span>
         </form>
-        <span id="global"></span>
+        <div id="div_volume">
+            volume <input id="range_volume" type="range" min="0" max="100" step="1" value="100"> <span id="volume">100</span>
+        </div>
         <div id="button_parent"></div>
         <ol id="parent"></ol>
-        <details id="macros"><summary>macro</summary><div>
-            <ol id="macro_parent"></ol>
-        </div></details>
-        <details id="menu"><summary>menu</summary><div>
-            <details><summary>タスク設定</summary><div>
-                <input id="radio_timer" type="radio" name="tasktype" value="timer" onclick="showTimerGUI()">
+        <div id="macro">
+            <details open><summary>macro</summary><div>
+                <ol id="macro_parent"></ol>
+            </div></details>
+        </div>
+        <div id="menu"><details><summary>menu</summary><div>
+            <details><summary>タスク設定</summary><form name="guiForm">
+                <input id="radio_timer" type="radio" name="taskType" value="timer" onclick="showTimerGUI()">
                 <label id="label_radio_timer" for="radio_timer">タイマー</label>
-                <input id="radio_alarm" type="radio" name="tasktype" value="alarm" onclick="showAlarmGUI()">
+                <input id="radio_alarm" type="radio" name="taskType" value="alarm" onclick="showAlarmGUI()">
                 <label id="label_radio_alarm" for="radio_alarm">アラーム</label>
                 <div id="timer_setting">
-                    <input id="timer_hour" list="data_0-23" class="textbox_2digits"> 時間 <input id="timer_minute" list="data_0-59" class="textbox_2digits"> 分 <input id="timer_second" list="data_0-59" class="textbox_2digits"> 秒後<br>テキスト: <input type="text"> で <input type="button" value="設定">
+                    <input id="timer_hour" list="data_0-23" name="timer_hour" class="textbox_2digits"> 時間 <input id="timer_minute" list="data_0-59" name="timer_minute" class="textbox_2digits"> 分 <input id="timer_second" list="data_0-59" name="timer_second" class="textbox_2digits"> 秒後
                 </div>
                 <div id="alarm_setting">
-                    <input id="alarm_hour" list="data_0-23" class="textbox_2digits"> 時 <input id="alarm_minute" list="data_0-59" class="textbox_2digits"> 分 <input id="alarm_second" list="data_0-59" class="textbox_2digits"> 秒<br>テキスト: <input type="text"> で <input type="button" value="設定">
+                    <input id="alarm_hour" list="data_0-23" class="textbox_2digits"> 時 <input id="alarm_minute" list="data_0-59" class="textbox_2digits"> 分 <input id="alarm_second" list="data_0-59" class="textbox_2digits"> 秒
                 </div>
-            </div></details>
-        </div></details>
+                <div id="gui_other_setting">
+                    テキスト: <input type="text" name="text"><br>音:
+                    <select name="sound">
+                        <option value="0" default>ジャラジャラ</option>
+                        <option value="1">ハープ</option>
+                        <option value="2">キラキラ1</option>
+                        <option value="3">キラキラ2</option>
+                        <option value="4">鈴</option>
+                        <option value="5">めざまし</option>
+                        <option value="6">アラーム1</option>
+                        <option value="7">アラーム2</option>
+                        <option value="8">アラーム3</option>
+                        <option value="9">アラーム4</option>
+                        <option value="-">なし</option>
+                    </select>
+                    重要度
+                    <select name="importance">
+                        <option value="" default>低</option>
+                        <option value="!">中</option>
+                        <option value="!!">高</option>
+                        <option value="!!!">超</option>
+                    </select>
+                    で <input type="button" value="設定" onclick="Task.sendByGui()">
+                </div>
+            </form></details>
+        </div></details></div>
     </body>
     <script>
 window.addEventListener('click', focus);
+document.addEventListener('input', showVolume);
     </script>
     <datalist id="data_0-23">
         <option value="0">

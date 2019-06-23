@@ -1,11 +1,26 @@
 'use strict';
 var NameType = {None: 0, Timer: 1, Alarm: 2};
+var UPDATE_TIME = 200;
 
-var toTimeString = (() => {
+var toHms = (() => {
     return o => {
         var hms = [o.getHours(), o.getMinutes(), o.getSeconds()];
         return hms.map(x => ('0' + x).slice(-2)).join(':');
     };
+})();
+
+var toDhms = (() => {
+    return rest => {
+        var d = Math.floor(rest / 86400);
+        rest -= d * 86400;
+        var h = Math.floor(rest / 3600);
+        rest -= h * 3600;
+        var m = Math.floor(rest / 60);
+        rest -= m * 60;
+        var s = Math.round(rest);
+        var ret = [h, m, s].map(x => ('0' + x).slice(-2)).join(':');
+        return (d > 0 ? d + ',' : '') + ret;
+    }
 })();
 
 var removeDom = (() => {
@@ -14,6 +29,37 @@ var removeDom = (() => {
         if(target == null) return false;
         target.parentNode.removeChild(target);
         return true;
+    };
+})();
+
+var save = (() => {
+    return () => {
+
+    };
+});
+
+var load = (() => {
+    return () => {
+        var items = window.localStorage.getItem('data');
+        for(var item of items) {
+            parseMain(item, 'global');
+        }
+    };
+})();
+
+var backgroundAlert = (() => {
+    var semaphore = 0;
+    return {
+        on: () => {
+            semaphore++;
+            document.getElementById('body').style.backgroundColor = '#ffcabf';
+        },
+        off: () => {
+            semaphore--;
+            if(semaphore == 0) {
+                document.getElementById('body').style.backgroundColor = 'white';
+            }
+        }
     };
 })();
 
@@ -31,8 +77,9 @@ var Sound = (() => {
         }
     }, {once: true});
     return {
-        volume: n => {
+        setVolume: n => {
             volume = n / 100;
+            TaskQueue.setVolume(volume);
         },
         play: (url, id) => {
             if(sounds[url] == undefined) {
@@ -44,13 +91,14 @@ var Sound = (() => {
                 sound.currentTime = 0;
                 sound.play();
                 var isPlay = TaskQueue.isPlay(id);
-                TaskQueue.setSound(sound, id);
+                var soundId = TaskQueue.setSound(sound, id);
                 sound.addEventListener('ended', () => {
+                    TaskQueue.removeSound(id, soundId);
                     if(TaskQueue.isPlay(id)) return;
                     removeDom('stopButton_' + id);
                 }, {once: true});
                 if(isPlay) return;
-                var target = document.getElementById(id);
+                var target = document.getElementById('item_' + id);
                 target.innerHTML += '<input id="stopButton_' + id
                         + '" type="button" value="stop" onclick="Sound.stop(\''
                         + id + '\');">';
@@ -68,14 +116,44 @@ var Sound = (() => {
 var Replacer = (() => {
     var regex = /^([^;]+?)->(.*)$/;
     var replaceSet = [];
+    var replacerCount = 0;
+
     return {
+        getIdByIndex: index => {
+            if(replaceSet[index] == undefined) {
+                return undefined;
+            }
+            return replaceSet[index].id;
+        },
+        add: s => {
+            var result = regex.exec(s);
+            var id = replacerCount;
+            replacerCount++;
+            var element = {key: new RegExp(result[1], 'gu'), keyStr: result[1]
+                    , value: result[2], id: id};
+            replaceSet.push(element);
+            var newLiElement = document.createElement('li');
+            newLiElement.innerHTML =
+                    '<input type="button" value="remove" onclick="Replacer.remove(\''
+                    + id + '\');"> ' + element.keyStr + ' -> ' + element.value;
+            newLiElement.setAttribute('id', 'macro_' + id);
+            var target = document.getElementById('macro_parent');
+            target.appendChild(newLiElement);
+        },
+        remove: id => {
+            if(!removeDom('macro_' + id)) return;
+            for(var i = 0; i < replaceSet.length; i++) {
+                if(replaceSet[i].id == id) {
+                    replaceSet.splice(i, 1);
+                    return;
+                }
+            }
+        },
+        removeAll: () => {
+            replaceSet.map(x => x.id).forEach(x => Replacer.remove(x));
+        },
         isMatch: s => {
             return regex.test(s);
-        },
-        push: s => {
-            var result = regex.exec(s);
-            replaceSet.push({key: new RegExp(result[1], 'gu'), keyStr: result[1]
-                    , value: result[2]});
         },
         replace: s => {
             for(var item of replaceSet) {
@@ -86,12 +164,47 @@ var Replacer = (() => {
     };
 })();
 
+var Button = (() => {
+    var buttonCount = 0;
+    var buttons = [];
+
+    return {
+        getIdByIndex: index => {
+            return buttons[index];
+        },
+        add: str => {
+            var parent = document.getElementById('button_parent');
+            var id = buttonCount;
+            buttonCount++;
+
+            parent.innerHTML += '<span id="button_' + id
+                    + '"><input type="button" value="' + str
+                    + '" onclick="parseMain(\'' + str
+                    + '\', \'global\');"> </span>';
+            buttons.push(id);
+        },
+        remove: id => {
+            if(!removeDom('button_' + id)) return;
+            for(var i = 0; i < buttons.length; i++) {
+                if(buttons[i] == id) {
+                    buttons.splice(i, 1);
+                    return;
+                }
+            }
+        },
+        removeAll: () => {
+            buttons.map(x => x).forEach(x => Button.remove(x));
+        }
+    };
+})();
+
 var TaskQueue = (() => {
     var taskQueue = [], idCount = 0;
 
     taskQueue[-1] = new Object();
     taskQueue[-1].id = 'global';
     taskQueue[-1].sound = [];
+    taskQueue[-1].soundCount = 0;
 
     var getIndexById = id => {
         for(var i = -1; i < taskQueue.length; i++) {
@@ -102,13 +215,30 @@ var TaskQueue = (() => {
 
     return {
         getIdByIndex: index => {
+            if(taskQueue[index] == undefined) {
+                return undefined;
+            }
             return taskQueue[index].id;
         },
         setSound: (sound, id) => {
-            taskQueue[getIndexById(id)].sound.push(sound);
+            var index = getIndexById(id);
+            var count = taskQueue[index].soundCount;
+            sound.id = count;
+            taskQueue[index].sound.push(sound);
+            taskQueue[index].soundCount++;
+            return count;
+        },
+        setVolume: volume => {
+            for(var i = -1; i < taskQueue.length; i++) {
+                var sound = taskQueue[i].sound;
+                if(sound == undefined) continue;
+                sound.forEach(x => x.volume = volume);
+            }
         },
         isPlay: id => {
-            return taskQueue[getIndexById(id)].sound.length > 0;
+            var ret = taskQueue[getIndexById(id)];
+            if(ret == undefined) return true;
+            return ret.sound.length > 0;
         },
         insert: taskElement => {
             var i, newLiElement = document.createElement('li');
@@ -117,6 +247,7 @@ var TaskQueue = (() => {
             taskElement.id = id;
             taskElement.isAlerted = false;
             taskElement.sound = [];
+            taskElement.soundCount = 0;
             newLiElement.innerHTML =
                     '<input type="button" value="remove" onclick="TaskQueue.remove(\''
                     + id + '\');"> <span id="text_' + id + '">'
@@ -136,15 +267,36 @@ var TaskQueue = (() => {
             taskQueue.push(taskElement);
         },
         remove: id => {
+            TaskQueue.stopSound(id);
             if(!removeDom('item_' + id)) return;
-            taskQueue.splice(getIndexById(id), 1);
+            var index = getIndexById(id);
+            if(taskQueue[index].importance > 1) {
+                backgroundAlert.off();
+            }
+            taskQueue.splice(index, 1);
         },
         removeAll: () => {
             taskQueue.map(x => x.id).forEach(x => TaskQueue.remove(x));
         },
+        removeAlerted: () => {
+            taskQueue.filter(x => x.isAlerted)
+                     .map(x => x.id)
+                     .forEach(x => TaskQueue.remove(x));
+        },
+        removeSound: (id, soundId) => {
+            var index = getIndexById(id);
+            if(index == undefined) return;
+            for(var i = 0; i < taskQueue[index].sound.length; i++) {
+                if(taskQueue[index].sound[i].id == soundId) {
+                    taskQueue[index].sound.splice(i, 1);
+                    return;
+                }
+            }
+        },
         checkDeadline: () => {
             for(var i = 0; taskQueue[i] != undefined
-                    && Date.now() - taskQueue[i].deadline >= -250; i++) {
+                    && Date.now() - taskQueue[i].deadline >= -UPDATE_TIME / 2
+                    ; i++) {
                 if(!taskQueue[i].isAlerted) {
                     var id = taskQueue[i].id;
                     taskQueue[i].isAlerted = true;
@@ -153,15 +305,17 @@ var TaskQueue = (() => {
                     textDom.className = 'strike';
                     document.getElementById('time_' + id).innerHTML = '';
                     switch(taskQueue[i].importance) {
-                        case 0:
-                            setTimeout(TaskQueue.remove, 15000, id);
+                        case 3:
+                            setTimeout(window.alert, 1000, textDom.innerText);
+                        case 2:
+                            textDom.className += ' red';
+                            backgroundAlert.on();
                             break;
                         case 1:
-                            textDom.className += ' em';
+                            textDom.className += ' yellow';
                             break;
-                        case 2:
-                            textDom.className += ' em';
-                            window.alert(textDom.innerText);
+                        case 0:
+                            setTimeout(TaskQueue.remove, 15000, id);
                             break;
                     }
                 }
@@ -180,12 +334,10 @@ var TaskQueue = (() => {
             });
         },
         stopSound: id => {
+            if(!removeDom('stopButton_' + id)) return;
             var index = getIndexById(id);
-            taskQueue[index].sound.forEach(x => {
-                x.pause();
-            });
+            taskQueue[index].sound.forEach(x => x.pause());
             taskQueue[index].sound = [];
-            removeDom('stopButton_' + id);
         },
         stopAllSound: () => {
             ['global', ...taskQueue.map(x => x.id)]
@@ -214,7 +366,6 @@ var Task = (() => {
                 if(result[4] != undefined) {
                     ret += parseInt(result[4], 10);
                 }
-                console.log(new Date(Date.now() + 1000 * ret).toString());
                 return Date.now() + 1000 * ret;
             }
         };
@@ -300,8 +451,7 @@ var Task = (() => {
                     if(tmp.getTime() > ret.getTime()) ret = tmp;
                 }
                 if(now >= ret.getTime()) return undefined;
-                console.log(ret.toString());
-            return ret.getTime();
+                return ret.getTime();
             }
         };
     })();
@@ -312,11 +462,11 @@ var Task = (() => {
             if(regex.test(s)) {
                 var result = regex.exec(s);
                 defaultSound = result[1];
-                defaultImportance = result[2];
+                defaultImportance = result[2].length;
             }
         },
         parse: s => {
-            var regex = /^([^\/]*)((?:\/(?:([-\d])(!{0,2})|\*([^\/]*)(!{0,2}))?(?:\/(.*))?)?)$/;
+            var regex = /^([^\/]*)((?:\/(?:(?:([-\d])|\*([^\/]*?))(!{0,3}))?(?:\/(.*))?)?)$/;
             var result = regex.exec(s);
             var plusSplit = /^([^\+]*?)(?:\+(.*))?$/.exec(result[1]);
             plusSplit[1] = Replacer.replace(plusSplit[1]);
@@ -334,7 +484,7 @@ var Task = (() => {
                 case undefined:
                     break;
                 case '':
-                    execs.push(plusSplit[1] + result[2]);
+                    execs.push(plusSplit[1] + '+' + result[2]);
                     break;
                 default:
                     execs.push(plusSplit[2] + result[2]);
@@ -342,30 +492,51 @@ var Task = (() => {
             }
             if(result[3] != undefined) {
                 execs.push('sound ' + result[3]);
-                ret.importance = result[4].length;
-            } else if(result[5] != undefined) {
-                execs.push(result[5]);
-                ret.importance = result[6].length;
+            } else if(result[4] != undefined) {
+                execs.push(result[4]);
             } else {
                 execs.push('sound ' + defaultSound);
+            }
+            if(result[5] != undefined) {
+                ret.importance = result[5].length;
+            } else {
                 ret.importance = defaultImportance;
             }
-            if(result[7] != undefined) {
-                ret.name = result[7];
+            if(result[6] != undefined) {
+                ret.name = result[6];
                 ret.type = NameType.None;
             } else {
                 ret.name = plusSplit[1];
             }
             ret.exec = execs.join(';');
             return ret;
+        },
+        sendByGui: () => {
+            var form = document.guiForm;
+            var taskType = form.taskType.value;
+            var sound = form.sound.value;
+            var importance = form.importance.value;
+            var name = form.text.value;
+            var main;
+            if(taskType == 'timer') {
+                var orig = 3600 * form.timer_hour.value
+                        + 60 * form.timer_minute.value
+                        + form.timer_second.value;
+                main = toDhms(orig).replace(/^(.*):(.*):(.*)$/, '$1$2.$3');
+            } else {
+                main = [form.alarm_hour.value
+                        , form.alarm_minute.value
+                        , form.alarm_second.value].join(':');
+            }
+            parseMain([main, sound + importance, name].join('/'));
         }
     };
 })();
 
 var getText = (() => {
     return () => {
-        var input = document.form1.input.value;
-        document.form1.input.value = '';
+        var input = document.cuiForm.input.value;
+        document.cuiForm.input.value = '';
         parseMain(input, 'global');
     };
 })();
@@ -375,7 +546,7 @@ var parseMain = (() => {
 
     return (text, callFrom) => {
         if(Replacer.isMatch(text)) {
-            Replacer.push(text);
+            Replacer.add(text);
             return;
         }
         text = Replacer.replace(text);
@@ -384,51 +555,79 @@ var parseMain = (() => {
             texts.forEach(element => parseMain(element, callFrom));
             return;
         }
-        var spaceSplit = /^([^ ]*) (.*)$/.exec(texts);
-        if(spaceSplit != null) {
-            switch(spaceSplit[1]) {
-                case 'switch':
-                    Display.toggle();
+        var spaceSplit = /^([^ ]*)(?: (.*))?$/.exec(texts);
+        switch(spaceSplit[1]) {
+            case 'switch':
+                Display.toggle();
+                return;
+            case 'remove':
+                if(spaceSplit[2] == '*') {
+                    TaskQueue.removeAll();
                     return;
-                case 'remove':
-                    if(spaceSplit[2] == '*') {
-                        TaskQueue.removeAll();
-                        return;
-                    }
-                    [...new Set(spaceSplit[2].split(' '))]
-                            .map(x => TaskQueue.getIdByIndex(
-                                    parseInt(x, 10) - 1))
-                            .forEach(x => TaskQueue.remove(x));
+                } else if(spaceSplit[2] == null) {
+                    TaskQueue.removeAlerted();
                     return;
-            //case 'button':
-            //    makeButton()
-            //case 'remove-macro':
-            //case 'exit':
-                case 'sound':
-                    if(!/\d/.test(spaceSplit[2])) return;
-                    Sound.play('sound/alarm' + spaceSplit[2] + '.mp3'
-                            , callFrom);
+                }
+                [...new Set(spaceSplit[2].split(' '))]
+                        .map(x => TaskQueue.getIdByIndex(parseInt(x, 10) - 1))
+                        .forEach(x => TaskQueue.remove(x));
+                return;
+            case 'button':
+                if(spaceSplit[2] == null) return;
+                Button.add(spaceSplit[2]);
+                return;
+            case 'remove-button':
+                if(spaceSplit[2] == '*') {
+                    Button.removeAll();
                     return;
-                case 'stop':
-                    if(spaceSplit[2] == '*') {
-                        Sound.stopAll();
-                        return;
-                    }
-                    [...new Set(spaceSplit[2].split(' '))]
-                            .map(x => TaskQueue.getIdByIndex(
-                                    parseInt(x, 10) - 1))
-                            .forEach(x => Sound.stop(x));
+                }
+                [...new Set(spaceSplit[2].split(' '))]
+                        .map(x => Button.getIdByIndex(parseInt(x, 10) - 1))
+                        .forEach(x => Button.remove(x));
+                return;
+            case 'show-macro':
+                document.getElementById('macro').style.display = 'block';
+                return;
+            case 'hide-macro':
+                document.getElementById('macro').style.display = 'none';
+                return;
+            case 'remove-macro':
+                if(spaceSplit[2] == '*') {
+                    Replacer.removeAll();
                     return;
-                case 'volume':
-                    var volume = parseInt(spaceSplit[1], 10);
-                    if(volume >= 0 && volume <= 100) {
-                        Sound.volume(volume);
-                    }
+                }
+                [...new Set(spaceSplit[2].split(' '))]
+                        .map(x => Replacer.getIdByIndex(parseInt(x, 10) - 1))
+                        .forEach(x => Replacer.remove(x));
+                return;
+            case 'sound':
+                if(!/^\d$/.test(spaceSplit[2])) return;
+                Sound.play('sound/alarm' + spaceSplit[2] + '.mp3'
+                        , callFrom);
+                return;
+            case 'stop':
+                if(spaceSplit[2] == '*') {
+                    Sound.stopAll();
                     return;
-                case 'default':
-                    Task.setDefault(spaceSplit[1]);
+                } else if(spaceSplit[2] == null) {
+                    Sound.stop('global');
                     return;
-            }
+                }
+                [...new Set(spaceSplit[2].split(' '))]
+                        .map(x => TaskQueue.getIdByIndex(parseInt(x, 10) - 1))
+                        .forEach(x => Sound.stop(x));
+                return;
+            case 'volume':
+                var volume = parseInt(spaceSplit[2], 10);
+                if(volume >= 0 && volume <= 100) {
+                    Sound.setVolume(volume);
+                    document.getElementById('range_volume').value = volume;
+                    showVolume();
+                }
+                return;
+            case 'default':
+                Task.setDefault(spaceSplit[2]);
+                return;
         }
         var taskElement = Task.parse(texts);
         if(taskElement == null) return;
@@ -441,7 +640,7 @@ var Display = (() => {
 
     var deadlineStr = (deadline, now) => {
         var deadlineObj = new Date(deadline);
-        var ret = toTimeString(deadlineObj);
+        var ret = toHms(deadlineObj);
         if(deadline - now >= 86400000) {
             ret = (deadlineObj.getMonth() + 1) + '-' + deadlineObj.getDate()
                     + ',' + ret;
@@ -453,15 +652,7 @@ var Display = (() => {
     };
     var restStr = (deadline, now) => {
         var rest = deadline - now;
-        var d = Math.floor(rest / 86400000);
-        rest -= d * 86400000;
-        var h = Math.floor(rest / 3600000);
-        rest -= h * 3600000;
-        var m = Math.floor(rest / 60000);
-        rest -= m * 60000;
-        var s = Math.round(rest / 1000);
-        var ret = [h, m, s].map(x => ('0' + x).slice(-2)).join(':');
-        return '[' + (d > 0 ? d + ',' : '') + ret + ']';
+        return '[' + toDhms(rest / 1000) + ']';
     };
 
     return {
@@ -477,7 +668,7 @@ var Display = (() => {
 
 var clock = (() => {
     return () => {
-        document.getElementById('clock').innerText = toTimeString(new Date());
+        document.getElementById('clock').innerText = toHms(new Date());
         Display.show();
         TaskQueue.checkDeadline();
     };
@@ -490,7 +681,7 @@ var focus = (() => {
             if(target.id == 'menu') return;
             target = target.parentNode;
         }
-        document.form1.input.focus();
+        document.cuiForm.input.focus();
     };
 })();
 
@@ -500,6 +691,7 @@ var showTimerGUI = (() => {
         document.getElementById('timer_setting').style.display = 'block';
         document.getElementById('label_radio_alarm').className = 'gray';
         document.getElementById('alarm_setting').style.display = 'none';
+        document.getElementById('gui_other_setting').style.display = 'block';
     };
 })();
 var showAlarmGUI = (() => {
@@ -508,7 +700,16 @@ var showAlarmGUI = (() => {
         document.getElementById('alarm_setting').style.display = 'block';
         document.getElementById('label_radio_timer').className = 'gray';
         document.getElementById('timer_setting').style.display = 'none';
+        document.getElementById('gui_other_setting').style.display = 'block';
     };
 })();
 
-setInterval(clock, 500);
+var showVolume = (() => {
+    return () => {
+        var value = document.getElementById('range_volume').value;
+        document.getElementById('volume').innerText = value;
+        Sound.setVolume(value);
+    };
+})();
+
+setInterval(clock, UPDATE_TIME);

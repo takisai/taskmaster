@@ -1,13 +1,25 @@
-.em {
-    background-color: #ff4b00;
-}
-
 details {
     display: inline-block;
 }
 
 details > div {
     padding-left: 1em;
+}
+
+input[type=range], select {
+    vertical-align: middle;
+}
+
+#clock, form[name=cuiForm], #div_volume, #button_parent, #macro, #menu {
+    margin: 8px 0px;
+}
+
+.red {
+    background-color: #ff4b00;
+}
+
+.yellow {
+    background-color: #fff100;
 }
 
 .strike {
@@ -19,17 +31,13 @@ details > div {
 }
 
 .gray {
-    color: #999999;
+    color: #84919e;
 }
 
 #clock {
     font-size: 200%;
 }
 
-#macros {
-    display: block;
-}
-
-#timer_setting, #alarm_setting {
+#macro, #timer_setting, #alarm_setting, #gui_other_setting {
     display: none;
 }

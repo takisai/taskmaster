@@ -426,7 +426,7 @@ var Task = (() => {
                 } else {
                     isFree.push(6);
                 }
-                while(now >= ret.getTime() && isFree != []) {
+                while(now >= ret.getTime() && isFree.toString() != '') {
                     var pop = isFree.pop(), tmp = ret;
                     switch(pop) {
                         case 1:
@@ -450,7 +450,6 @@ var Task = (() => {
                     }
                     if(tmp.getTime() > ret.getTime()) ret = tmp;
                 }
-                if(now >= ret.getTime()) return undefined;
                 return ret.getTime();
             }
         };
@@ -466,7 +465,7 @@ var Task = (() => {
             }
         },
         parse: s => {
-            var regex = /^([^\/]*)((?:\/(?:(?:([-\d])|\*([^\/]*?))(!{0,3}))?(?:\/(.*))?)?)$/;
+            var regex = /^([^\/]*)((?:\/(?:([-\d])|\*([^\/]*?))?(!{0,3})(?:\/(.*))?)?)$/;
             var result = regex.exec(s);
             var plusSplit = /^([^\+]*?)(?:\+(.*))?$/.exec(result[1]);
             plusSplit[1] = Replacer.replace(plusSplit[1]);
@@ -478,7 +477,7 @@ var Task = (() => {
                 ret.deadline = Alarm.parse(plusSplit[1]);
                 ret.type = NameType.Alarm;
             } else return null;
-            if(ret.deadline == undefined) return null;
+            ret.invalid = Date.now() - ret.deadline >= -UPDATE_TIME / 2;
 
             switch(plusSplit[2]) {
                 case undefined:

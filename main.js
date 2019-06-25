@@ -18,7 +18,7 @@ var toDhms = (() => {
         rest -= h * 3600;
         var m = Math.floor(rest / 60);
         rest -= m * 60;
-        var s = Math.round(rest);
+        var s = Math.floor(rest);
         var ret = [h, m, s].map(x => ('0' + x).slice(-2)).join(':');
         return (d > 0 ? d + ',' : '') + ret;
     }

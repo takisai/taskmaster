@@ -40,8 +40,10 @@ var Save = (() => {
             var macros = Replacer.save(sep);
             var volume = Sound.save(sep);
             var buttons = Button.save(sep);
-            var defaluts = Task.save(sep);
-            var rets = [].concat(tasks, macros, volume, buttons, defaults);
+            var defaults = Task.save(sep);
+            var display = Display.save(sep);
+            var rets = [].concat(tasks, macros, volume, buttons, defaults
+                    , display);
             return rets.join(sep);
         },
         exec: sep => {
@@ -100,6 +102,8 @@ var Sound = (() => {
         setVolume: n => {
             volume = n;
             TaskQueue.setVolume(volume / 100);
+            document.getElementById('range_volume').value = volume;
+            document.getElementById('volume').innerText = volume;
         },
         play: (url, id) => {
             if(sounds[url] == undefined) {
@@ -140,6 +144,7 @@ var Replacer = (() => {
     var regex = /^([^;]+?)->(.*)$/;
     var replaceSet = [];
     var replacerCount = 0;
+    var isHide = true;
 
     return {
         getIdByIndex: index => {
@@ -157,8 +162,9 @@ var Replacer = (() => {
             replaceSet.push(element);
             var newLiElement = document.createElement('li');
             newLiElement.innerHTML =
-                    '<input type="button" value="remove" onclick="Replacer.remove(\''
-                    + id + '\');"> ' + element.keyStr + ' -> ' + element.value;
+                    '<input type="button" value="remove" onclick="parseMain(\'remove-macro $'
+                    + id + '\', \'global\');"> ' + element.keyStr + ' -> '
+                    + element.value;
             newLiElement.setAttribute('id', 'macro_' + id);
             var target = document.getElementById('macro_parent');
             target.appendChild(newLiElement);
@@ -184,8 +190,21 @@ var Replacer = (() => {
             }
             return s;
         },
+        show: () => {
+            document.getElementById('macro').style.display = 'block';
+            isHide = false;
+        },
+        hide: () => {
+            document.getElementById('macro').style.display = 'none';
+            isHide = true;
+        },
         save: sep => {
-            return replaceSet.map(x => x.key + '->' + x.value).join(sep);
+            var macros = replaceSet.map(x => x.keyStr + '->' + x.value);
+            if(isHide) {
+                return macros.join(sep);
+            } else {
+                return ['show-macro', ...macros].join(sep);
+            }
         }
     };
 })();
@@ -222,7 +241,7 @@ var Button = (() => {
             buttons.map(x => x.id).forEach(x => Button.remove(x));
         },
         save: sep => {
-            buttons.map(x => 'button ' + x.str).join(sep);
+            return buttons.map(x => 'button ' + x.str).join(sep);
         }
     };
 })();
@@ -277,8 +296,8 @@ var TaskQueue = (() => {
             taskElement.sound = [];
             taskElement.soundCount = 0;
             newLiElement.innerHTML =
-                    '<input type="button" value="remove" onclick="TaskQueue.remove(\''
-                    + id + '\');"> <span id="text_' + id + '">'
+                    '<input type="button" value="remove" onclick="parseMain(\'remove $'
+                    + id + '\', \'global\');"> <span id="text_' + id + '">'
                     + taskElement.name + '<span id ="time_' + id
                     + '"></span></span> ';
             newLiElement.setAttribute('id', 'item_' + id);
@@ -367,7 +386,7 @@ var Task = (() => {
 
     var formatDeadline = deadline => {
         var o = new Date(deadline);
-        var ymd = [o.getFullYear(), o.getMonth(), o.getDate()].join('-');
+        var ymd = [o.getFullYear(), o.getMonth() + 1, o.getDate()].join('-');
         return ymd + ',' + toHms(o);
     };
 
@@ -500,7 +519,7 @@ var Task = (() => {
             } else return null;
             ret.isValid = Date.now() - ret.deadline < -UPDATE_TIME / 2;
 
-            ret.saveText = formatDeadline(ret.saveText);
+            ret.saveText = formatDeadline(ret.deadline);
             switch(plusSplit[2]) {
                 case undefined:
                     break;
@@ -602,6 +621,11 @@ var parseMain = (() => {
                     TaskQueue.removeAlerted();
                     break;
                 }
+                var idCall = /^\$(\d+)$/.exec(spaceSplit[2]);
+                if(idCall != null) {
+                    TaskQueue.remove(parseInt(idCall[1]));
+                    break;
+                }
                 [...new Set(spaceSplit[2].split(' '))]
                         .map(x => TaskQueue.getIdByIndex(parseInt(x, 10) - 1))
                         .forEach(x => TaskQueue.remove(x));
@@ -620,14 +644,19 @@ var parseMain = (() => {
                         .forEach(x => Button.remove(x));
                 break;
             case 'show-macro':
-                document.getElementById('macro').style.display = 'block';
-                return;
+                Replacer.show();
+                break;
             case 'hide-macro':
-                document.getElementById('macro').style.display = 'none';
-                return;
+                Replacer.hide();
+                break;
             case 'remove-macro':
                 if(spaceSplit[2] == '*') {
                     Replacer.removeAll();
+                    break;
+                }
+                var idCall = /^\$(\d+)$/.exec(spaceSplit[2]);
+                if(idCall != null) {
+                    Replacer.remove(parseInt(idCall[1]));
                     break;
                 }
                 [...new Set(spaceSplit[2].split(' '))]
@@ -655,8 +684,6 @@ var parseMain = (() => {
                 var volume = parseInt(spaceSplit[2], 10);
                 if(volume >= 0 && volume <= 100) {
                     Sound.setVolume(volume);
-                    document.getElementById('range_volume').value = volume;
-                    showVolume();
                 }
                 break;
             case 'default':
@@ -726,6 +753,9 @@ var Display = (() => {
                     setTimeout(TaskQueue.remove, 15000, id);
                     break;
             }
+        },
+        save: sep => {
+            return !isShowDeadline ? 'switch' : '';
         }
     };
 })();
@@ -771,11 +801,9 @@ var showAlarmGUI = (() => {
 var showVolume = (() => {
     return () => {
         var value = document.getElementById('range_volume').value;
-        document.getElementById('volume').innerText = value;
-        Sound.setVolume(value);
+        parseMain('volume ' + value, 'showVolume');
     };
 })();
 
 setInterval(clock, UPDATE_TIME);
-Load.exec(SEPARATOR);
 parseMain('init', 'global');

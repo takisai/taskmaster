@@ -497,10 +497,11 @@ var Task = (() => {
 
     return {
         setDefault: s => {
-            var regex = /^([-\d])(!{0,3})$/
-            if(regex.test(s)) {
-                var result = regex.exec(s);
-                defaultSound = result[1];
+            var result = /^([-\d]?)(!{0,3})$/.exec(s);
+            if(result != null) {
+                if(result[1] != '') {
+                    defaultSound = result[1];
+                }
                 defaultImportance = result[2];
             }
         },
@@ -543,7 +544,7 @@ var Task = (() => {
                 execs.push('sound ' + defaultSound);
                 ret.saveText += defaultSound;
             }
-            if(result[5] != undefined) {
+            if(result[5] != '' && result[5] != undefined) {
                 ret.importance = result[5].length;
                 ret.saveText += result[5];
             } else {

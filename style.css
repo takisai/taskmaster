@@ -10,7 +10,7 @@ input[type=range], select {
     vertical-align: middle;
 }
 
-#clock, form[name=cuiForm], #div_volume, #button_parent, #macro, #menu {
+form[name=cuiForm], #div_volume, #button_parent, #macro, #menu {
     margin: 8px 0px;
 }
 
@@ -35,7 +35,8 @@ input[type=range], select {
 }
 
 #clock {
-    font-size: 200%;
+    font-size: 2em;
+    margin: 8px 0px;
 }
 
 #macro, #timer_setting, #alarm_setting, #gui_other_setting {

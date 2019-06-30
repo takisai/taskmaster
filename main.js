@@ -1,7 +1,8 @@
 'use strict';
-var NameType = {None: 0, Timer: 1, Alarm: 2};
 var UPDATE_TIME = 200;
-var SEPARATOR = '|';
+var SEPARATOR = '\v';
+
+var NameType = {None: 0, Timer: 1, Alarm: 2};
 
 var toHms = (() => {
     return o => {
@@ -37,13 +38,13 @@ var Save = (() => {
     return  {
         makeData: sep => {
             var tasks = TaskQueue.save(sep);
-            var macros = Replacer.save(sep);
             var volume = Sound.save(sep);
             var buttons = Button.save(sep);
             var defaults = Task.save(sep);
             var display = Display.save(sep);
-            var rets = [].concat(tasks, macros, volume, buttons, defaults
-                    , display);
+            var macros = Replacer.save(sep);
+            var rets = [].concat(tasks, volume, buttons, defaults, display
+                    , macros);
             return rets.join(sep);
         },
         exec: sep => {
@@ -297,7 +298,8 @@ var TaskQueue = (() => {
             taskElement.soundCount = 0;
             newLiElement.innerHTML =
                     '<input type="button" value="remove" onclick="parseMain(\'remove $'
-                    + id + '\', \'global\');"> <span id="text_' + id + '">'
+                    + id + '\', \'global\');"> <span id="text_' + id
+                    + '" title="' + taskElement.tipText + '">'
                     + taskElement.name + '<span id ="time_' + id
                     + '"></span></span> ';
             newLiElement.setAttribute('id', 'item_' + id);
@@ -382,13 +384,7 @@ var TaskQueue = (() => {
 
 var Task = (() => {
     var defaultSound = '0';
-    var defaultImportance = '';
-
-    var formatDeadline = deadline => {
-        var o = new Date(deadline);
-        var ymd = [o.getFullYear(), o.getMonth() + 1, o.getDate()].join('-');
-        return ymd + ',' + toHms(o);
-    };
+    var defaultImportance = 0;
 
     var Timer = (() => {
         var regex = /^(?:(\d+),)?(\d*?)(\d{1,2})(?:\.(\d+))?$/;
@@ -396,7 +392,7 @@ var Task = (() => {
             isMatch: s => {
                 return regex.test(s);
             },
-            parse: s => {
+            parse: (s, now) => {
                 var result = regex.exec(s);
                 var ret = 3600 * parseInt('0' + result[2], 10)
                         + 60 * parseInt('0' + result[3], 10);
@@ -406,7 +402,7 @@ var Task = (() => {
                 if(result[4] != undefined) {
                     ret += parseInt(result[4], 10);
                 }
-                return Date.now() + 1000 * ret;
+                return now + 1000 * ret;
             }
         };
     })();
@@ -418,9 +414,9 @@ var Task = (() => {
             isMatch: s => {
                 return regex.test(s);
             },
-            parse: s => {
+            parse: (s, now) => {
                 var result = regex.exec(s), ret = new Date(), isFind = false
-                        , now = Date.now(), isFree = [];
+                        , isFree = [];
                 if(isValid(result[1])) {
                     ret.setFullYear(parseInt(result[1], 10));
                     isFind = true;
@@ -497,69 +493,76 @@ var Task = (() => {
 
     return {
         setDefault: s => {
-            var result = /^([-\d]?)(!{0,3})$/.exec(s);
+            var result = /^([-\d]?)(\.|!{1,3})?$/.exec(s);
             if(result != null) {
                 if(result[1] != '') {
                     defaultSound = result[1];
                 }
-                defaultImportance = result[2];
+                if(result[2] != undefined) {
+                    defaultImportance = result[2] == '.' ? 0 : result[2].length;
+                }
             }
         },
         parse: s => {
-            var regex = /^([^\/]*)((?:\/(?:([-\d])|\*([^\/]*?))?(!{0,3})(?:\/(.*))?)?)$/;
-            var result = regex.exec(s);
-            var plusSplit = /^([^\+]*?)(?:\+(.*))?$/.exec(result[1]);
+            var regex = /^(?:(\d+)#)?([^\/]*)((?:\/(?:([-\d])|\*([^\/]*?))??(\.|!{1,3})?(?:\/(.*))?)?)$/;
+            var result = regex.exec(s), ret = new Object(), execs = [], now;
+            if(result == null) return null;
+            if(result[1] != undefined) {
+                now = new Date(parseInt(result[1], 10)).getTime();
+                ret.saveText = result[1];
+            } else {
+                now = Date.now();
+                ret.saveText = now;
+            }
+            var plusSplit = /^([^\+]*?)(?:\+(.*))?$/.exec(result[2]);
             plusSplit[1] = Replacer.replace(plusSplit[1]);
-            var ret = new Object(), execs = [];
             if(Timer.isMatch(plusSplit[1])) {
-                ret.deadline = Timer.parse(plusSplit[1]);
+                ret.deadline = Timer.parse(plusSplit[1], now);
                 ret.type = NameType.Timer;
             } else if(Alarm.isMatch(plusSplit[1])) {
-                ret.deadline = Alarm.parse(plusSplit[1]);
+                ret.deadline = Alarm.parse(plusSplit[1], now);
                 ret.type = NameType.Alarm;
             } else return null;
             ret.isValid = Date.now() - ret.deadline < -UPDATE_TIME / 2;
+            ret.saveText += '#' + result[2];
 
-            ret.saveText = formatDeadline(ret.deadline);
             switch(plusSplit[2]) {
                 case undefined:
                     break;
                 case '':
-                    execs.push(plusSplit[1] + '+' + result[2]);
-                    ret.saveText += '+' + plusSplit[1] + '+';
+                    execs.push(plusSplit[1] + '+' + result[3]);
                     break;
                 default:
-                    execs.push(plusSplit[2] + result[2]);
-                    ret.saveText += '+' + plusSplit[2];
+                    execs.push(plusSplit[2] + result[3]);
                     break;
             }
             ret.saveText += '/';
-            if(result[3] != undefined) {
-                execs.push('sound ' + result[3]);
-                ret.saveText += result[3];
-            } else if(result[4] != undefined) {
-                execs.push(result[4]);
+            if(result[4] != undefined) {
+                execs.push('sound ' + result[4]);
                 ret.saveText += result[4];
+            } else if(result[5] != undefined) {
+                execs.push(result[5]);
+                ret.saveText += result[5];
             } else {
                 execs.push('sound ' + defaultSound);
                 ret.saveText += defaultSound;
             }
-            if(result[5] != '' && result[5] != undefined) {
-                ret.importance = result[5].length;
-                ret.saveText += result[5];
-            } else {
-                ret.importance = defaultImportance.length;
-                ret.saveText += defaultImportance;
-            }
-            ret.saveText += '/';
             if(result[6] != undefined) {
-                ret.name = result[6];
+                ret.importance = result[6] == '.' ? 0 : result[6].length;
+                ret.saveText += result[6];
+            } else {
+                ret.importance = defaultImportance;
+                ret.saveText += ['.', '!', '!!', '!!!'][defaultImportance];
+            }
+            if(result[7] != undefined) {
+                ret.name = result[7];
                 ret.type = NameType.None;
+                ret.saveText += '/' + result[7];
             } else {
                 ret.name = plusSplit[1];
             }
-            ret.saveText += ret.name;
             ret.exec = execs.join(';');
+            ret.tipText = (/^\d+#(.*)$/.exec(ret.saveText))[1];
             return ret;
         },
         sendByGui: () => {
@@ -806,5 +809,8 @@ var showVolume = (() => {
     };
 })();
 
+window.addEventListener('click', focus);
+document.getElementById('range_volume').addEventListener('input', showVolume);
+Load.exec(SEPARATOR);
 setInterval(clock, UPDATE_TIME);
 parseMain('init', 'global');

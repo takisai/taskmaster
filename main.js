@@ -70,6 +70,25 @@ var Load = (() => {
     };
 })();
 
+var Notice = (() => {
+    var id = undefined;
+    return {
+        set: html => {
+            if(id !== undefined) {
+                clearTimeout(id);
+            }
+            var target = document.getElementById('notice');
+            target.innerHTML += html;
+            id = setTimeout(Notice.clear, 5000);
+        },
+        clear: () => {
+            var target = document.getElementById('notice');
+            target.innerHTML = '';
+            id = undefined;
+        }
+    };
+})();
+
 var backgroundAlert = (() => {
     var semaphore = 0;
     return {
@@ -602,123 +621,138 @@ var parseMain = (() => {
     var idCount = 0;
     var recursionCount = 0;
 
-    return (text, callFrom) => {
-        recursionCount++;
-        if(recursionCount > 5) {
-            console.log('too much recursion');
+    var main = (text, callFrom) => {
+        if(Replacer.isMatch(text)) {
+            Replacer.add(text);
+            return;
+        }
+        text = Replacer.replace(text);
+        var texts = text.split(';');
+        if(texts.length > 1) {
+            recursionCount++;
+            if(recursionCount > 5) {
+                throw 'too much recursion';
+            }
+            texts.forEach(element => main(element, callFrom));
             recursionCount--;
             return;
         }
+        recursionCount--;
+        var spaceSplit = /^([^ ]*)(?: (.*))?$/.exec(texts);
+        switch(spaceSplit[1]) {
+            case 'switch':
+                Display.toggle();
+                return;
+            case 'remove':
+                if(spaceSplit[2] == '*') {
+                    TaskQueue.removeAll();
+                    return;
+                } else if(spaceSplit[2] == null) {
+                    TaskQueue.removeAlerted();
+                    return;
+                }
+                var idCall = /^\$(\d+)$/.exec(spaceSplit[2]);
+                if(idCall != null) {
+                    TaskQueue.remove(parseInt(idCall[1]));
+                    return;
+                }
+                [...new Set(spaceSplit[2].split(' '))]
+                        .map(x => TaskQueue.getIdByIndex(
+                            parseInt(x, 10) - 1))
+                        .forEach(x => TaskQueue.remove(x));
+                return;
+            case 'button':
+                if(spaceSplit[2] == null) {
+                    return;
+                }
+                Button.add(spaceSplit[2]);
+                return;
+            case 'remove-button':
+                if(spaceSplit[2] == '*') {
+                    Button.removeAll();
+                    return;
+                }
+                [...new Set(spaceSplit[2].split(' '))]
+                        .map(x => Button.getIdByIndex(parseInt(x, 10) - 1))
+                        .forEach(x => Button.remove(x));
+                return;
+            case 'show-macro':
+                Replacer.show();
+                return;
+            case 'hide-macro':
+                Replacer.hide();
+                return;
+            case 'remove-macro':
+                if(spaceSplit[2] == '*') {
+                    Replacer.removeAll();
+                    return;
+                }
+                var idCall = /^\$(\d+)$/.exec(spaceSplit[2]);
+                if(idCall != null) {
+                    Replacer.remove(parseInt(idCall[1]));
+                    return;
+                }
+                [...new Set(spaceSplit[2].split(' '))]
+                        .map(x => Replacer.getIdByIndex(
+                            parseInt(x, 10) - 1))
+                        .forEach(x => Replacer.remove(x));
+                return;
+            case 'sound':
+                if(!/^\d$/.test(spaceSplit[2])) {
+                    return;
+                }
+                Sound.play('sound/alarm' + spaceSplit[2] + '.mp3'
+                        , callFrom);
+                return;
+            case 'stop':
+                if(spaceSplit[2] == '*') {
+                    Sound.stopAll();
+                    return;
+                } else if(spaceSplit[2] == null) {
+                    Sound.stop('global');
+                    return;
+                }
+                [...new Set(spaceSplit[2].split(' '))]
+                        .map(x => TaskQueue.getIdByIndex(
+                            parseInt(x, 10) - 1))
+                        .forEach(x => Sound.stop(x));
+                return;
+            case 'volume':
+                var volume = parseInt(spaceSplit[2], 10);
+                if(volume >= 0 && volume <= 100) {
+                    Sound.setVolume(volume);
+                }
+                return;
+            case 'default':
+                Task.setDefault(spaceSplit[2]);
+                return;
+            default:
+                break;
+        }
+        var taskElement = Task.parse(texts);
+        if(taskElement == null) return;
+        TaskQueue.insert(taskElement);
+        if(!taskElement.isValid) {
+            Display.doStrike(taskElement.id, taskElement.importance);
+        }
+    };
+
+    return (text, callFrom) => {
         try {
-            if(Replacer.isMatch(text)) {
-                Replacer.add(text);
-                return;
-            }
-            text = Replacer.replace(text);
-            var texts = text.split(';');
-            if(texts.length > 1) {
-                texts.forEach(element => parseMain(element, callFrom));
-                return;
-            }
-            var spaceSplit = /^([^ ]*)(?: (.*))?$/.exec(texts);
-            switch(spaceSplit[1]) {
-                case 'switch':
-                    Display.toggle();
-                    return;
-                case 'remove':
-                    if(spaceSplit[2] == '*') {
-                        TaskQueue.removeAll();
-                        return;
-                    } else if(spaceSplit[2] == null) {
-                        TaskQueue.removeAlerted();
-                        return;
-                    }
-                    var idCall = /^\$(\d+)$/.exec(spaceSplit[2]);
-                    if(idCall != null) {
-                        TaskQueue.remove(parseInt(idCall[1]));
-                        return;
-                    }
-                    [...new Set(spaceSplit[2].split(' '))]
-                            .map(x => TaskQueue.getIdByIndex(
-                                parseInt(x, 10) - 1))
-                            .forEach(x => TaskQueue.remove(x));
-                    return;
-                case 'button':
-                    if(spaceSplit[2] == null) return;
-                    Button.add(spaceSplit[2]);
-                    return;
-                case 'remove-button':
-                    if(spaceSplit[2] == '*') {
-                        Button.removeAll();
-                        return;
-                    }
-                    [...new Set(spaceSplit[2].split(' '))]
-                            .map(x => Button.getIdByIndex(parseInt(x, 10) - 1))
-                            .forEach(x => Button.remove(x));
-                    return;
-                case 'show-macro':
-                    Replacer.show();
-                    return;
-                case 'hide-macro':
-                    Replacer.hide();
-                    return;
-                case 'remove-macro':
-                    if(spaceSplit[2] == '*') {
-                        Replacer.removeAll();
-                        return;
-                    }
-                    var idCall = /^\$(\d+)$/.exec(spaceSplit[2]);
-                    if(idCall != null) {
-                        Replacer.remove(parseInt(idCall[1]));
-                        return;
-                    }
-                    [...new Set(spaceSplit[2].split(' '))]
-                            .map(x => Replacer.getIdByIndex(
-                                parseInt(x, 10) - 1))
-                            .forEach(x => Replacer.remove(x));
-                    return;
-                case 'sound':
-                    if(!/^\d$/.test(spaceSplit[2])) return;
-                    Sound.play('sound/alarm' + spaceSplit[2] + '.mp3'
-                            , callFrom);
-                    return;
-                case 'stop':
-                    if(spaceSplit[2] == '*') {
-                        Sound.stopAll();
-                        return;
-                    } else if(spaceSplit[2] == null) {
-                        Sound.stop('global');
-                        return;
-                    }
-                    [...new Set(spaceSplit[2].split(' '))]
-                            .map(x => TaskQueue.getIdByIndex(
-                                parseInt(x, 10) - 1))
-                            .forEach(x => Sound.stop(x));
-                    return;
-                case 'volume':
-                    var volume = parseInt(spaceSplit[2], 10);
-                    if(volume >= 0 && volume <= 100) {
-                        Sound.setVolume(volume);
-                    }
-                    return;
-                case 'default':
-                    Task.setDefault(spaceSplit[2]);
-                    return;
+            Notice.clear();
+            main(text, callFrom);
+        } catch(e) {
+            switch(e) {
+                case 'too much recursion':
+                    Notice.set('再帰が深すぎます');
+                    break;
                 default:
+                    Notice.set('予期しないエラー');
+                    console.log(e);
                     break;
             }
-            var taskElement = Task.parse(texts);
-            if(taskElement == null) return;
-            TaskQueue.insert(taskElement);
-            if(!taskElement.isValid) {
-                Display.doStrike(taskElement.id, taskElement.importance);
-            }
-        } catch(e) {
-            console.log('error: ' + e);
-        } finally {
-            Save.exec(SEPARATOR);
-            recursionCount--;
         }
+        Save.exec(SEPARATOR);
     };
 })();
 

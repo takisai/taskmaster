@@ -10,6 +10,10 @@ input[type=range], select {
     vertical-align: middle;
 }
 
+input[type=text] {
+    height: calc(1em + 8px);
+}
+
 form[name=cuiForm], #div_volume, #button_parent, #macro, #menu {
     margin: 8px 0px;
 }

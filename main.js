@@ -2,8 +2,6 @@
 var UPDATE_TIME = 200;
 var SEPARATOR = '\v';
 
-var NameType = {None: 0, Timer: 1, Alarm: 2};
-
 var toHms = (() => {
     return o => {
         var hms = [o.getHours(), o.getMinutes(), o.getSeconds()];
@@ -25,10 +23,28 @@ var toDhms = (() => {
     }
 })();
 
+var deadlineSubstStr = (() => {
+    return (deadline, now) => {
+        var deadlineObj = new Date(deadline);
+        var nowObj = new Date(now);
+        var ret = toHms(deadlineObj);
+        if(Math.abs(deadline - now) >= 86400000
+                || deadlineObj.getDate() !== nowObj.getDate()) {
+            ret = (deadlineObj.getMonth() + 1) + '-' + deadlineObj.getDate()
+                    + ',' + ret;
+        }
+        if(Math.abs(deadline - now) >= 86400000 * 365
+                || deadlineObj.getFullYear() !== nowObj.getFullYear()) {
+            ret = deadlineObj.getFullYear() + '-' + ret;
+        }
+        return ret;
+    };
+})();
+
 var removeDom = (() => {
     return id => {
         var target = document.getElementById(id);
-        if(target == null) return false;
+        if(target === null) return false;
         target.parentNode.removeChild(target);
         return true;
     };
@@ -57,7 +73,7 @@ var Save = (() => {
 var Load = (() => {
     return {
         parse: (sep, data) => {
-            if(data == null) return;
+            if(data === null) return;
             var items = data.split(sep);
             for(var item of items) {
                 parseMain(item, 'global');
@@ -72,6 +88,7 @@ var Load = (() => {
 
 var Notice = (() => {
     var id = undefined;
+
     return {
         set: html => {
             if(id !== undefined) {
@@ -84,6 +101,7 @@ var Notice = (() => {
         clear: () => {
             var target = document.getElementById('notice');
             target.innerHTML = '';
+            clearTimeout(id);
             id = undefined;
         }
     };
@@ -319,8 +337,8 @@ var TaskQueue = (() => {
                     '<input type="button" value="remove" onclick="parseMain(\'remove $'
                     + id + '\', \'global\');"> <span id="text_' + id
                     + '" title="' + taskElement.tipText + '">'
-                    + taskElement.name + '<span id ="time_' + id
-                    + '"></span></span> ';
+                    + taskElement.name + '</span><span id ="time_' + id
+                    + '"></span> ';
             newLiElement.setAttribute('id', 'item_' + id);
             for(i = 0; i < taskQueue.length; i++) {
                 if(taskQueue[i].deadline > taskElement.deadline) {
@@ -376,10 +394,9 @@ var TaskQueue = (() => {
         show: (isShowDeadline, makeStr) => {
             var now = Date.now();
             taskQueue.forEach(x => {
-                if(!x.isValid) return;
                 var target = document.getElementById('time_' + x.id);
-                if(isShowDeadline && x.type == NameType.Alarm) {
-                    target.innerText = '';
+                if(!x.isValid) {
+                    target.innerText = '@' + deadlineSubstStr(x.deadline, now);
                 } else {
                     target.innerText = makeStr(x.deadline, now);
                 }
@@ -537,10 +554,8 @@ var Task = (() => {
             plusSplit[1] = Replacer.replace(plusSplit[1]);
             if(Timer.isMatch(plusSplit[1])) {
                 ret.deadline = Timer.parse(plusSplit[1], now);
-                ret.type = NameType.Timer;
             } else if(Alarm.isMatch(plusSplit[1])) {
                 ret.deadline = Alarm.parse(plusSplit[1], now);
-                ret.type = NameType.Alarm;
             } else return null;
             ret.isValid = Date.now() - ret.deadline < -UPDATE_TIME / 2;
             ret.saveText += '#' + result[2];
@@ -575,7 +590,6 @@ var Task = (() => {
             }
             if(result[7] != undefined) {
                 ret.name = result[7];
-                ret.type = NameType.None;
                 ret.saveText += '/' + result[7];
             } else {
                 ret.name = plusSplit[1];
@@ -653,12 +667,11 @@ var parseMain = (() => {
                 }
                 var idCall = /^\$(\d+)$/.exec(spaceSplit[2]);
                 if(idCall != null) {
-                    TaskQueue.remove(parseInt(idCall[1]));
+                    TaskQueue.remove(parseInt(idCall[1], 10));
                     return;
                 }
                 [...new Set(spaceSplit[2].split(' '))]
-                        .map(x => TaskQueue.getIdByIndex(
-                            parseInt(x, 10) - 1))
+                        .map(x => TaskQueue.getIdByIndex(parseInt(x, 10) - 1))
                         .forEach(x => TaskQueue.remove(x));
                 return;
             case 'button':
@@ -689,12 +702,11 @@ var parseMain = (() => {
                 }
                 var idCall = /^\$(\d+)$/.exec(spaceSplit[2]);
                 if(idCall != null) {
-                    Replacer.remove(parseInt(idCall[1]));
+                    Replacer.remove(parseInt(idCall[1], 10));
                     return;
                 }
                 [...new Set(spaceSplit[2].split(' '))]
-                        .map(x => Replacer.getIdByIndex(
-                            parseInt(x, 10) - 1))
+                        .map(x => Replacer.getIdByIndex(parseInt(x, 10) - 1))
                         .forEach(x => Replacer.remove(x));
                 return;
             case 'sound':
@@ -713,8 +725,7 @@ var parseMain = (() => {
                     return;
                 }
                 [...new Set(spaceSplit[2].split(' '))]
-                        .map(x => TaskQueue.getIdByIndex(
-                            parseInt(x, 10) - 1))
+                        .map(x => TaskQueue.getIdByIndex(parseInt(x, 10) - 1))
                         .forEach(x => Sound.stop(x));
                 return;
             case 'volume':
@@ -730,7 +741,11 @@ var parseMain = (() => {
                 break;
         }
         var taskElement = Task.parse(texts);
-        if(taskElement == null) return;
+        if(taskElement === null) {
+            if(texts == '' || texts == 'init') return;
+            Notice.set('解釈できません: ' + texts);
+            return;
+        }
         TaskQueue.insert(taskElement);
         if(!taskElement.isValid) {
             Display.doStrike(taskElement.id, taskElement.importance);
@@ -760,16 +775,7 @@ var Display = (() => {
     var isShowDeadline = true;
 
     var deadlineStr = (deadline, now) => {
-        var deadlineObj = new Date(deadline);
-        var ret = toHms(deadlineObj);
-        if(deadline - now >= 86400000) {
-            ret = (deadlineObj.getMonth() + 1) + '-' + deadlineObj.getDate()
-                    + ',' + ret;
-        }
-        if(deadline - now >= 86400000 * 365) {
-            ret = deadlineObj.getFullYear() + '-' + ret;
-        }
-        return '(' + ret + ')';
+        return '(' + deadlineSubstStr(deadline, now) + ')';
     };
     var restStr = (deadline, now) => {
         var rest = deadline - now;

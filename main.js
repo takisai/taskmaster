@@ -28,13 +28,13 @@ var deadlineSubstStr = (() => {
         var deadlineObj = new Date(deadline);
         var nowObj = new Date(now);
         var ret = toHms(deadlineObj);
-        if(Math.abs(deadline - now) >= 86400000
-                || deadlineObj.getDate() !== nowObj.getDate()) {
+        if(Math.abs(deadline - now) >= 86400000 / 2
+                && deadlineObj.getDate() !== nowObj.getDate()) {
             ret = (deadlineObj.getMonth() + 1) + '-' + deadlineObj.getDate()
                     + ',' + ret;
         }
-        if(Math.abs(deadline - now) >= 86400000 * 365
-                || deadlineObj.getFullYear() !== nowObj.getFullYear()) {
+        if(Math.abs(deadline - now) >= 86400000 * 365 / 2
+                && deadlineObj.getFullYear() !== nowObj.getFullYear()) {
             ret = deadlineObj.getFullYear() + '-' + ret;
         }
         return ret;
@@ -144,9 +144,9 @@ var Sound = (() => {
             document.getElementById('volume').innerText = volume;
         },
         play: (url, id) => {
-            if(sounds[url] == undefined) {
+            if(sounds[url] === undefined) {
                 console.log('"' + url + '" is unregistered');
-            } else if(sounds[url].readyState == 4) {
+            } else if(sounds[url].readyState === 4) {
                 var sound = new Audio();
                 sound.src = sounds[url].src;
                 sound.volume = volume / 100;
@@ -162,8 +162,8 @@ var Sound = (() => {
                 if(isPlay) return;
                 var target = document.getElementById('item_' + id);
                 target.innerHTML += '<input id="stopButton_' + id
-                        + '" type="button" value="stop" onclick="Sound.stop(\''
-                        + id + '\');">';
+                        + '" type="button" value="stop" onclick="parseMain(\'stop $'
+                        + id + '\', \'global\');">';
             }
         },
         stop: id => {
@@ -186,7 +186,7 @@ var Replacer = (() => {
 
     return {
         getIdByIndex: index => {
-            if(replaceSet[index] == undefined) {
+            if(replaceSet[index] === undefined) {
                 return undefined;
             }
             return replaceSet[index].id;
@@ -210,7 +210,7 @@ var Replacer = (() => {
         remove: id => {
             if(!removeDom('macro_' + id)) return;
             for(var i = 0; i < replaceSet.length; i++) {
-                if(replaceSet[i].id == id) {
+                if(replaceSet[i].id === id) {
                     replaceSet.splice(i, 1);
                     return;
                 }
@@ -253,6 +253,9 @@ var Button = (() => {
 
     return {
         getIdByIndex: index => {
+            if(buttons[index] === undefined) {
+                return undefined;
+            }
             return buttons[index].id;
         },
         add: str => {
@@ -269,7 +272,7 @@ var Button = (() => {
         remove: id => {
             if(!removeDom('button_' + id)) return;
             for(var i = 0; i < buttons.length; i++) {
-                if(buttons[i].id == id) {
+                if(buttons[i].id === id) {
                     buttons.splice(i, 1);
                     return;
                 }
@@ -294,14 +297,14 @@ var TaskQueue = (() => {
 
     var getIndexById = id => {
         for(var i = -1; i < taskQueue.length; i++) {
-            if(taskQueue[i].id == id) return i;
+            if(taskQueue[i].id === id) return i;
         }
         return undefined;
     };
 
     return {
         getIdByIndex: index => {
-            if(taskQueue[index] == undefined) {
+            if(taskQueue[index] === undefined) {
                 return undefined;
             }
             return taskQueue[index].id;
@@ -309,7 +312,7 @@ var TaskQueue = (() => {
         setSound: (sound, id) => {
             var index = getIndexById(id);
             var count = taskQueue[index].soundCount;
-            sound.id = count;
+            sound.soundId = count;
             taskQueue[index].sound.push(sound);
             taskQueue[index].soundCount++;
             return count;
@@ -317,18 +320,18 @@ var TaskQueue = (() => {
         setVolume: volume => {
             for(var i = -1; i < taskQueue.length; i++) {
                 var sound = taskQueue[i].sound;
-                if(sound == undefined) continue;
+                if(sound === undefined) continue;
                 sound.forEach(x => x.volume = volume);
             }
         },
         isPlay: id => {
             var ret = taskQueue[getIndexById(id)];
-            if(ret == undefined) return true;
+            if(ret === undefined) return true;
             return ret.sound.length > 0;
         },
         insert: taskElement => {
             var i, newLiElement = document.createElement('li');
-            var id = '' + idCount, target;
+            var id = idCount, target;
             idCount++;
             taskElement.id = id;
             taskElement.sound = [];
@@ -371,16 +374,16 @@ var TaskQueue = (() => {
         },
         removeSound: (id, soundId) => {
             var index = getIndexById(id);
-            if(index == undefined) return;
+            if(index === undefined) return;
             for(var i = 0; i < taskQueue[index].sound.length; i++) {
-                if(taskQueue[index].sound[i].id == soundId) {
+                if(taskQueue[index].sound[i].soundId === soundId) {
                     taskQueue[index].sound.splice(i, 1);
                     return;
                 }
             }
         },
         checkDeadline: () => {
-            for(var i = 0; taskQueue[i] != undefined
+            for(var i = 0; taskQueue[i] !== undefined
                     && Date.now() - taskQueue[i].deadline >= -UPDATE_TIME / 2
                     ; i++) {
                 if(taskQueue[i].isValid) {
@@ -422,6 +425,10 @@ var Task = (() => {
     var defaultSound = '0';
     var defaultImportance = 0;
 
+    var importanceStr = () => {
+        return ['.', '!', '!!', '!!!'][defaultImportance];
+    };
+
     var Timer = (() => {
         var regex = /^(?:(\d+),)?(\d*?)(\d{1,2})(?:\.(\d+))?$/;
         return {
@@ -432,10 +439,10 @@ var Task = (() => {
                 var result = regex.exec(s);
                 var ret = 3600 * parseInt('0' + result[2], 10)
                         + 60 * parseInt('0' + result[3], 10);
-                if(result[1] != undefined) {
+                if(result[1] !== undefined) {
                     ret += 86400 * parseInt(result[1], 10);
                 }
-                if(result[4] != undefined) {
+                if(result[4] !== undefined) {
                     ret += parseInt(result[4], 10);
                 }
                 return now + 1000 * ret;
@@ -445,7 +452,7 @@ var Task = (() => {
 
     var Alarm = (() => {
         var regex = /^(?:(?:(\d*)-)?(\d*)-(\d*),)?(\d*):(\d*)(?::(\d*))?$/;
-        var isValid = n => n != '' && n != undefined;
+        var isValid = n => n !== '' && n !== undefined;
         return {
             isMatch: s => {
                 return regex.test(s);
@@ -498,7 +505,7 @@ var Task = (() => {
                 } else {
                     isFree.push(6);
                 }
-                while(now >= ret.getTime() && isFree.toString() != '') {
+                while(now >= ret.getTime() && isFree.length > 0) {
                     var pop = isFree.pop(), tmp = ret;
                     switch(pop) {
                         case 1:
@@ -529,21 +536,25 @@ var Task = (() => {
 
     return {
         setDefault: s => {
+            if(s === undefined) {
+                Notice.set('default: ' + defaultSound + importanceStr());
+                return;
+            }
             var result = /^([-\d]?)(\.|!{1,3})?$/.exec(s);
-            if(result != null) {
-                if(result[1] != '') {
+            if(result !== null) {
+                if(result[1] !== '') {
                     defaultSound = result[1];
                 }
-                if(result[2] != undefined) {
-                    defaultImportance = result[2] == '.' ? 0 : result[2].length;
+                if(result[2] !== undefined) {
+                    defaultImportance =
+                            result[2] === '.' ? 0 : result[2].length;
                 }
             }
         },
         parse: s => {
             var regex = /^(?:(\d+)#)?([^\/]*)((?:\/(?:([-\d])|\*([^\/]*?))??(\.|!{1,3})?(?:\/(.*))?)?)$/;
             var result = regex.exec(s), ret = new Object(), execs = [], now;
-            if(result == null) return null;
-            if(result[1] != undefined) {
+            if(result[1] !== undefined) {
                 now = new Date(parseInt(result[1], 10)).getTime();
                 ret.saveText = result[1];
             } else {
@@ -571,24 +582,24 @@ var Task = (() => {
                     break;
             }
             ret.saveText += '/';
-            if(result[4] != undefined) {
+            if(result[4] !== undefined) {
                 execs.push('sound ' + result[4]);
                 ret.saveText += result[4];
-            } else if(result[5] != undefined) {
+            } else if(result[5] !== undefined) {
                 execs.push(result[5]);
-                ret.saveText += result[5];
+                ret.saveText += '*' + result[5];
             } else {
                 execs.push('sound ' + defaultSound);
                 ret.saveText += defaultSound;
             }
-            if(result[6] != undefined) {
-                ret.importance = result[6] == '.' ? 0 : result[6].length;
+            if(result[6] !== undefined) {
+                ret.importance = result[6] === '.' ? 0 : result[6].length;
                 ret.saveText += result[6];
             } else {
                 ret.importance = defaultImportance;
-                ret.saveText += ['.', '!', '!!', '!!!'][defaultImportance];
+                ret.saveText += importanceStr();
             }
-            if(result[7] != undefined) {
+            if(result[7] !== undefined) {
                 ret.name = result[7];
                 ret.saveText += '/' + result[7];
             } else {
@@ -604,12 +615,17 @@ var Task = (() => {
             var sound = form.sound.value;
             var importance = form.importance.value;
             var name = form.text.value;
-            var main;
-            if(taskType == 'timer') {
+            var main = '';
+            if(taskType === 'timer') {
                 var orig = 3600 * form.timer_hour.value
                         + 60 * form.timer_minute.value
-                        + form.timer_second.value;
-                main = toDhms(orig).replace(/^(.*):(.*):(.*)$/, '$1$2.$3');
+                        + 1 * form.timer_second.value;
+                var result =
+                        /^(?:(\d+),)?(\d+):(\d+):(\d+)$/.exec(toDhms(orig));
+                if(result[1] !== undefined) {
+                    main = result[1] + ',';
+                }
+                main += result[2] + result[3] + '.' + result[4];
             } else {
                 main = [form.alarm_hour.value
                         , form.alarm_minute.value
@@ -618,7 +634,7 @@ var Task = (() => {
             parseMain([main, sound + importance, name].join('/'));
         },
         save: sep => {
-            return 'default ' + defaultSound + defaultImportance;
+            return 'default ' + defaultSound + importanceStr();
         }
     };
 })();
@@ -652,21 +668,21 @@ var parseMain = (() => {
             return;
         }
         recursionCount--;
-        var spaceSplit = /^([^ ]*)(?: (.*))?$/.exec(texts);
+        var spaceSplit = /^([^ ]*)(?: (.*))?$/.exec(text);
         switch(spaceSplit[1]) {
             case 'switch':
                 Display.toggle();
                 return;
             case 'remove':
-                if(spaceSplit[2] == '*') {
+                if(spaceSplit[2] === '*') {
                     TaskQueue.removeAll();
                     return;
-                } else if(spaceSplit[2] == null) {
+                } else if(spaceSplit[2] === undefined) {
                     TaskQueue.removeAlerted();
                     return;
                 }
                 var idCall = /^\$(\d+)$/.exec(spaceSplit[2]);
-                if(idCall != null) {
+                if(idCall !== null) {
                     TaskQueue.remove(parseInt(idCall[1], 10));
                     return;
                 }
@@ -675,13 +691,13 @@ var parseMain = (() => {
                         .forEach(x => TaskQueue.remove(x));
                 return;
             case 'button':
-                if(spaceSplit[2] == null) {
+                if(spaceSplit[2] === undefined || spaceSplit[2] === '') {
                     return;
                 }
                 Button.add(spaceSplit[2]);
                 return;
             case 'remove-button':
-                if(spaceSplit[2] == '*') {
+                if(spaceSplit[2] === '*') {
                     Button.removeAll();
                     return;
                 }
@@ -696,12 +712,12 @@ var parseMain = (() => {
                 Replacer.hide();
                 return;
             case 'remove-macro':
-                if(spaceSplit[2] == '*') {
+                if(spaceSplit[2] === '*') {
                     Replacer.removeAll();
                     return;
                 }
                 var idCall = /^\$(\d+)$/.exec(spaceSplit[2]);
-                if(idCall != null) {
+                if(idCall !== null) {
                     Replacer.remove(parseInt(idCall[1], 10));
                     return;
                 }
@@ -717,11 +733,16 @@ var parseMain = (() => {
                         , callFrom);
                 return;
             case 'stop':
-                if(spaceSplit[2] == '*') {
+                if(spaceSplit[2] === '*') {
                     Sound.stopAll();
                     return;
-                } else if(spaceSplit[2] == null) {
+                } else if(spaceSplit[2] === undefined) {
                     Sound.stop('global');
+                    return;
+                }
+                var idCall = /^\$(\d+)$/.exec(spaceSplit[2]);
+                if(idCall !== null) {
+                    Sound.stop(parseInt(idCall[1], 10));
                     return;
                 }
                 [...new Set(spaceSplit[2].split(' '))]
@@ -740,10 +761,10 @@ var parseMain = (() => {
             default:
                 break;
         }
-        var taskElement = Task.parse(texts);
+        var taskElement = Task.parse(text);
         if(taskElement === null) {
-            if(texts == '' || texts == 'init') return;
-            Notice.set('解釈できません: ' + texts);
+            if(text === '' || text === 'init') return;
+            Notice.set('undefined: ' + text);
             return;
         }
         TaskQueue.insert(taskElement);
@@ -759,10 +780,10 @@ var parseMain = (() => {
         } catch(e) {
             switch(e) {
                 case 'too much recursion':
-                    Notice.set('再帰が深すぎます');
+                    Notice.set('too much recursion');
                     break;
                 default:
-                    Notice.set('予期しないエラー');
+                    Notice.set('unexpected error');
                     console.log(e);
                     break;
             }
@@ -826,8 +847,8 @@ var clock = (() => {
 var focus = (() => {
     return event => {
         var target = event.target;
-        while(target != null) {
-            if(target.id == 'menu') return;
+        while(target !== null) {
+            if(target.id === 'menu') return;
             target = target.parentNode;
         }
         document.cuiForm.input.focus();

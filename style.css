@@ -18,12 +18,20 @@ form[name=cuiForm], #div_volume, #button_parent, #macro, #menu {
     margin: 8px 0px;
 }
 
-.red {
+.bg-red {
     background-color: #ff4b00;
 }
 
-.yellow {
+.bg-yellow {
     background-color: #fff100;
+}
+
+.bg-white {
+    background-color: white;
+}
+
+.bg-pink {
+    background-color: #ffcabf;
 }
 
 .strike {
@@ -34,8 +42,16 @@ form[name=cuiForm], #div_volume, #button_parent, #macro, #menu {
     width: 5em;
 }
 
+.red {
+    color: #ff4b00;
+}
+
 .gray {
     color: #84919e;
+}
+
+.block {
+    display: block;
 }
 
 #clock {
@@ -43,6 +59,6 @@ form[name=cuiForm], #div_volume, #button_parent, #macro, #menu {
     margin: 8px 0px;
 }
 
-#macro, #timer_setting, #alarm_setting, #gui_other_setting {
+.none, #macro, #timer_setting, #alarm_setting, #gui_other_setting {
     display: none;
 }

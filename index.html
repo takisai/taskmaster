@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ja">
     <head>
-        <title>test</title>
+        <title>Task Master</title>
         <meta charset="utf-8">
         <link rel="stylesheet" href="style.css">
     </head>
@@ -17,49 +17,145 @@
         </div>
         <div id="button_parent"></div>
         <ol id="parent"></ol>
-        <div id="macro">
-            <details open><summary>macro</summary><div>
-                <ol id="macro_parent"></ol>
-            </div></details>
+        <div id="macro" class="none">
+            <details open><summary>macro</summary>
+                <div>
+                    <ol id="macro_parent"></ol>
+                </div>
+            </details>
         </div>
-        <div id="menu"><details><summary>menu</summary><div>
-            <details><summary>タスク設定</summary><form name="guiForm">
-                <input id="radio_timer" type="radio" name="taskType" value="timer" onclick="showTimerGUI()">
-                <label id="label_radio_timer" for="radio_timer">タイマー</label>
-                <input id="radio_alarm" type="radio" name="taskType" value="alarm" onclick="showAlarmGUI()">
-                <label id="label_radio_alarm" for="radio_alarm">アラーム</label>
-                <div id="timer_setting">
-                    <input id="timer_hour" list="data_0-23" name="timer_hour" class="textbox_2digits"> 時間 <input id="timer_minute" list="data_0-59" name="timer_minute" class="textbox_2digits"> 分 <input id="timer_second" list="data_0-59" name="timer_second" class="textbox_2digits"> 秒後
+        <div id="menu">
+            <details><summary>menu</summary>
+                <div>
+                    <details><summary>タスク設定</summary>
+                        <form name="guiForm">
+                            <input id="radio_timer" type="radio" name="taskType" value="timer" onclick="showTimerGUI()">
+                            <label id="label_radio_timer" for="radio_timer">タイマー</label>
+                            <input id="radio_alarm" type="radio" name="taskType" value="alarm" onclick="showAlarmGUI()">
+                            <label id="label_radio_alarm" for="radio_alarm">アラーム</label>
+                            <div id="timer_setting" class="none">
+                                <input id="timer_hour" list="data_0-23" name="timer_hour" class="textbox_2digits"> 時間 <input id="timer_minute" list="data_0-59" name="timer_minute" class="textbox_2digits"> 分 <input id="timer_second" list="data_0-59" name="timer_second" class="textbox_2digits"> 秒後
+                            </div>
+                            <div id="alarm_setting" class="none">
+                                <input id="alarm_hour" list="data_0-23" class="textbox_2digits"> 時 <input id="alarm_minute" list="data_0-59" class="textbox_2digits"> 分 <input id="alarm_second" list="data_0-59" class="textbox_2digits"> 秒
+                            </div>
+                            <div id="gui_other_setting" class="none">
+                                テキスト: <input type="text" name="text"><br>音:
+                                <select name="sound">
+                                    <option value="0" default>ジャラジャラ</option>
+                                    <option value="1">ハープ</option>
+                                    <option value="2">キラキラ1</option>
+                                    <option value="3">キラキラ2</option>
+                                    <option value="4">鈴</option>
+                                    <option value="5">めざまし</option>
+                                    <option value="6">アラーム1</option>
+                                    <option value="7">アラーム2</option>
+                                    <option value="8">アラーム3</option>
+                                    <option value="9">アラーム4</option>
+                                    <option value="-">なし</option>
+                                </select>
+                                重要度
+                                <select name="importance">
+                                    <option value="." default>低</option>
+                                    <option value="!">中</option>
+                                    <option value="!!">高</option>
+                                    <option value="!!!">超</option>
+                                </select>
+                                で <input type="button" value="設定" onclick="Task.sendByGui()">
+                            </div>
+                        </form>
+                    </details>
                 </div>
-                <div id="alarm_setting">
-                    <input id="alarm_hour" list="data_0-23" class="textbox_2digits"> 時 <input id="alarm_minute" list="data_0-59" class="textbox_2digits"> 分 <input id="alarm_second" list="data_0-59" class="textbox_2digits"> 秒
+                <div>
+                    <details><summary>Task Masterについて</summary>
+                        <div>
+                            <p>Task Masterは、タスク管理ができるページです。</p>
+                            <dl>
+                                <dt>製作者</dt><dd>takisai</dd>
+                                <dt>Version 1.0</dt><dd>とりあえず作った</dd>
+                                <dt>動作ブラウザ</dt><dd></dd>
+                            </dl>
+                        </div>
+                    </details>
                 </div>
-                <div id="gui_other_setting">
-                    テキスト: <input type="text" name="text"><br>音:
-                    <select name="sound">
-                        <option value="0" default>ジャラジャラ</option>
-                        <option value="1">ハープ</option>
-                        <option value="2">キラキラ1</option>
-                        <option value="3">キラキラ2</option>
-                        <option value="4">鈴</option>
-                        <option value="5">めざまし</option>
-                        <option value="6">アラーム1</option>
-                        <option value="7">アラーム2</option>
-                        <option value="8">アラーム3</option>
-                        <option value="9">アラーム4</option>
-                        <option value="-">なし</option>
-                    </select>
-                    重要度
-                    <select name="importance">
-                        <option value="." default>低</option>
-                        <option value="!">中</option>
-                        <option value="!!">高</option>
-                        <option value="!!!">超</option>
-                    </select>
-                    で <input type="button" value="設定" onclick="Task.sendByGui()">
+                <div>
+                    <details><summary>使い方</summary>
+                        <div>
+                            <p>Task Masterは、基本的に上から2行目の入力欄に入力することで操作します。以下の説明に出てくる文字は、全て半角文字です。</p>
+                            <details><summary>タスクの設定</summary>
+                                <div>
+                                    <details open><summary>タスク入力</summary>
+                                        <div>
+                                            <p><a href="#help_taskStr">時刻設定文字列</a> [ / <a href="#help_taskAttr">タスク設定</a> [ / <a href="#help_taskName">タスク名</a> ] ]</p>
+                                            <p>タスク名を省略した場合、時刻設定文字列がタスク名になります。</p>
+                                            <p>例: "30" ←30分後にデフォルト設定でタスクを設定。タスク名は「30」<br>
+                                            "7:00/6/wake-up" ←朝7時に6番の音を鳴らすタスクを設定（重要度は既定値）。タスク名は「wake-up」</p>
+                                        </div>
+                                    </details>
+                                </div>
+                                <div>
+                                    <details open><summary><a name="help_taskStr">時刻設定文字列</a></summary>
+                                        <div>
+                                            <p><a href="#help_timeStr">時間指定</a> [ + ( 時刻設定文字列 | "" ) ]</p>
+                                            <p>時間指定を+でつなげることで、設定した時刻に自動で次の時間指定を行うことができます。+で指定を終えると、直前の時間指定が繰り返されます。</p>
+                                            <p>例: "10+5+5" ←10分後、それから5分後(=15分後)、さらに5分後(=20分後)に設定。<br>
+                                            "7:30+5+" ←朝7時30分、それから5分ごとに設定(いわゆるスヌーズ)。</p>
+                                            <p>参考: +でつなげた時間指定は全て同じタスク設定/タスク名が適用されます。回避するためには<a href="#help_macro">マクロ</a>を利用します。</p>
+                                        </div>
+                                    </details>
+                                </div>
+                                <div>
+                                    <details open><summary><a name="help_timeStr">時間指定</a></summary>
+                                        <div>
+                                            <p><a href="#help_timerStr">タイマー文字列</a> | <a href="#help_alarmStr">アラーム文字列</a></p>
+                                        </div>
+                                    </details>
+                                </div>
+                                <div>
+                                    <details open><summary><a name="help_timerStr">タイマー文字列</a></summary>
+                                        <div>
+                                            <p>[ D, ] HM [ .S ]</p>
+                                            <p>Dは日を表す数値です。HMは下二桁が分を、残りの数字が時間を表す数値です。Sは秒を表す数値です。</p>
+                                            <p>例: "130" ←1時間30分後を示します。<br>
+                                            "3,2400.15" ←3日と24時間と15秒後(=4日と15秒後)を示します。</p>
+                                        </div>
+                                    </details>
+                                </div>
+                                <div>
+                                    <details open><summary><a name="help_alarmStr">アラーム文字列</a></summary>
+                                        <div>
+                                            <p>[ [ Y- ] M-D, ] h : m [ :d ]</p>
+                                            <p>Y、M、D、h、m、dはそれぞれ年、月、日、時、分、秒を表す数値です。</p>
+                                            <p>それぞれの数値は省略することができます。省略した単位の場所によって挙動が異なります。省略した数値より上の単位に数値がある場合、月日なら1が、時刻なら0が入っているとみなします。そうでない場合、入力された数値と全て一致する次の時刻に設定します。</p>
+                                            <p>例: "23:0" ← 23時0分0秒を表します。これを入力したのが23時00分より前の場合、その日の23時が指定されます。23時00分より後の場合は、次の日の23時ちょうどが指定されます。<br>
+                                            "1-,9:0" ← 1月1日9時0分0秒を表します。入力したのが1月1日の9時より前の場合、その年の1月1日9時が指定されます。そうでない場合は、次の年の1月1日9時が指定されます。</p>
+                                        </div>
+                                    </details>
+                                </div>
+                                <div>
+                                    <details open><summary><a name="help_taskAttr">タスク設定</a></summary>
+                                        <div>
+                                            <p>[ 音番号 ] [ 重要度 ]</p>
+                                            <p>音番号は0から9の数値または-(ハイフン)。数値を入れると、対応する番号の音が鳴ります。-の場合は音が鳴りません。</p>
+                                            <p>重要度は.(ピリオド)または!、!!、!!!のいずれかです。重要度の指定は、設定した時刻からの動作を変更します。.の場合、15秒後にリストから消去されます。!の場合、タスクが黄色で強調されて自動消去はされません。!!の場合、タスクは赤色で強調されて、さらにTask Master全体が赤っぽく表示されます。!!!の場合、!!に加えてアラートが表示されます。</p>
+                                            <p>また、どちらの設定も省略することができます。その場合、<a href="#help_default">既定値</a>が適用されます。</p>
+                                            <p>例: "!!" ←音は既定値、重要度は高でタスクを設定</p>
+                                        </div>
+                                    </details>
+                                </div>
+                                <div>
+                                    <details open><summary><a name="help_taskName">タスク名</a></summary>
+                                        <div>
+                                            <p>タスク名は;(セミコロン)以外の任意の文字列が利用できます。</p>
+                                        <div>
+                                    </details>
+                                </div>
+                            </details>
+                        </div>
+                    </details>
                 </div>
-            </form></details>
-        </div></details></div>
+            </details>
+        </div>
     </body>
     <script src="main.js"></script>
     <datalist id="data_0-23">

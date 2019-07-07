@@ -158,7 +158,7 @@ let Sound = (() => {
             if(isPlay) return;
             document.getElementById('item_' + id).innerHTML +=
                     '<input id="stopButton_' + id
-                    + '" type="button" value="stop" onclick="parseMain(\'stop $'
+                    + '" type="button" value="stop" onclick="parseMain(\'#stop $'
                     + id + '\');">';
         },
         stop: id => {
@@ -188,7 +188,7 @@ let Macro = (() => {
             macros.push(element);
             let newLiElement = document.createElement('li');
             newLiElement.innerHTML =
-                    '<input type="button" value="remove" onclick="parseMain(\'remove-macro $'
+                    '<input type="button" value="remove" onclick="parseMain(\'#remove-macro $'
                     + id + '\');"> ' + element.keyStr + ' -> '
                     + element.value;
             newLiElement.setAttribute('id', 'macro_' + id);
@@ -224,7 +224,7 @@ let Macro = (() => {
         save: sep => {
             let ret = macros.map(x => x.keyStr + '->' + x.value).join(sep);
             if(!isHide) {
-                ret = 'show-macro' + sep + ret;
+                ret += sep + 'show-macro';
             }
             return ret;
         }
@@ -280,10 +280,8 @@ let TaskQueue = (() => {
 
     return {
         getIdByIndex: index => {
-            if(taskQueue[index] === undefined) {
-                return undefined;
-            }
-            return taskQueue[index].id;
+            return taskQueue[index] === undefined ? undefined
+                    : taskQueue[index].id;
         },
         setSound: (sound, id) => {
             let index = getIndexById(id), count = taskQueue[index].soundCount;
@@ -311,7 +309,7 @@ let TaskQueue = (() => {
             taskElement.sound = [];
             taskElement.soundCount = 0;
             newLiElement.innerHTML =
-                    '<input type="button" value="remove" onclick="parseMain(\'remove $'
+                    '<input type="button" value="remove" onclick="parseMain(\'#remove $'
                     + id + '\');"> <span id="text_' + id + '" title="'
                     + taskElement.tipText + '">' + taskElement.name
                     + '</span><span id ="time_' + id + '"></span> ';
@@ -341,8 +339,7 @@ let TaskQueue = (() => {
             taskQueue.map(x => x.id).forEach(x => TaskQueue.remove(x));
         },
         removeAlerted: () => {
-            taskQueue.filter(x => !x.isValid)
-                     .map(x => x.id)
+            taskQueue.filter(x => !x.isValid).map(x => x.id)
                      .forEach(x => TaskQueue.remove(x));
         },
         removeSound: (id, soundId) => {
@@ -362,8 +359,8 @@ let TaskQueue = (() => {
                 if(taskQueue[i].isValid) {
                     taskQueue[i].isValid = false;
                     let id = taskQueue[i].id;
-                    Display.doStrike(id, taskQueue[i].importance);
                     parseMain(taskQueue[i].exec, id);
+                    Display.doStrike(id, taskQueue[i].importance);
                 }
             }
         },
@@ -398,6 +395,9 @@ let Task = (() => {
     let defaultSound = '0', defaultImportance = 0;
     let importanceStr = () => {
         return ['.', '!', '!!', '!!!'][defaultImportance];
+    };
+    let importanceToNumber = str => {
+        return str === '.' ? 0 : str.length;
     };
 
     let Timer = (() => {
@@ -524,7 +524,7 @@ let Task = (() => {
                 defaultSound = result[1];
             }
             if(result[2] !== undefined) {
-                defaultImportance = result[2] === '.' ? 0 : result[2].length;
+                defaultImportance = importanceToNumber(result[2]);
             }
         },
         parse: s => {
@@ -538,7 +538,6 @@ let Task = (() => {
                 ret.saveText = now;
             }
             let plusSplit = /^([^\+]*?)(?:\+(.*))?$/.exec(result[2]);
-            plusSplit[1] = Macro.replace(plusSplit[1]);
             if(Timer.isMatch(plusSplit[1])) {
                 ret.deadline = Timer.parse(plusSplit[1], now);
             } else if(Alarm.isMatch(plusSplit[1])) {
@@ -559,17 +558,17 @@ let Task = (() => {
             }
             ret.saveText += '/';
             if(result[4] !== undefined) {
-                execs.push('sound ' + result[4]);
+                execs.push('#sound ' + result[4]);
                 ret.saveText += result[4];
             } else if(result[5] !== undefined) {
                 execs.push(result[5]);
                 ret.saveText += '*' + result[5];
             } else {
-                execs.push('sound ' + defaultSound);
+                execs.push('#sound ' + defaultSound);
                 ret.saveText += defaultSound;
             }
             if(result[6] !== undefined) {
-                ret.importance = result[6] === '.' ? 0 : result[6].length;
+                ret.importance = importanceToNumber(result[6]);
                 ret.saveText += result[6];
             } else {
                 ret.importance = defaultImportance;
@@ -586,11 +585,10 @@ let Task = (() => {
             return ret;
         },
         sendByGui: () => {
-            let form = document.guiForm;
-            let main = '', taskType = form.taskType.value;
+            let form = document.guiForm, main = '';
             let sound = form.sound.value, importance = form.importance.value;
             let name = form.text.value;
-            if(taskType === 'timer') {
+            if(form.taskType.value === 'timer') {
                 let orig = 3600 * form.timer_hour.value
                         + 60 * form.timer_minute.value
                         + 1 * form.timer_second.value;
@@ -630,12 +628,13 @@ let parseMain = (() => {
             return;
         }
         let noSet = [...new Set(str.split(' '))];
-        noSet.map(x => obj.getIdByIndex(parseInt(x, 10) - 1))
+        noSet.filter(x => /^\d+$/.test(x))
+                .map(x => obj.getIdByIndex(parseInt(x, 10) - 1))
                 .forEach(x => method(x));
-        var notNumbers = noSet.filter(x => !/^\d+$/.test(x));
-        if(notNumbers.length > 0) {
-            Notice.set('syntax error: ' + inst + ' <span class="red">'
-                    + notNumbers.join(' ') + '</span>');
+        if(noSet.some(x => /\D/.test(x))) {
+            Notice.set('syntax error: ' + inst + ' '
+                    + noSet.map(x => x.replace(/^(\d*\D.*)$/
+                    , '<span class="red">$1</span>')).join(' '));
         }
     };
     let isIdCall = (method, str) => {
@@ -648,11 +647,18 @@ let parseMain = (() => {
     };
 
     let main = (text, callFrom) => {
+        let hashResult = /^#(.*)/.exec(text), isRawMode = false;
+        if(hashResult !== null) {
+            text = text.slice(1);
+            isRawMode = true;
+        }
         if(Macro.isMatch(text)) {
             Macro.add(text);
             return;
         }
-        text = Macro.replace(text);
+        if(!isRawMode) {
+            text = Macro.replace(text);
+        }
         let texts = text.split(';');
         if(texts.length > 1) {
             recursionCount++;
@@ -663,7 +669,6 @@ let parseMain = (() => {
             recursionCount--;
             return;
         }
-        recursionCount--;
         let spaceSplit = /^([^ ]*)(?: (.*))?$/.exec(text);
         switch(spaceSplit[1]) {
             case 'switch':
@@ -679,13 +684,11 @@ let parseMain = (() => {
                         , TaskQueue.remove, TaskQueue.removeAll);
                 return;
             case 'button':
-                if(spaceSplit[2] === undefined || spaceSplit[2] === '') {
-                    return;
-                }
+                if(spaceSplit[2] === undefined || spaceSplit[2] === '') return;
                 Button.add(spaceSplit[2]);
                 return;
             case 'remove-button':
-                instNumberParse('remove-button', spaceSplit[2], Button
+                instNumbersParse('remove-button', spaceSplit[2], Button
                         , Button.remove, Button.removeAll);
                 return;
             case 'show-macro':
@@ -721,10 +724,8 @@ let parseMain = (() => {
             case 'default':
                 Task.setDefault(spaceSplit[2]);
                 return;
-            default:
-                break;
         }
-        let taskElement = Task.parse(text);
+        let taskElement = Task.parse(text, isRawMode);
         if(taskElement === null) {
             if(text === '' || text === 'init') return;
             Notice.set('undefined: ' + text);
@@ -776,7 +777,6 @@ let Display = (() => {
         doStrike: (id, importance) => {
             let target = document.getElementById('text_' + id);
             target.className = 'strike';
-            document.getElementById('time_' + id).innerHTML = '';
             switch(importance) {
                 case 3:
                     setTimeout(window.alert, 1000, target.innerText);
@@ -806,44 +806,37 @@ let clock = (() => {
     };
 })();
 
-let focus = (() => {
-    return event => {
-        let target = event.target;
-        while(target !== null) {
-            if(target.id === 'menu') return;
-            target = target.parentNode;
-        }
-        document.cuiForm.input.focus();
-    };
-})();
-
 let showTimerGUI = (() => {
     return () => {
         document.getElementById('label_radio_timer').className = '';
-        document.getElementById('timer_setting').style.display = 'block';
+        document.getElementById('timer_setting').className = 'block';
         document.getElementById('label_radio_alarm').className = 'gray';
-        document.getElementById('alarm_setting').style.display = 'none';
-        document.getElementById('gui_other_setting').style.display = 'block';
+        document.getElementById('alarm_setting').className = 'none';
+        document.getElementById('gui_other_setting').className = 'block';
     };
 })();
 let showAlarmGUI = (() => {
     return () => {
         document.getElementById('label_radio_alarm').className = '';
-        document.getElementById('alarm_setting').style.display = 'block';
+        document.getElementById('alarm_setting').className = 'block';
         document.getElementById('label_radio_timer').className = 'gray';
-        document.getElementById('timer_setting').style.display = 'none';
-        document.getElementById('gui_other_setting').style.display = 'block';
+        document.getElementById('timer_setting').className = 'none';
+        document.getElementById('gui_other_setting').className = 'block';
     };
 })();
 
-let showVolume = (() => {
-    return () => {
-        parseMain('volume ' + document.getElementById('range_volume').value);
-    };
-})();
+window.addEventListener('click', event => {
+    let target = event.target;
+    while(target !== null) {
+        if(target.id === 'menu') return;
+        target = target.parentNode;
+    }
+    document.cuiForm.input.focus();
+});
+document.getElementById('range_volume').addEventListener('input', () => {
+    parseMain('volume ' + document.getElementById('range_volume').value);
+});
 
-window.addEventListener('click', focus);
-document.getElementById('range_volume').addEventListener('input', showVolume);
 Load.exec(SEPARATOR);
 setInterval(clock, UPDATE_TIME);
 parseMain('init');

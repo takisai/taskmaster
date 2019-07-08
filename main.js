@@ -176,6 +176,10 @@ let Sound = (() => {
 let Macro = (() => {
     let regex = /^([^;]+?)->(.*)$/, macros = [], macroCount = 0, isHide = true;
 
+    let formatter = s => {
+        return s.replace(regex, '$1 -> $2');
+    };
+
     return {
         getIdByIndex: index => {
             return macros[index] === undefined ? undefined : macros[index].id;
@@ -183,21 +187,25 @@ let Macro = (() => {
         add: s => {
             let result = regex.exec(s), id = macroCount;
             macroCount++;
-            let element = {key: new RegExp(result[1], 'gu'), keyStr: result[1]
+            let element = {key: new RegExp(result[1], 'gu'), str: s
                     , value: result[2], id: id};
             macros.push(element);
             let newLiElement = document.createElement('li');
             newLiElement.innerHTML =
                     '<input type="button" value="remove" onclick="parseMain(\'#remove-macro $'
-                    + id + '\');"> ' + element.keyStr + ' -> '
-                    + element.value;
+                    + id + '\');"> ' + formatter(element.str);
             newLiElement.setAttribute('id', 'macro_' + id);
             document.getElementById('macro_parent').appendChild(newLiElement);
+            if(!isHide) return;
+            Notice.set('macro: ' + formatter(element.str));
         },
         remove: id => {
             if(!removeDom('macro_' + id)) return;
             for(let i = 0; i < macros.length; i++) {
                 if(macros[i].id === id) {
+                    if(isHide) {
+                        Notice.set('removed: ' + formatter(macros[i].str));
+                    }
                     macros.splice(i, 1);
                     return;
                 }
@@ -222,7 +230,7 @@ let Macro = (() => {
             isHide = true;
         },
         save: sep => {
-            let ret = macros.map(x => x.keyStr + '->' + x.value).join(sep);
+            let ret = macros.map(x => x.s).join(sep);
             if(!isHide) {
                 ret += sep + 'show-macro';
             }
@@ -699,7 +707,7 @@ let parseMain = (() => {
                 return;
             case 'remove-macro':
                 if(isIdCall(Macro.remove, spaceSplit[2])) return;
-                instNumberParse('remove-macro', spaceSplit[2], Macro
+                instNumbersParse('remove-macro', spaceSplit[2], Macro
                         , Macro.remove, Macro.removeAll);
                 return;
             case 'sound':

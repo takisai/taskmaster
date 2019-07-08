@@ -2,6 +2,16 @@ details {
     display: inline-block;
 }
 
+kbd {
+    background-color: #f1f1f1;
+    padding: 0.1em 0.4em;
+    font-size: 0.9em;
+}
+
+p {
+    line-height: 1.8em;
+}
+
 details > div {
     padding-left: 1em;
 }
@@ -34,6 +44,42 @@ form[name=cuiForm], #div_volume, #button_parent, #macro, #menu {
     text-decoration: line-through;
 }
 
+h1 {
+    display: block;
+    font-size: 2em;
+    margin: 0.67em 0px;
+    font-weight: normal;
+}
+
+.h2 {
+    display: block;
+    margin: 1.245em 0px;
+}
+
+.h2 > details > summary {
+    font-size: 1.5em;
+    font-weight: bold;
+}
+
+.h3 {
+    display: block;
+    margin: 1.17em 0px;
+}
+
+.h3 > details > summary {
+    font-size: 1.17em;
+    font-weight: bold;
+}
+
+.h4 {
+    display: block;
+    margin: 1.33em 0px;
+}
+
+.h4 > details > summary {
+    font-weight: bold;
+}
+
 .textbox_2digits {
     width: 5em;
 }
@@ -61,4 +107,8 @@ form[name=cuiForm], #div_volume, #button_parent, #macro, #menu {
 
 #notice {
     font-size: 0.95em;
+}
+
+#help * {
+    letter-spacing: 0.05em;
 }

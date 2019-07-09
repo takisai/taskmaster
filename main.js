@@ -66,6 +66,10 @@ let Save = (() => {
         },
         exec: sep => {
             window.localStorage.setItem('data', Save.makeData(sep));
+        },
+        toString: sep => {
+            prompt('', Save.makeData(sep).split(sep).map(x => encodeBase64(x))
+                    .join('|'));
         }
     };
 })();
@@ -78,6 +82,10 @@ let Load = (() => {
         },
         exec: sep => {
             Load.parse(sep, window.localStorage.getItem('data'));
+        },
+        fromString: sep => {
+            let text = prompt('', '');
+            Load.parse(text.split('|').map(x => decodeBase64(x)).join(sep));
         }
     };
 })();
@@ -247,12 +255,13 @@ let Button = (() => {
             return buttons[index] === undefined ? undefined : buttons[index].id;
         },
         add: str => {
+            let execStr = str.replace(/'/g, '\\\'').replace(/\\/g, '\\\\');
             let element = {id: buttonCount, str: str};
             buttonCount++;
             document.getElementById('button_parent').innerHTML +=
                     '<span id="button_' + element.id
-                    + '"><input type="button" value="' + element.str
-                    + '" onclick="parseMain(\'' + element.str
+                    + '"><input type="button" value="' + str
+                    + '" onclick="parseMain(\'' + execStr
                     + '\');"> </span>';
             buttons.push(element);
         },
@@ -441,73 +450,27 @@ let Task = (() => {
             parse: (s, now) => {
                 let ret = new Date();
                 let result = regex.exec(s), isFind = false, isFree = [];
-                if(isValid(result[1])) {
-                    ret.setFullYear(parseInt(result[1], 10));
-                    isFind = true;
-                } else {
-                    isFree.push(1);
-                }
-                if(isValid(result[2])) {
-                    ret.setMonth(parseInt(result[2], 10) - 1);
-                    isFind = true;
-                } else if(isFind) {
-                    ret.setMonth(0);
-                } else {
-                    isFree.push(2);
-                }
-                if(isValid(result[3])) {
-                    ret.setDate(parseInt(result[3], 10));
-                    isFind = true;
-                } else if(isFind) {
-                    ret.setDate(1);
-                } else {
-                    isFree.push(3);
-                }
-                if(isValid(result[4])) {
-                    ret.setHours(parseInt(result[4], 10));
-                    isFind = true;
-                } else if(isFind) {
-                    ret.setHours(0);
-                } else {
-                    isFree.push(4);
-                }
-                if(isValid(result[5])) {
-                    ret.setMinutes(parseInt(result[5], 10));
-                    isFind = true;
-                } else if(isFind) {
-                    ret.setMinutes(0);
-                } else {
-                    isFree.push(5);
-                }
-                if(isValid(result[6])) {
-                    ret.setSeconds(parseInt(result[6], 10));
-                } else if(isFind) {
-                    ret.setSeconds(0);
-                } else {
-                    isFree.push(6);
+                let table =
+                        [{get: 'getFullYear', set: 'setFullYear', c: 0, r: 0}
+                        , {get: 'getMonth', set: 'setMonth', c: -1, r: 0}
+                        , {get: 'getDate', set: 'setDate', c: 0, r: 1}
+                        , {get: 'getHours', set: 'setHours', c: 0, r: 0}
+                        , {get: 'getMinutes', set: 'setMinutes', c: 0, r: 0}
+                        , {get: 'getSeconds', set: 'setSeconds', c: 0, r: 0}];
+                for(let i = 0; i < 6; i++) {
+                    let t = table[i];
+                    if(isValid(result[i + 1])) {
+                        ret[t.set](parseInt(result[i + 1], 10) + t.c);
+                        isFind = true;
+                    } else if(isFind) {
+                        ret[t.set](t.r);
+                    } else {
+                        isFree.push(i);
+                    }
                 }
                 while(now >= ret.getTime() && isFree.length > 0) {
-                    let tmp = ret;
-                    switch(isFree.pop()) {
-                        case 1:
-                            tmp.setFullYear(ret.getFullYear() + 1);
-                            break;
-                        case 2:
-                            tmp.setMonth(ret.getMonth() + 1);
-                            break;
-                        case 3:
-                            tmp.setDate(ret.getDate() + 1);
-                            break;
-                        case 4:
-                            tmp.setHours(ret.getHours() + 1);
-                            break;
-                        case 5:
-                            tmp.setMinutes(ret.getMinutes() + 1);
-                            break;
-                        case 6:
-                            tmp.setSeconds(ret.getSeconds() + 1);
-                            break;
-                    }
+                    let tmp = ret, t = table[isFree.pop()];
+                    tmp[t.set](ret[t.get]() + 1);
                     if(tmp.getTime() > ret.getTime()) {
                         ret = tmp;
                     }
@@ -525,7 +488,8 @@ let Task = (() => {
             }
             let result = /^([-\d]?)(\.|!{1,3})?$/.exec(s);
             if(result === null) {
-                Notice.set('syntax error: default <span class="red">' + s + '</span>');
+                Notice.set('parse error: default <span class="red">' + s
+                        + '</span>');
                 return;
             }
             if(result[1] !== '') {
@@ -640,7 +604,7 @@ let parseMain = (() => {
                 .map(x => obj.getIdByIndex(parseInt(x, 10) - 1))
                 .forEach(x => method(x));
         if(noSet.some(x => /\D/.test(x))) {
-            Notice.set('syntax error: ' + inst + ' '
+            Notice.set('parse error: ' + inst + ' '
                     + noSet.map(x => x.replace(/^(\d*\D.*)$/
                     , '<span class="red">$1</span>')).join(' '));
         }

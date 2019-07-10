@@ -51,41 +51,86 @@ let removeDom = (() => {
     };
 })();
 
+let Base64 = (() => {
+    let key = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+
+    return {
+        encode: str => {
+            str = encodeURIComponent(str);
+            let ret = '';
+            for(let i = 0; i < str.length; i += 3) {
+                let c = [0, 1, 2].map(x => str.charCodeAt(i + x)), t;
+                ret += key[c[0] >> 2];
+                t = (c[0] & 3) << 4;
+                if(isNaN(c[1])) {
+                    ret += key[t] + '==';
+                } else {
+                    ret += key[t | (c[1] >> 4)];
+                    t = (c[1] & 15) << 2;
+                    if(isNaN(c[2])) {
+                        ret += key[t] + '=';
+                    } else {
+                        ret += key[t | (c[2] >> 6)] + key[c[2] & 63];
+                    }
+                }
+            }
+            return ret;
+        },
+        decode: str => {
+            let ret = '';
+            for(let i = 0; i < str.length; i += 4) {
+                let c = [0, 1, 2, 3].map(x => key.indexOf(str.charAt(i + x)));
+                console.log(c);
+                let t = [(c[0] << 2) | (c[1] >> 4)];
+                if(c[2] >= 0) {
+                    t.push(((c[1] & 15) << 4) | (c[2] >> 2));
+                    if(c[3] >= 0) {
+                        t.push(((c[2] & 3) << 6) | c[3]);
+                    }
+                }
+                console.log(t);
+                ret += t.map(x => String.fromCharCode(x)).join('');
+            }
+            return decodeURIComponent(ret);
+        }
+    }
+})();
+
 let Save = (() => {
     return  {
-        makeData: sep => {
-            let tasks = TaskQueue.save(sep);
-            let volume = Sound.save(sep);
-            let buttons = Button.save(sep);
-            let defaults = Task.save(sep);
-            let display = Display.save(sep);
-            let macros = Macro.save(sep);
-            let rets = [].concat(tasks, volume, buttons, defaults, display
-                    , macros);
-            return rets.join(sep);
+        makeData: () => {
+            let tasks = TaskQueue.save();
+            let volume = Sound.save();
+            let buttons = Button.save();
+            let defaults = Task.save();
+            let display = Display.save();
+            let macros = Macro.save();
+            return [].concat(tasks, volume, buttons, defaults, display, macros)
+                     .join(SEPARATOR);
         },
-        exec: sep => {
-            window.localStorage.setItem('data', Save.makeData(sep));
+        exec: () => {
+            window.localStorage.setItem('data', Save.makeData());
         },
         toString: sep => {
-            prompt('', Save.makeData(sep).split(sep).map(x => encodeBase64(x))
-                    .join('|'));
+            prompt('セーブデータ:', Base64.encode(Save.makeData()));
         }
     };
 })();
 
 let Load = (() => {
     return {
-        parse: (sep, data) => {
-            if(data === null) return;
-            data.split(sep).forEach(x => parseMain(x));
+        parse: data => {
+            data.split(SEPARATOR).forEach(x => parseMain(x));
         },
-        exec: sep => {
-            Load.parse(sep, window.localStorage.getItem('data'));
+        exec: () => {
+            Load.parse(window.localStorage.getItem('data'));
         },
         fromString: sep => {
-            let text = prompt('', '');
-            Load.parse(text.split('|').map(x => decodeBase64(x)).join(sep));
+            let text = prompt('読み込むデータを入れてください:', '');
+            if(text === '' || text === null) return;
+            parseMain('#remove-macro *;remove *;remove-button *;default 0.;switch alarm;volume 100');
+            Load.parse(Base64.decode(text));
+            Notice.set('data loaded');
         }
     };
 })();
@@ -175,8 +220,8 @@ let Sound = (() => {
         stopAll: () => {
             TaskQueue.stopAllSound();
         },
-        save: sep => {
-            return 'volume ' + volume;
+        save: () => {
+            return ['volume ' + volume];
         }
     };
 })();
@@ -237,10 +282,10 @@ let Macro = (() => {
             document.getElementById('macro').className = 'none';
             isHide = true;
         },
-        save: sep => {
-            let ret = macros.map(x => x.s).join(sep);
+        save: () => {
+            let ret = macros.map(x => x.str);
             if(!isHide) {
-                ret += sep + 'show-macro';
+                ret.push('show-macro');
             }
             return ret;
         }
@@ -277,8 +322,8 @@ let Button = (() => {
         removeAll: () => {
             buttons.map(x => x.id).forEach(x => Button.remove(x));
         },
-        save: sep => {
-            return buttons.map(x => 'button ' + x.str).join(sep);
+        save: () => {
+            return buttons.map(x => 'button ' + x.str);
         }
     };
 })();
@@ -402,8 +447,8 @@ let TaskQueue = (() => {
             ['global', ...taskQueue.map(x => x.id)]
                     .forEach(x => TaskQueue.stopSound(x));
         },
-        save: sep => {
-            return taskQueue.map(x => x.saveText).join(sep);
+        save: () => {
+            return taskQueue.map(x => x.saveText);
         }
     };
 })();
@@ -577,8 +622,8 @@ let Task = (() => {
             }
             parseMain([main, sound + importance, name].join('/'));
         },
-        save: sep => {
-            return 'default ' + defaultSound + importanceStr();
+        save: () => {
+            return ['default ' + defaultSound + importanceStr()];
         }
     };
 })();
@@ -644,7 +689,7 @@ let parseMain = (() => {
         let spaceSplit = /^([^ ]*)(?: (.*))?$/.exec(text);
         switch(spaceSplit[1]) {
             case 'switch':
-                Display.toggle();
+                Display.setMode(spaceSplit[2]);
                 return;
             case 'remove':
                 if(spaceSplit[2] === undefined) {
@@ -696,6 +741,12 @@ let parseMain = (() => {
             case 'default':
                 Task.setDefault(spaceSplit[2]);
                 return;
+            case 'save':
+                Save.toString();
+                return;
+            case 'load':
+                Load.fromString();
+                return;
         }
         let taskElement = Task.parse(text, isRawMode);
         if(taskElement === null) {
@@ -739,8 +790,19 @@ let Display = (() => {
     };
 
     return {
-        toggle: () => {
-            isShowDeadline = !isShowDeadline;
+        setMode: str => {
+            switch(str) {
+                case '':
+                case undefined:
+                    isShowDeadline = !isShowDeadline;
+                    break;
+                case 'timer':
+                    isShowDeadline = false;
+                    break;
+                case 'alarm':
+                    isShowDeadline = true;
+                    break;
+            }
         },
         show: () => {
             TaskQueue.show(isShowDeadline
@@ -764,8 +826,8 @@ let Display = (() => {
                     break;
             }
         },
-        save: sep => {
-            return !isShowDeadline ? 'switch' : '';
+        save: () => {
+            return ['switch ' + (isShowDeadline ? 'alarm' : 'timer')];
         }
     };
 })();

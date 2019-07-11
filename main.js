@@ -123,7 +123,9 @@ let Load = (() => {
             data.split(SEPARATOR).forEach(x => parseMain(x));
         },
         exec: () => {
-            Load.parse(window.localStorage.getItem('data'));
+            let data = window.localStorage.getItem('data');
+            if(data === null) return;
+            Load.parse(data);
         },
         fromString: sep => {
             let text = prompt('読み込むデータを入れてください:', '');
@@ -140,10 +142,12 @@ let Notice = (() => {
 
     return {
         set: html => {
+            let target = document.getElementById('notice');
             if(id !== undefined) {
                 clearTimeout(id);
+                target.innerHTML += ' , ';
             }
-            document.getElementById('notice').innerHTML += html;
+            target.innerHTML += html;
             id = setTimeout(Notice.clear, 5000);
         },
         clear: () => {
@@ -775,7 +779,7 @@ let parseMain = (() => {
                     break;
             }
         }
-        Save.exec(SEPARATOR);
+        Save.exec();
     };
 })();
 
@@ -871,6 +875,6 @@ document.getElementById('range_volume').addEventListener('input', () => {
     parseMain('volume ' + document.getElementById('range_volume').value);
 });
 
-Load.exec(SEPARATOR);
+Load.exec();
 setInterval(clock, UPDATE_TIME);
 parseMain('init');

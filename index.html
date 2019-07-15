@@ -9,7 +9,7 @@
         <div id="clock">
             ...
         </div>
-        <form name="cuiForm" onsubmit="getText();return false;">
+        <form name="cui_form" onsubmit="getText();return false;">
             <input type="text" name="input"></input> <span id="item_global"></span><span id="notice"></span>
         </form>
         <div id="div_volume">
@@ -17,7 +17,7 @@
         </div>
         <div id="button_parent"></div>
         <ol id="parent"></ol>
-        <div id="macro" class="none">
+        <div id="macros" class="none">
             <details open><summary>macro</summary>
                 <div>
                     <ol id="macro_parent"></ol>
@@ -28,10 +28,10 @@
             <details><summary>menu</summary>
                 <div>
                     <details><summary>タスク設定</summary>
-                        <form name="guiForm">
-                            <input id="radio_timer" type="radio" name="taskType" value="timer" onclick="showTimerGUI()">
+                        <form name="gui_form">
+                            <input id="radio_timer" type="radio" name="task_type" value="timer" onclick="showTimerGUI()">
                             <label id="label_radio_timer" for="radio_timer">タイマー</label>
-                            <input id="radio_alarm" type="radio" name="taskType" value="alarm" onclick="showAlarmGUI()">
+                            <input id="radio_alarm" type="radio" name="task_type" value="alarm" onclick="showAlarmGUI()">
                             <label id="label_radio_alarm" for="radio_alarm">アラーム</label>
                             <div id="timer_setting" class="none">
                                 <input id="timer_hour" list="data_0-23" name="timer_hour" class="textbox_2digits"> 時間 <input id="timer_minute" list="data_0-59" name="timer_minute" class="textbox_2digits"> 分 <input id="timer_second" list="data_0-59" name="timer_second" class="textbox_2digits"> 秒後

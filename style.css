@@ -1,5 +1,19 @@
-details {
-    display: inline-block;
+body {
+    box-sizing: border-box;
+    width: 100%;
+    margin: 8px 0px;
+    padding: 0px 8px;
+}
+
+details, summary {
+    display: inline;
+}
+
+h1 {
+    display: block;
+    font-size: 2em;
+    margin: 0.67em 0px;
+    font-weight: normal;
 }
 
 kbd {
@@ -12,6 +26,18 @@ p {
     line-height: 1.8em;
 }
 
+a {
+    text-decoration: none;
+}
+
+a:link, a:visited {
+    color: #005aff;
+}
+
+select {
+    height: 1.7em;
+}
+
 details > div {
     padding-left: 1em;
 }
@@ -20,8 +46,12 @@ input[type=range], select {
     vertical-align: middle;
 }
 
-form[name=cuiForm], #div_volume, #button_parent, #macro, #menu {
+form[name=cui_form], #div_volume, #button_parent, #macros, #menu {
     margin: 8px 0px;
+}
+
+form[name=gui_form] {
+    line-height: 1.8em;
 }
 
 .bg-red {
@@ -42,13 +72,6 @@ form[name=cuiForm], #div_volume, #button_parent, #macro, #menu {
 
 .strike {
     text-decoration: line-through;
-}
-
-h1 {
-    display: block;
-    font-size: 2em;
-    margin: 0.67em 0px;
-    font-weight: normal;
 }
 
 .h2 {
@@ -84,7 +107,7 @@ h1 {
     width: 5em;
 }
 
-.red {
+a:hover, .red {
     color: #ff4b00;
 }
 

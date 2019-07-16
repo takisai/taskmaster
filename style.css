@@ -34,6 +34,10 @@ a:link, a:visited {
     color: #005aff;
 }
 
+a:hover {
+    text-decoration: underline;
+}
+
 select {
     height: 1.7em;
 }
@@ -107,7 +111,7 @@ form[name=gui_form] {
     width: 5em;
 }
 
-a:hover, .red {
+a:active, .red {
     color: #ff4b00;
 }
 

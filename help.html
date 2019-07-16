@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ja">
     <head>
-        <title>Help: Task Master</title>
+        <title>Task Master Help</title>
         <meta charset="utf-8">
         <link rel="stylesheet" href="style.css">
     </head>
@@ -152,7 +152,7 @@
                                 <p>マクロの指定方法は<kbd>&lt;元文字列&gt;-&gt;&lt;置き換え後文字列&gt;</kbd>です。ただし、<kbd>&lt;元文字列&gt;</kbd>に<kbd>-&gt;</kbd>を含めることはできません。<kbd>&lt;元文字列&gt;</kbd>と<kbd>&lt;置き換え後文字列&gt;</kbd>はJavaScriptの<code>replace</code>メソッドを利用しているため、複雑な指定をすることができます。例えば、<kbd>dup (.*)$-&gt;$1;button $1</kbd>というマクロを指定しておくと、<kbd>dup 50</kbd>という文字列は<kbd>50;button 50</kbd>というコマンドに置き換えられます。詳しくは、JavaScriptの<code>replace</code>メソッドを参照してください。</p>
                                 <p>マクロによる置き換えは、登録順にすべてのマクロで行われます。例えば、<kbd>a-&gt;b</kbd>と<kbd>b-&gt;c</kbd>というマクロをこの順番に登録した場合、<kbd>a</kbd>というコマンドは<kbd>c</kbd>に置き換えられます。マクロでの置換が行われないようにするには、先頭に<kbd>#</kbd>をつけてコマンドを入力します。</p>
                                 <p>マクロの一覧は<kbd>show-macro</kbd>コマンドで見ることができます。マクロの消去は、マクロリストの左にある<input type="button" value="remove">ボタンを押すか、<kbd>remove-macro</kbd>コマンドにより行います。このコマンドは<a href="#taskRemove">2.3</a>の<kbd>remove</kbd>コマンドと同様に、<kbd>remove-macro 1 3 4</kbd>や<kbd>remove-macro *</kbd>と入力できます。マクロ一覧を隠すときは<kbd>hide-macro</kbd>を実行します。</p>
-                                <p>参考: 参考: <a href="https://www.google.co.jp/search?q=JavaScript+replace" target="_blank">JavaScript replace - Google 検索</a></p>
+                                <p>参考: <a href="https://www.google.co.jp/search?q=JavaScript+replace" target="_blank">JavaScript replace - Google 検索</a></p>
                             </div>
                         </details>
                     </div>

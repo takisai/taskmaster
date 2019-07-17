@@ -86,6 +86,7 @@ let Base64 = (() => {
         },
         // Base64.decode :: Base64String -> SaveString
         decode: str => {
+            str = str.replace(/[^A-Za-z\d+/=]/g, '');
             let ret = []; // ret :: UnicodeNumber
             for(let i = 0; i < str.length; i += 4) { // i :: IndexNumber
                 // c :: [Base64Number]

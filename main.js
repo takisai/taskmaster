@@ -834,7 +834,7 @@ let parseMain = (() => {
         // taskItem :: Maybe TaskObject
         let taskItem = Task.parse(text);
         if(taskItem === null) {
-            if(text === '' || text === 'init') return;
+            if(text === '') return;
             Notice.set('undefined: ' + text);
             return;
         }
@@ -968,11 +968,11 @@ window.addEventListener('keydown', event => {
     if(event.ctrlKey) {
         switch(event.keyCode) {
             case 79:
-                parseMain('load');
+                parseMain('#load');
                 event.preventDefault();
                 break;
             case 83:
-                parseMain('save');
+                parseMain('#save');
                 event.preventDefault();
                 break;
         }
@@ -981,4 +981,3 @@ window.addEventListener('keydown', event => {
 
 Load.exec();
 setInterval(clock, UPDATE_TIME);
-parseMain('init');

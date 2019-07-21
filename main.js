@@ -143,11 +143,34 @@ let Load = (() => {
             // text :: Maybe Base64String
             let text = prompt('読み込むデータを入れてください:', '');
             if(text === '' || text === null) return;
-            parseMain('#remove-macro *;remove *;remove-button *;default 0.;switch alarm;volume 100');
+            parseMain('#remove-macro *;remove *;remove-button *;default 0.;switch alarm;volume 100;empty-trash');
             parse(Base64.decode(text));
             Notice.set('data loaded');
         }
     };
+})();
+
+let Trash = (() => {
+    let items = []; // items :: [SaveString]
+
+    return {
+        // Trash.push :: SaveString -> ()
+        push: item => {
+            items.push(item);
+        },
+        // Trash.pop :: () -> ()
+        pop: () => {
+            if(items.length === 0) {
+                Notice.set('trash is empty');
+                return;
+            }
+            items.pop().split(SEPARATOR).forEach(x => parseMain(x));
+        },
+        // Trash.reset :: () -> ()
+        reset: () => {
+            items = [];
+        }
+    }
 })();
 
 let Notice = (() => {
@@ -253,7 +276,7 @@ let Sound = (() => {
 })();
 
 let Macro = (() => {
-    let regex = /^([^;]+?)->(.*)$/; // regex :: RegExp
+    let regex = /^([^;]*?)->(.*)$/; // regex :: RegExp
     let macros = []; // macros :: [MacroObject]
     let macroCount = 0; // macroCount :: CountNumber
     let isHide = true; // isHide :: Bool
@@ -268,15 +291,18 @@ let Macro = (() => {
         getIdByIndex: index => {
             return macros[index] === undefined ? undefined : macros[index].id;
         },
-        // Macro.isAddSuccess :: ExecString -> Bool
-        isAddSuccess: s => {
+        // Macro.isAddSuccess :: (ExecString, DateNumber) -> Bool
+        isAddSuccess: (s, now = null) => {
             let result = regex.exec(s); // result :: Maybe [Maybe String]
-            if(result === null) return false;
+            if(result === null || result[1] === '') return false;
             let id = macroCount; // id :: IDNumber
             macroCount++;
-            let element = {key: new RegExp(result[1], 'gu'), str: s
-                    , value: result[2], id: id}; // element :: MacroObject
-            macros.push(element);
+            let isNull = now === null; // isNull :: Bool
+            if(isNull) now = Date.now();
+            // macroItem :: MacroObject
+            let macroItem = {key: new RegExp(result[1], 'gu'), str: s
+                    , value: result[2], id: id, time: now
+                    , saveText: '-> ' + now + '#' + s};
             // newElement :: Element
             let newElement = document.createElement('li');
             let formatStr = formatter(s); // formatStr :: DisplayString
@@ -284,11 +310,27 @@ let Macro = (() => {
                     '<input type="button" value="remove" onclick="parseMain(\'#remove-macro $'
                     + id + '\');"> ' + formatStr;
             newElement.setAttribute('id', 'macro_' + id);
-            document.getElementById('macro_parent').appendChild(newElement);
-            if(isHide) {
+            // i :: IndexNumber;  target :: Element
+            let i = macros.findIndex(x => x.time > macroItem.time), target;
+            if(i >= 0) {
+                target = document.getElementById('macro_' + macros[i].id);
+                target.parentNode.insertBefore(newElement, target);
+                macros.splice(i, 0, macroItem);
+            } else {
+                target = document.getElementById('macro_parent');
+                target.appendChild(newElement);
+                macros.push(macroItem);
+            }
+            if(isHide && isNull) {
                 Notice.set('macro: ' + formatStr);
             }
             return true;
+        },
+        // Macro.addByData :: ParameterString -> ()
+        addByData: str => {
+            // result :: Maybe [Maybe String]
+            let result = /^(\d+)#(.+)$/.exec(str);
+            Macro.isAddSuccess(result[2], parseInt(result[1], 10));
         },
         // Macro.remove :: IDNumber -> ()
         remove: id => {
@@ -307,6 +349,17 @@ let Macro = (() => {
         removeAll: () => {
             macros.map(x => x.id).forEach(x => Macro.remove(x));
         },
+        // Macro.moveToTrash :: ParameterString -> ()
+        moveToTrash: str => {
+            if(str === '*') {
+                Trash.push(macros.map(x => x.saveText).join(SEPARATOR));
+                return;
+            }
+            Trash.push(str.split(' ').map(x => macros.find(y =>
+                    y.id === parseInt(x, 10))).filter(x => x !== undefined)
+                    .map(x => x.saveText)
+                    .join(SEPARATOR));
+        },
         // Macro.replace :: ExecString -> ExecString
         replace: s => {
             macros.forEach(x => s = s.replace(x.key, x.value));
@@ -324,7 +377,8 @@ let Macro = (() => {
         },
         // Macro.save :: () -> [ExecString]
         save: () => {
-            let ret = macros.map(x => x.str); // ret :: [ExecString]
+            // ret :: [ExecString]
+            let ret = macros.map(x => x.saveText);
             if(!isHide) {
                 ret.push('show-macro');
             }
@@ -342,18 +396,37 @@ let Button = (() => {
         getIdByIndex: index => {
             return buttons[index] === undefined ? undefined : buttons[index].id;
         },
-        // Button.add :: ExecString -> ()
-        add: str => {
+        // Button.add :: (ExecString, DateNumber) -> ()
+        add: (str, now = null) => {
             // execStr :: ExecString
             let execStr = str.replace(/'/g, '\\\'').replace(/\\/g, '\\\\');
-            // item :: ButtonObject
-            let item = {id: buttonCount, str: str};
+            if(now === null) now = Date.now();
+            // buttonItem :: ButtonObject
+            let buttonItem = {id: buttonCount, str: str, time: now
+                    , saveText: '$button ' + now + '#' + str};
             buttonCount++;
-            document.getElementById('button_parent').innerHTML +=
-                    '<span id="button_' + item.id
-                    + '"><input type="button" value="' + str
-                    + '" onclick="parseMain(\'' + execStr + '\');"> </span>';
-            buttons.push(item);
+            // newElement :: Element
+            let newElement = document.createElement('span');
+            newElement.innerHTML = '<input type="button" value="' + str
+                    + '" onclick="parseMain(\'' + execStr + '\');"> ';
+            newElement.setAttribute('id', 'button_' + buttonItem.id);
+            // i :: IndexNumber; target :: Element
+            let i = buttons.findIndex(x => x.time > buttonItem.time), target;
+            if(i >= 0) {
+                target = document.getElementById('button_' + buttons[i].id);
+                target.parentNode.insertBefore(newElement, target);
+                buttons.splice(i, 0, buttonItem);
+            } else {
+                target = document.getElementById('button_parent');
+                target.appendChild(newElement);
+                buttons.push(buttonItem);
+            }
+        },
+        // Button.addByData :: ParameterString -> ()
+        addByData: str => {
+            // result :: Maybe [Maybe String]
+            let result = /^(\d+)#(.+)$/.exec(str);
+            Button.add(result[2], parseInt(result[1], 10));
         },
         // Button.remove :: IDNumber -> ()
         remove: id => {
@@ -369,9 +442,21 @@ let Button = (() => {
         removeAll: () => {
             buttons.map(x => x.id).forEach(x => Button.remove(x));
         },
+        // Button.moveToTrash :: ParameterString -> ()
+        moveToTrash: str => {
+            if(str === '*') {
+                Trash.push(buttons.map(x => '#' + x.saveText())
+                        .join(SEPARATOR));
+                return;
+            }
+            Trash.push(str.split(' ').map(x => buttons.find(y =>
+                    y.id === parseInt(x, 10))).filter(x => x !== undefined)
+                    .map(x => '#' + x.saveText)
+                    .join(SEPARATOR));
+        },
         // Button.save :: () -> [ExecString]
         save: () => {
-            return buttons.map(x => 'button ' + x.str);
+            return buttons.map(x => x.saveText);
         }
     };
 })();
@@ -514,6 +599,17 @@ let TaskQueue = (() => {
             ['global', ...taskQueue.map(x => x.id)]
                     .forEach(x => TaskQueue.stopSound(x));
         },
+        // TaskQueue.moveToTrash :: ParameterString -> ()
+        moveToTrash: str => {
+            if(str === '*') {
+                Trash.push(taskQueue.map(x => '#' + x.saveText)
+                        .join(SEPARATOR));
+                return;
+            }
+            Trash.push(str.split(' ').map(x => taskQueue.find(y => y.id === x))
+                    .filter(x => x !== undefined).map(x => '#' + x.saveText)
+                    .join(SEPARATOR));
+        },
         // TaskQueue.save :: () -> [ExecString]
         save: () => {
             return taskQueue.map(x => x.saveText);
@@ -621,7 +717,7 @@ let Task = (() => {
             let ret = new Object(); // ret :: TaskObject
             let execs = [], now; // execs :: [ExecString];  now :: DateNumber
             if(result[1] !== undefined) {
-                now = new Date(parseInt(result[1], 10)).getTime();
+                now = parseInt(result[1], 10);
                 ret.saveText = result[1];
             } else {
                 now = Date.now();
@@ -719,26 +815,31 @@ let parseMain = (() => {
     let idCount = 0; // idCount :: CountNumber
     let recursionCount = 0; // recursionCount :: CountNumber
 
-    // instNumbersParse :: (ExecString, ParameterString, Object, a -> (), () -> ()) -> ()
-    let instNumbersParse = (inst, str, obj, method, methodAll) => {
+    // instNumbersParse :: (ExecString, ParameterString, Object, a -> (), () -> (), ParameterString -> ()) -> ()
+    let instNumbersParse =
+            (inst, str, obj, method, methodAll, toTrash = null) => {
         if(str === '*') {
+            if(toTrash !== null) toTrash('*');
             methodAll();
             return;
         }
         let noSet = [...new Set(str.split(' '))]; // noSet :: [String]
-        noSet.filter(x => /^\d+$/.test(x))
-                .map(x => obj.getIdByIndex(parseInt(x, 10) - 1))
-                .forEach(x => method(x));
+        // ids :: [a]
+        let ids = noSet.filter(x => /^\d+$/.test(x))
+                .map(x => obj.getIdByIndex(parseInt(x, 10) - 1));
+        if(toTrash !== null) toTrash(ids.join(' '));
+        ids.forEach(x => method(x));
         if(noSet.some(x => /\D/.test(x))) {
             Notice.set('parse error: ' + inst + ' '
                     + noSet.map(x => x.replace(/^(\d*\D.*)$/
                     , '<span class="red">$1</span>')).join(' '));
         }
     };
-    // isIdCall :: (IDString -> (), ParameterString) -> Bool
-    let isIdCall = (method, str) => {
+    // isIdCall :: (IDString -> (), ParameterString, ParameterString -> ()) -> Bool
+    let isIdCall = (method, str, toTrash = null) => {
         let result = /^\$(\d+)$/.exec(str); // result :: Maybe [Maybe String]
         if(result === null) return false;
+        if(toTrash !== null) toTrash(result[1]);
         method(result[1]);
         return true;
     };
@@ -746,10 +847,13 @@ let parseMain = (() => {
     // main :: (ExecString, FlagString) -> ()
     let main = (text, callFrom) => {
         // hashResult :: Maybe [Maybe String]
-        let hashResult = /^#(.*)$/.exec(text);
+        let hashResult = /^(#|->)(.*)$/.exec(text);
         let isRawMode = false; // isRawMode :: Bool
         if(hashResult !== null) {
-            text = text.slice(1);
+            text = hashResult[2];
+            if(hashResult[1] === '->') {
+                text = '->' + text;
+            }
             isRawMode = true;
         }
         if(Macro.isAddSuccess(text)) return;
@@ -777,17 +881,25 @@ let parseMain = (() => {
                     TaskQueue.removeAlerted();
                     return;
                 }
-                if(isIdCall(TaskQueue.remove, spaceSplit[2])) return;
+                if(isIdCall(TaskQueue.remove, spaceSplit[2]
+                        , TaskQueue.moveToTrash)) return;
                 instNumbersParse('remove', spaceSplit[2], TaskQueue
-                        , TaskQueue.remove, TaskQueue.removeAll);
+                        , TaskQueue.remove, TaskQueue.removeAll
+                        , TaskQueue.moveToTrash);
                 return;
             case 'button':
                 if(spaceSplit[2] === undefined || spaceSplit[2] === '') return;
                 Button.add(spaceSplit[2]);
                 return;
+            case '$button':
+                Button.addByData(spaceSplit[2]);
+                return;
             case 'remove-button':
                 instNumbersParse('remove-button', spaceSplit[2], Button
-                        , Button.remove, Button.removeAll);
+                        , Button.remove, Button.removeAll, Button.moveToTrash);
+                return;
+            case '->':
+                Macro.addByData(spaceSplit[2]);
                 return;
             case 'show-macro':
                 Macro.show();
@@ -796,10 +908,10 @@ let parseMain = (() => {
                 Macro.hide();
                 return;
             case 'remove-macro':
-                if(isIdCall(x => Macro.remove(parseInt(x, 10)), spaceSplit[2]))
-                    return;
+                if(isIdCall(x => Macro.remove(parseInt(x, 10)), spaceSplit[2]
+                        , Macro.moveToTrash)) return;
                 instNumbersParse('remove-macro', spaceSplit[2], Macro
-                        , Macro.remove, Macro.removeAll);
+                        , Macro.remove, Macro.removeAll, Macro.moveToTrash);
                 return;
             case 'sound':
                 if(!/^\d$/.test(spaceSplit[2])) return;
@@ -810,8 +922,7 @@ let parseMain = (() => {
                     Sound.stop('global');
                     return;
                 }
-                if(isIdCall(Sound.stop, spaceSplit[2]))
-                    return;
+                if(isIdCall(Sound.stop, spaceSplit[2])) return;
                 instNumbersParse('stop', spaceSplit[2], TaskQueue, Sound.stop
                         , Sound.stopAll);
                 return;
@@ -829,6 +940,12 @@ let parseMain = (() => {
                 return;
             case 'load':
                 Load.fromString();
+                return;
+            case 'undo':
+                Trash.pop();
+                return;
+            case 'empty-trash':
+                Trash.reset();
                 return;
         }
         // taskItem :: Maybe TaskObject
@@ -973,6 +1090,10 @@ window.addEventListener('keydown', event => {
                 break;
             case 83:
                 parseMain('#save');
+                event.preventDefault();
+                break;
+            case 90:
+                parseMain('#undo');
                 event.preventDefault();
                 break;
         }

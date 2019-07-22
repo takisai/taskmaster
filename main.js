@@ -99,8 +99,8 @@ let Base64 = (() => {
                     }
                 }
             }
-            return decodeURIComponent(
-                    ret.map(x => String.fromCharCode(x)).join(''));
+            return decodeURIComponent(ret.map(x => String.fromCharCode(x))
+                                         .join(''));
         }
     }
 })();
@@ -143,7 +143,7 @@ let Load = (() => {
             // text :: Maybe Base64String
             let text = prompt('読み込むデータを入れてください:', '');
             if(text === '' || text === null) return;
-            parseMain('#remove-macro *;remove *;remove-button *;default 0.;switch alarm;volume 100;empty-trash');
+            parseMain('##remove-macro *;remove *;remove-button *;default 0.;switch alarm;volume 100;empty-trash');
             parse(Base64.decode(text));
             Notice.set('data loaded');
         }
@@ -355,10 +355,11 @@ let Macro = (() => {
                 Trash.push(macros.map(x => x.saveText).join(SEPARATOR));
                 return;
             }
-            Trash.push(str.split(' ').map(x => macros.find(y =>
-                    y.id === parseInt(x, 10))).filter(x => x !== undefined)
-                    .map(x => x.saveText)
-                    .join(SEPARATOR));
+            Trash.push(str.split(' ')
+                          .map(x => macros.find(y => y.id === parseInt(x, 10)))
+                          .filter(x => x !== undefined)
+                          .map(x => x.saveText)
+                          .join(SEPARATOR));
         },
         // Macro.replace :: ExecString -> ExecString
         replace: s => {
@@ -410,7 +411,7 @@ let Button = (() => {
             newElement.innerHTML = '<input type="button" value="' + str
                     + '" onclick="parseMain(\'' + execStr + '\');"> ';
             newElement.setAttribute('id', 'button_' + buttonItem.id);
-            // i :: IndexNumber; target :: Element
+            // i :: IndexNumber;  target :: Element
             let i = buttons.findIndex(x => x.time > buttonItem.time), target;
             if(i >= 0) {
                 target = document.getElementById('button_' + buttons[i].id);
@@ -445,14 +446,14 @@ let Button = (() => {
         // Button.moveToTrash :: ParameterString -> ()
         moveToTrash: str => {
             if(str === '*') {
-                Trash.push(buttons.map(x => '#' + x.saveText())
-                        .join(SEPARATOR));
+                Trash.push(buttons.map(x => '#' + x.saveText).join(SEPARATOR));
                 return;
             }
-            Trash.push(str.split(' ').map(x => buttons.find(y =>
-                    y.id === parseInt(x, 10))).filter(x => x !== undefined)
-                    .map(x => '#' + x.saveText)
-                    .join(SEPARATOR));
+            Trash.push(str.split(' ')
+                          .map(x => buttons.find(y => y.id === parseInt(x, 10)))
+                          .filter(x => x !== undefined)
+                          .map(x => '#' + x.saveText)
+                          .join(SEPARATOR));
         },
         // Button.save :: () -> [ExecString]
         save: () => {
@@ -501,7 +502,7 @@ let TaskQueue = (() => {
         // TaskQueue.isPlay :: IDString -> Bool
         isPlay: id => {
             let ret = taskQueue[getIndexById(id)]; // ret :: Maybe TaskObject
-            return ret === undefined || ret.sound.length > 0;
+            return ret !== undefined && ret.sound.length > 0;
         },
         // TaskQueue.insert :: TaskObject -> ()
         insert: taskItem => {
@@ -546,7 +547,8 @@ let TaskQueue = (() => {
         },
         // TaskQueue.moreveAlerted :: () -> ()
         removeAlerted: () => {
-            taskQueue.filter(x => !x.isValid).map(x => x.id)
+            taskQueue.filter(x => !x.isValid)
+                     .map(x => x.id)
                      .forEach(x => TaskQueue.remove(x));
         },
         // TaskQueue.removeSound :: (IDString, IDNumber) -> ()
@@ -606,9 +608,11 @@ let TaskQueue = (() => {
                         .join(SEPARATOR));
                 return;
             }
-            Trash.push(str.split(' ').map(x => taskQueue.find(y => y.id === x))
-                    .filter(x => x !== undefined).map(x => '#' + x.saveText)
-                    .join(SEPARATOR));
+            Trash.push(str.split(' ')
+                          .map(x => taskQueue.find(y => y.id === x))
+                          .filter(x => x !== undefined)
+                          .map(x => '#' + x.saveText)
+                          .join(SEPARATOR));
         },
         // TaskQueue.save :: () -> [ExecString]
         save: () => {
@@ -826,7 +830,7 @@ let parseMain = (() => {
         let noSet = [...new Set(str.split(' '))]; // noSet :: [String]
         // ids :: [a]
         let ids = noSet.filter(x => /^\d+$/.test(x))
-                .map(x => obj.getIdByIndex(parseInt(x, 10) - 1));
+                       .map(x => obj.getIdByIndex(parseInt(x, 10) - 1));
         if(toTrash !== null) toTrash(ids.join(' '));
         ids.forEach(x => method(x));
         if(noSet.some(x => /\D/.test(x))) {

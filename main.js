@@ -658,7 +658,7 @@ let Task = (() => {
             let result = /^(?:(?:(\d*)-)?(\d*)-(\d*),)?(\d*):(\d*)(?::(\d*))?$/
                     .exec(s); // result :: Maybe [Maybe String]
             if(result === null) return null;
-            let ret = new Date(); // ret :: Date
+            let ret = new Date(now); // ret :: Date
             let isFind = false; // isFind :: Bool
             let isFree = []; // isFree :: [Number]
             // table :: [Object]

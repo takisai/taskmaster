@@ -218,15 +218,6 @@ let Sound = (() => {
     let sounds = []; // sounds :: Map URLString Audio
     let volume = 100; // volume :: VolumeNumber
 
-    window.addEventListener('click', () => {
-        for(let i = 0; i < 10; i++) { // i :: IndexNumber
-            let url = 'sound/alarm' + i + '.mp3'; // url :: URLString
-            sounds[url] = new Audio(url);
-            sounds[url].muted = true;
-            sounds[url].onloadeddata = e => sounds[url].play();
-        }
-    }, {once: true});
-
     return {
         // Sound.setVolume :: VolumeNumber -> ()
         setVolume: n => {
@@ -234,6 +225,15 @@ let Sound = (() => {
             TaskQueue.setVolume(volume / 100);
             document.getElementById('range_volume').value = volume;
             document.getElementById('volume').innerText = volume;
+        },
+        // Sound.init :: () ~-> ()
+        init: () => {
+            for(let i = 0; i < 10; i++) { // i :: IndexNumber
+                let url = 'sound/alarm' + i + '.mp3'; // url :: URLString
+                sounds[url] = new Audio(url);
+                sounds[url].muted = true;
+                sounds[url].onloadeddata = e => sounds[url].play();
+            }
         },
         // Sound.play :: (URLString, IDString) -> ()
         play: (url, id) => {
@@ -1103,6 +1103,10 @@ window.addEventListener('keydown', event => {
         }
     }
 });
+document.getElementById('cover').addEventListener('click', () => {
+    document.getElementById('cover').className = 'none';
+    Sound.init();
+    setInterval(clock, UPDATE_TIME);
+}, {once: true});
 
 Load.exec();
-setInterval(clock, UPDATE_TIME);

@@ -44,6 +44,7 @@
                                         <div>
                                             <p>タスクが動作する時刻は、動作する時刻までの時間を指定する方法と、時刻を直接指定する方法があります。</p>
                                             <p>タイマーのように「これだけ時間が経ったら音を鳴らす」という設定は、数字を並べて表します。例えば、3分なら<kbd>3</kbd>と入力します。また、4分33秒のように秒単位で指定したいときは、<kbd>4.33</kbd>と<kbd>&lt;分&gt;.&lt;秒&gt;</kbd>の形式で指定します。ただし、<kbd>&lt;分&gt;</kbd>は2桁までの数値で、3桁以上の場合は「右側2桁が分、残りが時間」を表します。例えば、1時間5分なら<kbd>105</kbd>のようになります。日単位の指定は、時分秒の指定の前に<kbd>&lt;日&gt;,</kbd>と書きます。例えば、<kbd>10,537.43</kbd>は10日と5時間37分43秒を表しています。</p>
+                                            <p>また、タイマー式の指定は<kbd>&lt;日&gt;d&lt;時間&gt;h&lt;分&gt;m&lt;秒&gt;s</kbd>の形式でも入力することができます。この指定では<kbd>1.5h</kbd>のように、少数での指定もすることができます。</p>
                                             <p>アラームのように「ある時刻になったら」という設定は、時分秒の区切りには<kbd>:</kbd>(コロン)、年月日の区切りには<kbd>-</kbd>、年月日と時分秒の間には<kbd>,</kbd>(コンマ)を入れて表します。例えば、21時38分は<kbd>21:38</kbd>、7時38分46秒なら<kbd>7:38:46</kbd>、3月7日の22時なら<kbd>3-7,22:0</kbd>のように書きます。これらの例のように、年月日や月日、秒は必要なければ省略することができます。</p>
                                             <p>アラームで設定される時間は、書かれたものと等しい一番始めの時刻になります。例えば、朝8時に<kbd>13:00</kbd>を指定すると、5時間後にタスクは動作します。一方で、15時に<kbd>13:00</kbd>と指定すると、次の日の13時にタスクが動作します。</p>
                                         </div>
@@ -156,29 +157,37 @@
                         </details>
                     </div>
                     <div class="h3">
-                        <details open><summary>2.8 ボタンの作成</summary>
+                        <details open><summary>2.8 式の記述</summary>
                             <div>
-                                <p>今まで書いてきたコマンドは、ボタンを押すことで実行することもできます。<kbd>button</kbd>コマンドの後ろに入力したいコマンドを入れて実行すると、volume操作バーとタスクリストの間にボタンが現れます。このボタンを押すことで、登録された内容が実行されます。例えば、<kbd>button switch</kbd>というコマンドで作成したボタンは、押すたびに<kbd>switch</kbd>コマンドを実行します。ただし、コマンドに<kbd>;</kbd>を含めることはできません。</p>
-                                <p>ボタンの削除は、<kbd>remove-button</kbd>コマンドで行います。<a href="#taskRemove">2.3</a>の<kbd>remove</kbd>コマンドと同様に、左上のボタンを1としたときのボタンの番号や<kbd>*</kbd>で削除を行います。
+                                <p>命令文字列の中に<kbd>${</kbd>～<kbd>}$</kbd>と記述すると、～の部分がJavaScriptの文として評価されます。たとえば、<kbd>${24*5}$m</kbd>という入力は、<kbd>120m</kbd>という指定と等しくなります。詳しくは、JavaScriptの文法を参照してください。</p>
+                                <p>参考: <a href="https://www.google.co.jp/search?q=JavaScript" target="_blank">JavaScript - Google 検索</a></p>
                             </div>
                         </details>
                     </div>
                     <div class="h3">
-                        <details open><summary>2.9 消去したものを元に戻す</summary>
+                        <details open><summary>2.9 ボタンの作成</summary>
+                            <div>
+                                <p>今まで書いてきたコマンドは、ボタンを押すことで実行することもできます。<kbd>button</kbd>コマンドの後ろに入力したいコマンドを入れて実行すると、volume操作バーとタスクリストの間にボタンが現れます。このボタンを押すことで、登録された内容が実行されます。例えば、<kbd>button switch</kbd>というコマンドで作成したボタンは、押すたびに<kbd>switch</kbd>コマンドを実行します。ただし、コマンドに<kbd>;</kbd>を含めることはできません。</p>
+                                <p>ボタンの削除は、<kbd>remove-button</kbd>コマンドで行います。<a href="#taskRemove">2.3</a>の<kbd>remove</kbd>コマンドと同様に、左上のボタンを1としたときのボタンの番号や<kbd>*</kbd>で削除を行います。</p>
+                            </div>
+                        </details>
+                    </div>
+                    <div class="h3">
+                        <details open><summary>2.10 消去したものを元に戻す</summary>
                             <div>
                                 <p><kbd>remove</kbd>や<kbd>remove-macro</kbd>、<kbd>remove-button</kbd>、<input type="button" value="remove">ボタンで消したものは、<kbd>undo</kbd>コマンドまたはCtrl+Zで元に戻すことができます。</p>
                             </div>
                         </details>
                     </div>
                     <div class="h3">
-                        <details open><summary>2.10 一度に複数のコマンドを実行する</summary>
+                        <details open><summary>2.11 一度に複数のコマンドを実行する</summary>
                             <div>
                                 <p>マクロを除くこれまでのコマンドは、<kbd>;</kbd>(セミコロン)でつなぐことで一度にすべて実行することができます。</p>
                             </div>
                         </details>
                     </div>
                     <div class="h3">
-                        <details open><summary>2.11 タスクの外部保存</summary>
+                        <details open><summary>2.12 タスクの外部保存</summary>
                             <div>
                                 <p>Task Masterはブラウザにデータを保存しているので、履歴の消去などでデータは消えてしまいます。また、同じ設定を入力しない限り、別の端末で同じタスクは管理できません。</p>
                                 <p><kbd>save</kbd>コマンドまたはCtrl+Sを使うと、Task Masterの全ての設定をセーブデータとして保存することができます。セーブデータを読み込むときは、<kbd>load</kbd>コマンドまたはCtrl+Oを実行して出てくる入力欄にその文字列を貼り付けてください。</p>

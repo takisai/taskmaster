@@ -39,11 +39,34 @@ let deadlineSubstStr = (() => {
             if(Math.abs(deadline - now) >= 86400000 * 365) {
                 ret = deadlineObj.getFullYear() + '-';
             }
-            ret += (deadlineObj.getMonth() + 1) + '-' + deadlineObj.getDate()
-                    + ',';
+            ret += `${deadlineObj.getMonth() + 1}-${deadlineObj.getDate()},`;
         }
         return ret + toHms(deadlineObj);
     };
+})();
+
+let evaluate = (() => {
+    // safeEval :: String -> String
+    let safeEval = str => {
+        try {
+            return Function(`'use strict';return(${str})`)();
+        } catch(e) { // e :: Object
+            return '';
+        }
+    };
+
+    return str => {
+        let ret = []; // ret :: [String]
+        while(str !== '') {
+            // result :: Maybe [Maybe String]
+            let result = /^(.*?)(\$\{(.*?)\}\$(.*))?$/.exec(str);
+            ret.push(result[1]);
+            if(result[2] === undefined) break;
+            ret.push(safeEval(result[3]));
+            str = result[4];
+        }
+        return ret.join('');
+    }
 })();
 
 // removeDom :: IDString -> Bool
@@ -58,7 +81,8 @@ let removeDom = (() => {
 
 let Base64 = (() => {
     // KEY :: Base64String
-    const KEY = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+    const KEY = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789\
+            +/=';
 
     return {
         // Base64.encode :: SaveString -> Base64String
@@ -119,7 +143,7 @@ let Save = (() => {
         },
         // Save.toString :: () -> ()
         toString: () => {
-            prompt('セーブデータ:', Base64.encode(makeData()));
+            window.prompt('セーブデータ:', Base64.encode(makeData()));
         }
     };
 })();
@@ -135,15 +159,20 @@ let Load = (() => {
         exec: () => {
             // data :: Maybe SaveString
             let data = window.localStorage.getItem('data');
-            if(data === null) return;
+            if(data === null) {
+                document.getElementById('menu_details').open = true;
+                document.getElementById('document_details').open = true;
+                return;
+            }
             parse(data);
         },
         // Load.fromString :: () -> ()
         fromString: () => {
             // text :: Maybe Base64String
-            let text = prompt('読み込むデータを入れてください:', '');
+            let text = window.prompt('読み込むデータを入れてください:', '');
             if(text === '' || text === null) return;
-            parseMain('##remove-macro *;remove *;remove-button *;default 0.;switch alarm;volume 100;empty-trash');
+            parseMain('##remove-macro *;remove *;remove-button *;default 0.;\
+                    switch alarm;volume 100;empty-trash');
             parse(Base64.decode(text));
             Notice.set('data loaded');
         }
@@ -181,16 +210,16 @@ let Notice = (() => {
         set: html => {
             let target = document.getElementById('notice'); // target :: Element
             if(id !== undefined) {
-                clearTimeout(id);
+                window.clearTimeout(id);
                 target.innerHTML += ' , ';
             }
             target.innerHTML += html;
-            id = setTimeout(Notice.clear, 5000);
+            id = window.setTimeout(Notice.clear, 5000);
         },
         // Notice.clear :: () -> ()
         clear: () => {
             document.getElementById('notice').innerHTML = '';
-            clearTimeout(id);
+            window.clearTimeout(id);
             id = undefined;
         }
     };
@@ -229,7 +258,7 @@ let Sound = (() => {
         // Sound.init :: () ~-> ()
         init: () => {
             for(let i = 0; i < 10; i++) { // i :: IndexNumber
-                let url = 'sound/alarm' + i + '.mp3'; // url :: URLString
+                let url = `sound/alarm${i}.mp3`; // url :: URLString
                 sounds[url] = new Audio(url);
                 sounds[url].muted = true;
                 sounds[url].onloadeddata = e => sounds[url].play();
@@ -238,7 +267,7 @@ let Sound = (() => {
         // Sound.play :: (URLString, IDString) -> ()
         play: (url, id) => {
             if(sounds[url] === undefined) {
-                console.log('"' + url + '" is unregistered');
+                console.log(`"${url}" is unregistered`);
                 return;
             }
             if(sounds[url].readyState < 2) return;
@@ -256,9 +285,7 @@ let Sound = (() => {
             }, {once: true});
             if(isPlay) return;
             document.getElementById('item_' + id).innerHTML +=
-                    '<input id="stopButton_' + id
-                    + '" type="button" value="stop" onclick="parseMain(\'#stop $'
-                    + id + '\');">';
+                    `<input id="stopButton_${id}" type="button" value="stop" onclick="parseMain('#stop $${id}');">`;
         },
         // Sound.stop :: IDString -> ()
         stop: id => {
@@ -302,13 +329,12 @@ let Macro = (() => {
             // macroItem :: MacroObject
             let macroItem = {key: new RegExp(result[1], 'gu'), str: s
                     , value: result[2], id: id, time: now
-                    , saveText: '-> ' + now + '#' + s};
+                    , saveText: `-> ${now}#${s}`};
             // newElement :: Element
             let newElement = document.createElement('li');
             let formatStr = formatter(s); // formatStr :: DisplayString
             newElement.innerHTML =
-                    '<input type="button" value="remove" onclick="parseMain(\'#remove-macro $'
-                    + id + '\');"> ' + formatStr;
+                    `<input type="button" value="remove" onclick="parseMain('#remove-macro $${id}');"> ${formatStr}`;
             newElement.setAttribute('id', 'macro_' + id);
             // i :: IndexNumber;  target :: Element
             let i = macros.findIndex(x => x.time > macroItem.time), target;
@@ -404,12 +430,12 @@ let Button = (() => {
             if(now === null) now = Date.now();
             // buttonItem :: ButtonObject
             let buttonItem = {id: buttonCount, str: str, time: now
-                    , saveText: '$button ' + now + '#' + str};
+                    , saveText: `$button ${now}#${str}`};
             buttonCount++;
             // newElement :: Element
             let newElement = document.createElement('span');
-            newElement.innerHTML = '<input type="button" value="' + str
-                    + '" onclick="parseMain(\'' + execStr + '\');"> ';
+            newElement.innerHTML =
+                    `<input type="button" value="${str}" onclick="parseMain('${execStr}');"> `;
             newElement.setAttribute('id', 'button_' + buttonItem.id);
             // i :: IndexNumber;  target :: Element
             let i = buttons.findIndex(x => x.time > buttonItem.time), target;
@@ -514,10 +540,7 @@ let TaskQueue = (() => {
             // newElement :: Element
             let newElement = document.createElement('li');
             newElement.innerHTML =
-                    '<input type="button" value="remove" onclick="parseMain(\'#remove $'
-                    + id + '\');"> <span id="text_' + id + '" title="'
-                    + taskItem.tipText + '">' + taskItem.name
-                    + '</span><span id ="time_' + id + '"></span> ';
+                    `<input type="button" value="remove" onclick="parseMain('#remove $${id}');"> <span id="text_${id}" title="${taskItem.tipText}">${taskItem.name}</span><span id="time_${id}"></span> `;
             newElement.setAttribute('id', 'item_' + id);
             // i :: IndexNumber
             let i = taskQueue.findIndex(x => x.deadline > taskItem.deadline);
@@ -635,18 +658,22 @@ let Task = (() => {
 
     // timer :: (TimerString, DateNumber) -> Maybe DateNumber
     let timer = (() => {
+        // regex :: RegExp
+        let regex = /^((?:(\d+),)?(\d*?)(\d{1,2})(?:\.(\d+))?)$|^((?:(.*)d)?(?:(.*)h)?(?:(.*)m)?(?:(.*)s)?)$/;
+
         return (s, now) => {
-            // result :: Maybe [Maybe String]
-            let result = /^(?:(\d+),)?(\d*?)(\d{1,2})(?:\.(\d+))?$/.exec(s);
-            if(result === null) return null;
-            // ret :: DateNumber
-            let ret = 3600 * parseInt('0' + result[2], 10)
-                    + 60 * parseInt('0' + result[3], 10);
-            if(result[1] !== undefined) {
-                ret += 86400 * parseInt(result[1], 10);
-            }
-            if(result[4] !== undefined) {
-                ret += parseInt(result[4], 10);
+            let result = regex.exec(s); // result :: Maybe [Maybe String]
+            if(s === '' || result === null) return null;
+            // ret :: DateNumber;  correct : IndexNumber
+            let ret = 0, correct = result[1] !== undefined ? 2 : 7;
+            let table = [86400, 3600, 60, 1]; // table :: Number
+            for(let i = 0; i < 4; i++) { // i :: IndexNumber
+                if(result[i + correct] !== undefined) {
+                    // value :: MaybeNumber
+                    let value = Number('0' + result[i + correct], 10);
+                    if(isNaN(value)) return null;
+                    ret += table[i] * value;
+                }
             }
             return now + 1000 * ret;
         };
@@ -702,8 +729,9 @@ let Task = (() => {
             // result :: Maybe [Maybe String]
             let result = /^([-\d]?)(\.|!{1,3})?$/.exec(s);
             if(result === null) {
-                Notice.set('parse error: default <span class="red">' + s
-                        + '</span>');
+                // str :: DisplayString
+                let str = `parse error: default <span class="red">${s}</span>`;
+                Notice.set(str);
                 return;
             }
             if(result[1] !== '') {
@@ -780,16 +808,18 @@ let Task = (() => {
             let form = document.gui_form; // form :: Element
             let main = ''; // main :: String
             if(form.task_type.value === 'timer') {
-                let orig = 3600 * form.timer_hour.value
-                        + 60 * form.timer_minute.value
-                        + 1 * form.timer_second.value; // orig :: DateNumber
+                main = `${form.timer_hour.value}h${form.timer_minute.value}m${form.timer_second.value}s`;/*
+                // orig :: DateNumber
+                let orig = ['hour', 'minute', 'second']
+                        .map(x => parseFloat('0' + form['timer_' + x].value))
+                        .reduce((acc, v) => 60 * acc + v, 0);
                 // result :: Maybe [Maybe String]
                 let result
                         = /^(?:(\d+),)?(\d+):(\d+):(\d+)$/.exec(toDhms(orig));
                 if(result[1] !== undefined) {
                     main = result[1] + ',';
                 }
-                main += result[2] + result[3] + '.' + result[4];
+                main += result[2] + result[3] + '.' + result[4];*/
             } else {
                 main = [form.alarm_hour.value
                         , form.alarm_minute.value
@@ -819,7 +849,8 @@ let parseMain = (() => {
     let idCount = 0; // idCount :: CountNumber
     let recursionCount = 0; // recursionCount :: CountNumber
 
-    // instNumbersParse :: (ExecString, ParameterString, Object, a -> (), () -> (), ParameterString -> ()) -> ()
+    // instNumbersParse :: (ExecString, ParameterString, Object, a -> ()
+            // , () -> (), ParameterString -> ()) -> ()
     let instNumbersParse =
             (inst, str, obj, method, methodAll, toTrash = null) => {
         if(str === '*') {
@@ -834,12 +865,15 @@ let parseMain = (() => {
         if(toTrash !== null) toTrash(ids.join(' '));
         ids.forEach(x => method(x));
         if(noSet.some(x => /\D/.test(x))) {
-            Notice.set('parse error: ' + inst + ' '
-                    + noSet.map(x => x.replace(/^(\d*\D.*)$/
-                    , '<span class="red">$1</span>')).join(' '));
+            Notice.set(`parse error: ${inst} ${
+                    noSet.map(x => x.replace(/^(\d*\D.*)$/
+                            , '<span class="red">$1</span>'))
+                         .join(' ')}`);
+
         }
     };
-    // isIdCall :: (IDString -> (), ParameterString, ParameterString -> ()) -> Bool
+    /* isIdCall :: (IDString -> (), ParameterString, ParameterString -> ())
+            -> Bool */
     let isIdCall = (method, str, toTrash = null) => {
         let result = /^\$(\d+)$/.exec(str); // result :: Maybe [Maybe String]
         if(result === null) return false;
@@ -863,6 +897,7 @@ let parseMain = (() => {
         if(Macro.isAddSuccess(text)) return;
         if(!isRawMode) {
             text = Macro.replace(text);
+            text = evaluate(text);
         }
         let texts = text.split(';');
         if(texts.length > 1) {
@@ -919,7 +954,7 @@ let parseMain = (() => {
                 return;
             case 'sound':
                 if(!/^\d$/.test(spaceSplit[2])) return;
-                Sound.play('sound/alarm' + spaceSplit[2] + '.mp3', callFrom);
+                Sound.play(`sound/alarm${spaceSplit[2]}.mp3`, callFrom);
                 return;
             case 'stop':
                 if(spaceSplit[2] === undefined || spaceSplit[2] === '$global') {
@@ -969,7 +1004,7 @@ let parseMain = (() => {
         try {
             Notice.clear();
             main(text, callFrom);
-        } catch(e) {
+        } catch(e) { // e :: Object
             switch(e) {
                 case 'too much recursion':
                     Notice.set('too much recursion');

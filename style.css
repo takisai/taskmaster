@@ -127,6 +127,14 @@ a:active, .red {
     display: none;
 }
 
+.of_hidden {
+    overflow: hidden;
+}
+
+.of_auto {
+    overflow: auto;
+}
+
 #clock {
     font-size: 2em;
     margin: 8px 0px;
@@ -143,7 +151,6 @@ a:active, .red {
     height: 100%;
     opacity: 0.75;
     z-index: 1;
-    overflow: hidden;
 }
 
 #notice {

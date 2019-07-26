@@ -11,25 +11,6 @@ let toHms = (() => {
     };
 })();
 
-// toDhms :: DateNumber -> DisplayString
-let toDhms = (() => {
-    return rest => {
-        let d = Math.floor(rest / 86400); // d :: Number
-        rest -= d * 86400;
-        let h = Math.floor(rest / 3600); // h :: Number
-        rest -= h * 3600;
-        let m = Math.floor(rest / 60); // m :: Number
-        rest -= m * 60;
-        let s = Math.floor(rest); // s :: Number
-        // ret :: DisplayString
-        let ret = [h, m, s].map(x => ('0' + x).slice(-2)).join(':');
-        if(d > 0) {
-            ret = d + ',' + ret;
-        }
-        return ret;
-    }
-})();
-
 // deadlineSubstStr :: (DateNumber, DateNumber) -> DisplayString
 let deadlineSubstStr = (() => {
     return (deadline, now) => {
@@ -59,7 +40,7 @@ let evaluate = (() => {
         let ret = []; // ret :: [String]
         while(str !== '') {
             // result :: Maybe [Maybe String]
-            let result = /^(.*?)(\$\{(.*?)\}\$(.*))?$/.exec(str);
+            let result = /^(.*?)(\$\{(.*?)\$\}(.*))?$/.exec(str);
             ret.push(result[1]);
             if(result[2] === undefined) break;
             ret.push(safeEval(result[3]));
@@ -764,7 +745,6 @@ let Task = (() => {
             }
             ret.isValid = Date.now() - ret.deadline < -UPDATE_TIME / 2;
             ret.saveText += '#' + result[2];
-
             switch(plusSplit[2]) {
                 case undefined:
                     break;
@@ -808,18 +788,7 @@ let Task = (() => {
             let form = document.gui_form; // form :: Element
             let main = ''; // main :: String
             if(form.task_type.value === 'timer') {
-                main = `${form.timer_hour.value}h${form.timer_minute.value}m${form.timer_second.value}s`;/*
-                // orig :: DateNumber
-                let orig = ['hour', 'minute', 'second']
-                        .map(x => parseFloat('0' + form['timer_' + x].value))
-                        .reduce((acc, v) => 60 * acc + v, 0);
-                // result :: Maybe [Maybe String]
-                let result
-                        = /^(?:(\d+),)?(\d+):(\d+):(\d+)$/.exec(toDhms(orig));
-                if(result[1] !== undefined) {
-                    main = result[1] + ',';
-                }
-                main += result[2] + result[3] + '.' + result[4];*/
+                main = `${form.timer_hour.value}h${form.timer_minute.value}m${form.timer_second.value}s`;
             } else {
                 main = [form.alarm_hour.value
                         , form.alarm_minute.value
@@ -987,8 +956,7 @@ let parseMain = (() => {
                 Trash.reset();
                 return;
         }
-        // taskItem :: Maybe TaskObject
-        let taskItem = Task.parse(text);
+        let taskItem = Task.parse(text); // taskItem :: Maybe TaskObject
         if(taskItem === null) {
             if(text === '') return;
             Notice.set('undefined: ' + text);
@@ -1028,7 +996,20 @@ let Display = (() => {
     };
     // restStr :: (DateNumber, DateNumber) -> DisplayString
     let restStr = (deadline, now) => {
-        return '[' + toDhms((deadline - now) / 1000) + ']';
+        let rest = (deadline - now) / 1000; // rest :: DateNumber
+        let d = Math.floor(rest / 86400); // d :: Number
+        rest -= d * 86400;
+        let h = Math.floor(rest / 3600); // h :: Number
+        rest -= h * 3600;
+        let m = Math.floor(rest / 60); // m :: Number
+        rest -= m * 60;
+        let s = Math.floor(rest); // s :: Number
+        // ret :: DisplayString
+        let ret = [h, m, s].map(x => ('0' + x).slice(-2)).join(':');
+        if(d > 0) {
+            ret = d + ',' + ret;
+        }
+        return '[' + ret + ']';
     };
 
     return {
@@ -1109,37 +1090,38 @@ let showAlarmGUI = (() => {
     };
 })();
 
-window.addEventListener('click', event => {
-    let target = event.target; // target :: Maybe Element
-    while(target !== null) {
-        if(target.id === 'menu') return;
-        target = target.parentNode;
-    }
-    document.cui_form.input.focus();
-});
-document.getElementById('range_volume').addEventListener('input', () => {
-    parseMain('volume ' + document.getElementById('range_volume').value);
-});
-window.addEventListener('keydown', event => {
-    if(event.ctrlKey) {
-        switch(event.keyCode) {
-            case 79:
-                parseMain('#load');
-                event.preventDefault();
-                break;
-            case 83:
-                parseMain('#save');
-                event.preventDefault();
-                break;
-            case 90:
-                parseMain('#undo');
-                event.preventDefault();
-                break;
-        }
-    }
-});
 document.getElementById('cover').addEventListener('click', () => {
+    window.addEventListener('click', event => {
+        let target = event.target; // target :: Maybe Element
+        while(target !== null) {
+            if(target.id === 'menu') return;
+            target = target.parentNode;
+        }
+        document.cui_form.input.focus();
+    });
+    document.getElementById('range_volume').addEventListener('input', () => {
+        parseMain('volume ' + document.getElementById('range_volume').value);
+    });
+    window.addEventListener('keydown', event => {
+        if(event.ctrlKey) {
+            switch(event.keyCode) {
+                case 79:
+                    parseMain('#load');
+                    event.preventDefault();
+                    break;
+                case 83:
+                    parseMain('#save');
+                    event.preventDefault();
+                    break;
+                case 90:
+                    parseMain('#undo');
+                    event.preventDefault();
+                    break;
+            }
+        }
+    });
     document.getElementById('cover').className = 'none';
+    document.getElementById('body').className = 'of_auto';
     Sound.init();
     setInterval(clock, UPDATE_TIME);
 }, {once: true});

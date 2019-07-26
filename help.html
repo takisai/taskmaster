@@ -10,7 +10,7 @@
         <div class="h2">
             <details open><summary>1 概要</summary>
                 <div>
-                    <p><a href="index.html">Task Master</a>は、決められた時刻に音を出すことができるWEBツールです。</p>
+                    <p><a href="index.html">Task Master</a>は、WEB上で利用できるリマインダーツールです。</p>
                     <div class="h3">
                         <details open><summary>1.1 諸情報</summary>
                             <div>
@@ -26,7 +26,7 @@
             </details>
         </div>
         <div class="h2">
-            <details open><summary>2 使い方</summary>
+            <details open><summary>2 使い方|基本編</summary>
                 <div>
                     <p>Task Masterは、基本的に上から2行目の入力欄にコマンド+Enterを入れて動かします。</p>
                     <div class="h3">
@@ -93,14 +93,6 @@
                                         </div>
                                     </details>
                                 </div>
-                                <div class="h4">
-                                    <details open><summary>2.1.6 指定した時刻に別のコマンドを実行する</summary>
-                                        <div>
-                                            <p>タスクで指定した時刻に、別のコマンドを実行することができます。ただし、実行できるコマンドは<kbd>;</kbd>や<kbd>/</kbd>が入っていないこと、最後の文字が<kbd>.</kbd>や<kbd>!</kbd>でないことが必要です。例えば、5分後に<kbd>hoge</kbd>というコマンドを実行するタスクは<kbd>5/*hoge</kbd>のように今までの<kbd>&lt;音番号&gt;</kbd>の部分を<kbd>*&lt;実行したいコマンド&gt;</kbd>に置き換えます。今までのタスク指定と同様に、重要度やタスク名を設定することもできます。</p>
-                                            <p>上の条件に合わないコマンドを実行するためには、<a href="#macro">2.7</a>で説明するマクロを利用する必要があります。</p>
-                                        </div>
-                                    </details>
-                                </div>
                             </div>
                         </details>
                     </div>
@@ -146,26 +138,7 @@
                         </details>
                     </div>
                     <div class="h3">
-                        <details id="macro" open><summary>2.7 マクロ</summary>
-                            <div>
-                                <p>マクロを使うと、例えば<kbd>ramen</kbd>と入力すれば、自動で<kbd>3//ramen</kbd>というコマンドに置き換えて実行することができます。</p>
-                                <p>マクロの指定方法は<kbd>&lt;元文字列&gt;-&gt;&lt;置き換え後文字列&gt;</kbd>です。ただし、<kbd>&lt;元文字列&gt;</kbd>に<kbd>-&gt;</kbd>を含めることはできません。<kbd>&lt;元文字列&gt;</kbd>と<kbd>&lt;置き換え後文字列&gt;</kbd>はJavaScriptの<code>replace</code>メソッドを利用しているため、複雑な指定をすることができます。例えば、<kbd>dup (.*)$-&gt;$1;button $1</kbd>というマクロを指定しておくと、<kbd>dup 50</kbd>という文字列は<kbd>50;button 50</kbd>というコマンドに置き換えられます。詳しくは、JavaScriptの<code>replace</code>メソッドを参照してください。</p>
-                                <p>マクロによる置き換えは、登録順にすべてのマクロで行われます。例えば、<kbd>a-&gt;b</kbd>と<kbd>b-&gt;c</kbd>というマクロをこの順番に登録した場合、<kbd>a</kbd>というコマンドは<kbd>c</kbd>に置き換えられます。マクロでの置換が行われないようにするには、先頭に<kbd>#</kbd>をつけてコマンドを入力します。</p>
-                                <p>マクロの一覧は<kbd>show-macro</kbd>コマンドで見ることができます。マクロの消去は、マクロリストの左にある<input type="button" value="remove">ボタンを押すか、<kbd>remove-macro</kbd>コマンドにより行います。このコマンドは<a href="#taskRemove">2.3</a>の<kbd>remove</kbd>コマンドと同様に、<kbd>remove-macro 1 3 4</kbd>や<kbd>remove-macro *</kbd>と入力できます。マクロ一覧を隠すときは<kbd>hide-macro</kbd>を実行します。</p>
-                                <p>参考: <a href="https://www.google.co.jp/search?q=JavaScript+replace" target="_blank">JavaScript replace - Google 検索</a></p>
-                            </div>
-                        </details>
-                    </div>
-                    <div class="h3">
-                        <details open><summary>2.8 式の記述</summary>
-                            <div>
-                                <p>命令文字列の中に<kbd>${</kbd>～<kbd>}$</kbd>と記述すると、～の部分がJavaScriptの文として評価されます。たとえば、<kbd>${24*5}$m</kbd>という入力は、<kbd>120m</kbd>という指定と等しくなります。詳しくは、JavaScriptの文法を参照してください。</p>
-                                <p>参考: <a href="https://www.google.co.jp/search?q=JavaScript" target="_blank">JavaScript - Google 検索</a></p>
-                            </div>
-                        </details>
-                    </div>
-                    <div class="h3">
-                        <details open><summary>2.9 ボタンの作成</summary>
+                        <details id="button" open><summary>2.7 ボタンの作成</summary>
                             <div>
                                 <p>今まで書いてきたコマンドは、ボタンを押すことで実行することもできます。<kbd>button</kbd>コマンドの後ろに入力したいコマンドを入れて実行すると、volume操作バーとタスクリストの間にボタンが現れます。このボタンを押すことで、登録された内容が実行されます。例えば、<kbd>button switch</kbd>というコマンドで作成したボタンは、押すたびに<kbd>switch</kbd>コマンドを実行します。ただし、コマンドに<kbd>;</kbd>を含めることはできません。</p>
                                 <p>ボタンの削除は、<kbd>remove-button</kbd>コマンドで行います。<a href="#taskRemove">2.3</a>の<kbd>remove</kbd>コマンドと同様に、左上のボタンを1としたときのボタンの番号や<kbd>*</kbd>で削除を行います。</p>
@@ -173,24 +146,63 @@
                         </details>
                     </div>
                     <div class="h3">
-                        <details open><summary>2.10 消去したものを元に戻す</summary>
+                        <details open><summary>2.8 消去したものを元に戻す</summary>
                             <div>
                                 <p><kbd>remove</kbd>や<kbd>remove-macro</kbd>、<kbd>remove-button</kbd>、<input type="button" value="remove">ボタンで消したものは、<kbd>undo</kbd>コマンドまたはCtrl+Zで元に戻すことができます。</p>
                             </div>
                         </details>
                     </div>
                     <div class="h3">
-                        <details open><summary>2.11 一度に複数のコマンドを実行する</summary>
+                        <details open><summary>2.9 一度に複数のコマンドを実行する</summary>
                             <div>
                                 <p>マクロを除くこれまでのコマンドは、<kbd>;</kbd>(セミコロン)でつなぐことで一度にすべて実行することができます。</p>
                             </div>
                         </details>
                     </div>
                     <div class="h3">
-                        <details open><summary>2.12 タスクの外部保存</summary>
+                        <details open><summary>2.10 タスクの外部保存</summary>
                             <div>
                                 <p>Task Masterはブラウザにデータを保存しているので、履歴の消去などでデータは消えてしまいます。また、同じ設定を入力しない限り、別の端末で同じタスクは管理できません。</p>
                                 <p><kbd>save</kbd>コマンドまたはCtrl+Sを使うと、Task Masterの全ての設定をセーブデータとして保存することができます。セーブデータを読み込むときは、<kbd>load</kbd>コマンドまたはCtrl+Oを実行して出てくる入力欄にその文字列を貼り付けてください。</p>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+            </details>
+        </div>
+        <div class="h2">
+            <details open><summary>3 使い方|詳細編</summary>
+                <div>
+                    <div class="h3">
+                        <details id="exec_task" open><summary>3.1 指定した時刻に別のコマンドを実行する</summary>
+                            <div>
+                                <p>タスクで指定した時刻に、別のコマンドを実行することができます。ただし、実行できるコマンドは<kbd>;</kbd>や<kbd>/</kbd>が入っていないこと、最後の文字が<kbd>.</kbd>や<kbd>!</kbd>でないことが必要です。例えば、5分後に<kbd>hoge</kbd>というコマンドを実行するタスクは<kbd>5/*hoge</kbd>のように今までの<kbd>&lt;音番号&gt;</kbd>の部分を<kbd>*&lt;実行したいコマンド&gt;</kbd>に置き換えます。今までのタスク指定と同様に、重要度やタスク名を設定することもできます。</p>
+                            </div>
+                        </details>
+                    </div>
+                    <div class="h3">
+                        <details open><summary>3.2 コマンド文字列の置き換え</summary>
+                            <div>
+                                <p>入力されたコマンドを、前処理として置き換えることができます。前処理は<a href="#macro">マクロ</a>、<a href="#eval">式の展開</a>の順に行われます。これらの置き換えが行われないようにするには、マクロでの置換が行われないようにするには、先頭に<kbd>#</kbd>をつけてコマンドを入力します。</p>
+                                <div class="h3">
+                                    <details id="macro" open><summary>3.2.1 マクロ</summary>
+                                        <div>
+                                            <p>マクロを使うと、例えば<kbd>ramen</kbd>と入力すれば、自動で<kbd>3//ramen</kbd>というコマンドに置き換えて実行することができます。また、<a href="#button">2.7</a>や<a href="#exec_task">3.1</a>で指定できなかったコマンドでも、マクロで置き換えることで実行することができます。</p>
+                                            <p>マクロの指定方法は<kbd>&lt;元文字列&gt;-&gt;&lt;置き換え後文字列&gt;</kbd>です。ただし、<kbd>&lt;元文字列&gt;</kbd>に<kbd>-&gt;</kbd>を含めることはできません。<kbd>&lt;元文字列&gt;</kbd>と<kbd>&lt;置き換え後文字列&gt;</kbd>はJavaScriptの<code>replace</code>メソッドを利用しているため、複雑な指定をすることができます。例えば、<kbd>dup (.*)$-&gt;$1;button $1</kbd>というマクロを指定しておくと、<kbd>dup 50</kbd>という文字列は<kbd>50;button 50</kbd>というコマンドに置き換えられます。詳しくは、JavaScriptの<code>replace</code>メソッドを参照してください。</p>
+                                            <p>マクロによる置き換えは、登録順にすべてのマクロで行われます。例えば、<kbd>a-&gt;b</kbd>と<kbd>b-&gt;c</kbd>というマクロをこの順番に登録した場合、<kbd>a</kbd>というコマンドは<kbd>c</kbd>に置き換えられます。</p>
+                                            <p>マクロの一覧は<kbd>show-macro</kbd>コマンドで見ることができます。マクロの消去は、マクロリストの左にある<input type="button" value="remove">ボタンを押すか、<kbd>remove-macro</kbd>コマンドにより行います。このコマンドは<a href="#taskRemove">2.3</a>の<kbd>remove</kbd>コマンドと同様に、<kbd>remove-macro 1 3 4</kbd>や<kbd>remove-macro *</kbd>と入力できます。マクロ一覧を隠すときは<kbd>hide-macro</kbd>を実行します。</p>
+                                            <p>参考: <a href="https://www.google.co.jp/search?q=JavaScript+replace" target="_blank">JavaScript replace - Google 検索</a></p>
+                                        </div>
+                                    </details>
+                                </div>
+                                <div class="h3">
+                                    <details open><summary>3.3 式の記述</summary>
+                                        <div>
+                                            <p>命令文字列の中に<kbd>${</kbd>～<kbd>$}</kbd>と記述すると、～の部分がJavaScriptの文として評価されます。たとえば、<kbd>^hoge (\d+)->${$1*5$}m</kbd>というマクロは、<kbd>hoge 12</kbd>という指定を<kbd>${12*5$}m</kbd>に変換します。さらに12*5が評価される結果、<kbd>60m</kbd>と等しくなります。詳しくは、JavaScriptの文法を参照してください。</p>
+                                            <p>参考: <a href="https://www.google.co.jp/search?q=JavaScript" target="_blank">JavaScript - Google 検索</a></p>
+                                        </div>
+                                    </details>
+                                </div>
                             </div>
                         </details>
                     </div>

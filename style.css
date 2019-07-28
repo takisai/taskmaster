@@ -138,7 +138,7 @@ a:active, .red {
 #clock {
     font-size: 2em;
     margin: 8px 0px;
-    font-family: monospace;
+    font-family: monospace, serif;
 }
 
 #cover {
@@ -164,4 +164,8 @@ a:active, .red {
 
 #document * {
     letter-spacing: 0.05em;
+}
+
+#document li {
+    line-height: 1.8em;
 }

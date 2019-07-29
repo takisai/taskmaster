@@ -27,6 +27,7 @@ const deadlineSubstStr = (() => {
     };
 })();
 
+// evaluate :: ExecString -> ExecString
 const evaluate = (() => {
     // safeEval :: String -> String
     const safeEval = str => {

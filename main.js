@@ -210,11 +210,12 @@ const Notice = (() => {
 
 const History = (() => {
     const strs = []; // strs :: [ExecString]
-    let index = 0, tempStr; // index :: IndexNumber;  tempStr :: ExecString
+    let index = 0, tempStr = ''; // index :: IndexNumber;  tempStr :: ExecString
 
     return {
         // History.add :: ExecString -> ()
         add: str => {
+            if(str === '') return;
             strs.push(str);
             if(index < strs.length - 1) {
                 strs.splice(index, 1);
@@ -223,25 +224,25 @@ const History = (() => {
         },
         // History.up :: ExecString -> ExecString
         up: str => {
-            if(index === 0) return strs[0];
             if(index === strs.length) {
                 tempStr = str;
             }
+            if(index === 0) return strs.length === 0 ? tempStr : strs[0];
             index--;
             return strs[index];
         },
-        // History.down :: () -> ExecString
-        down: () => {
+        // History.down :: ExecString -> ExecString
+        down: str => {
+            if(index === strs.length) return str;
             index++;
-            if(index >= strs.length) {
-                index = strs.length;
-                return tempStr;
-            }
+            if(index === strs.length) return tempStr;
             return strs[index];
         },
         // History.reset :: () -> ()
         reset: () => {
             strs.length = 0;
+            index = 0;
+            tempStr = '';
         }
     };
 })();
@@ -1185,30 +1186,36 @@ document.getElementById('cover').addEventListener('click', () => {
     });
     window.addEventListener('keydown', event => {
         if(event.ctrlKey) {
-            switch(event.keyCode) {
-                case 79: // 'o'
+            switch(event.key) {
+                case 'o':
+                case 'O':
                     parseMain('#load');
                     event.preventDefault();
                     break;
-                case 83: // 's'
+                case 's':
+                case 'S':
                     parseMain('#save');
                     event.preventDefault();
                     break;
-                case 90: // 'z'
+                case 'z':
+                case 'Z':
                     parseMain('#undo');
                     event.preventDefault();
                     break;
             }
             return;
         }
-        switch(event.keyCode) {
-            case 38: // 'up'
-                document.cui_form.input.value =
-                        History.up(document.cui_form.input.value);
-                break;
-            case 40: // 'down'
-                document.cui_form.input.value = History.down();
-                break;
+        if(document.activeElement.id === 'text_cui_form') {
+            switch(event.key) {
+                case 'ArrowUp':
+                    document.cui_form.input.value =
+                            History.up(document.cui_form.input.value);
+                    break;
+                case 'ArrowDown':
+                    document.cui_form.input.value =
+                            History.down(document.cui_form.input.value);
+                    break;
+            }
         }
     });
     document.getElementById('cover').className = 'none';

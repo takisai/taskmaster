@@ -58,7 +58,7 @@
                                 <div class="h4">
                                     <details id="taskMode" open><summary>2.1.2 通知設定: 音/重要度</summary>
                                         <div>
-                                            <p>Task Masterは10種類の音を出すことができます。それぞれ0から9までの数字が割り当てられています。リマインダーが動作するときの音の設定には、その数字を指定すればOKです。音の確認は<kbd>sound 0</kbd>のように<kbd>sound</kbd>コマンドを使います。</p>
+                                            <p>Task Masterは10種類の音を出すことができます。それぞれ0から9までの数字が割り当てられています。リマインダーが動作するときの音の設定には、その数字を指定すればOKです。音の確認は<a href="#sound">3.3.1</a>の<kbd>sound</kbd>コマンドを使います。</p>
                                             <p>重要度の指定をすると、動作する時刻を過ぎたときのリマインダーの表示が変わります。</p>
                                             <ul>
                                                 <li>重要度: 低のとき<br>
@@ -151,7 +151,7 @@
                         </details>
                     </div>
                     <div class="h3">
-                        <details open><summary>2.8 消去したものを元に戻す</summary>
+                        <details id="undo" open><summary>2.8 消去したものを元に戻す</summary>
                             <div>
                                 <p><kbd>remove</kbd>や<kbd>remove-macro</kbd>、<kbd>remove-button</kbd>、<input type="button" value="remove">ボタンで消したものは、<kbd>undo</kbd>コマンドまたはCtrl+Zで元に戻すことができます。</p>
                             </div>
@@ -189,7 +189,7 @@
                         <details open><summary>3.2 コマンド文字列の置き換え</summary>
                             <div>
                                 <p>入力されたコマンドを、前処理として置き換えることができます。前処理は<a href="#macro">マクロ</a>、<a href="#eval">式の展開</a>の順に行われます。これらの置き換えが行われないようにするには、マクロでの置換が行われないようにするには、先頭に<kbd>#</kbd>をつけてコマンドを入力します。</p>
-                                <div class="h3">
+                                <div class="h4">
                                     <details id="macro" open><summary>3.2.1 マクロ</summary>
                                         <div>
                                             <p>マクロを使うと、例えば<kbd>ramen</kbd>と入力すれば、自動で<kbd>3//ramen</kbd>というコマンドに置き換えて実行することができます。また、<a href="#button">2.7</a>や<a href="#exec_task">3.1</a>で指定できなかったコマンドでも、マクロで置き換えることで実行することができます。</p>
@@ -200,11 +200,46 @@
                                         </div>
                                     </details>
                                 </div>
-                                <div class="h3">
-                                    <details open><summary>3.3 式の記述</summary>
+                                <div class="h4">
+                                    <details open><summary>3.2.2 式の展開</summary>
                                         <div>
                                             <p>命令文字列の中に<kbd>${</kbd>～<kbd>$}</kbd>と記述すると、～の部分がJavaScriptの文として評価されます。たとえば、<kbd>^hoge (\d+)->${$1*5$}m</kbd>というマクロは、<kbd>hoge 12</kbd>という指定を<kbd>${12*5$}m</kbd>に変換します。さらに12*5が評価される結果、<kbd>60m</kbd>と等しくなります。詳しくは、JavaScriptの文法を参照してください。</p>
                                             <p>参考: <a href="https://www.google.co.jp/search?q=JavaScript" target="_blank">JavaScript - Google 検索</a></p>
+                                        </div>
+                                    </details>
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+                    <div class="h3">
+                        <details open><summary>3.3 その他のコマンド</summary>
+                            <div>
+                                <p>これまで説明した以外のコマンドを、ここでは説明します。</p>
+                                <div class="h4">
+                                    <details id="sound" open><summary>3.3.1 <code>sound</code>コマンド</summary>
+                                        <div>
+                                            <p><kbd>sound &lt;音番号&gt;</kbd>の形式で0から9の数字を指定すると、音の確認をすることができます。</p>
+                                        </div>
+                                    </details>
+                                </div>
+                                <div class="h4">
+                                    <details open><summary>3.3.2 <code>empty-trash</code>コマンド</summary>
+                                        <div>
+                                            <p><kbd>empty-trash</kbd>コマンドは、<a href="#undo">2.8</a>の<kbd>undo</kbd>コマンドの履歴を消去します。このコマンドを使った後は、それより前に消去したリマインダーなどは復元できなくなります。</p>
+                                        </div>
+                                    </details>
+                                </div>
+                                <div class="h4">
+                                    <details open><summary>3.3.3 <code>show-menu</code>/<code>hide-menu</code>コマンド</summary>
+                                        <div>
+                                            <p>リマインダーリストやマクロリストの下にあるmenuは、<kbd>hide-menu</kbd>コマンドによって非表示にすることができます。再び表示するためには<kbd>show-menu</kbd>コマンドを使います。</p>
+                                        </div>
+                                    </details>
+                                </div>
+                                <div class="h4">
+                                    <details open><summary>3.3.4 <code>empty-history</code>コマンド</summary>
+                                        <div>
+                                            <p>入力欄で上下キーを押すと、以前入力したコマンドをもう一度使うことができます。この履歴を消すことができるのが<kbd>empty-history</kbd>コマンドです。</p>
                                         </div>
                                     </details>
                                 </div>

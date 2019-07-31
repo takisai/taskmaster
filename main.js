@@ -208,6 +208,44 @@ const Notice = (() => {
     };
 })();
 
+const History = (() => {
+    const strs = []; // strs :: [ExecString]
+    let index = 0, tempStr; // index :: IndexNumber;  tempStr :: ExecString
+
+    return {
+        // History.add :: ExecString -> ()
+        add: str => {
+            strs.push(str);
+            if(index < strs.length - 1) {
+                strs.splice(index, 1);
+            }
+            index = strs.length;
+        },
+        // History.up :: ExecString -> ExecString
+        up: str => {
+            if(index === 0) return strs[0];
+            if(index === strs.length) {
+                tempStr = str;
+            }
+            index--;
+            return strs[index];
+        },
+        // History.down :: () -> ExecString
+        down: () => {
+            index++;
+            if(index >= strs.length) {
+                index = strs.length;
+                return tempStr;
+            }
+            return strs[index];
+        },
+        // History.reset :: () -> ()
+        reset: () => {
+            strs.length = 0;
+        }
+    };
+})();
+
 const BackgroundAlert = (() => {
     let semaphore = 0; // semaphore :: CountNumber
 
@@ -349,15 +387,11 @@ const Macro = (() => {
         // Macro.remove :: IDNumber -> ()
         remove: id => {
             if(!removeDom('macro_' + id)) return;
-            for(let i = 0; i < macros.length; i++) { // i :: IndexNumber
-                if(macros[i].id === id) {
-                    if(isHide) {
-                        Notice.set('removed: ' + formatter(macros[i].str));
-                    }
-                    macros.splice(i, 1);
-                    return;
-                }
+            const i = macros.findIndex(x => x.id === id); // i :: IndexNumber
+            if(isHide) {
+                Notice.set('removed: ' + formatter(macros[i].str));
             }
+            macros.splice(i, 1);
         },
         // Macro.removeAll :: () -> ()
         removeAll: () => {
@@ -451,12 +485,7 @@ const Button = (() => {
         // Button.remove :: IDNumber -> ()
         remove: id => {
             if(!removeDom('button_' + id)) return;
-            for(let i = 0; i < buttons.length; i++) { // i :: IndexNumber
-                if(buttons[i].id === id) {
-                    buttons.splice(i, 1);
-                    return;
-                }
-            }
+            buttons.splice(buttons.findIndex(x => x.id === id), 1);
         },
         // Button.removeAll :: () -> ()
         removeAll: () => {
@@ -574,13 +603,15 @@ const TaskQueue = (() => {
         removeSound: (id, soundId) => {
             const index = getIndexById(id); // index :: Maybe IndexNumber
             if(index === undefined) return;
+            taskQueue[index].sound.splice(taskQueue[index].sound
+                    .findIndex(x => x.soundId === soundId), 1);/*
             // i :: IndexNumber
             for(let i = 0; i < taskQueue[index].sound.length; i++) {
                 if(taskQueue[index].sound[i].soundId === soundId) {
                     taskQueue[index].sound.splice(i, 1);
                     return;
                 }
-            }
+            }*/
         },
         // TaskQueue.checkDeadline :: () -> ()
         checkDeadline: () => {
@@ -826,6 +857,7 @@ const getText = (() => {
     return () => {
         const input = document.cui_form.input.value; // input :: ExecString
         document.cui_form.input.value = '';
+        History.add(input);
         parseMain(input);
     };
 })();
@@ -835,8 +867,8 @@ const parseMain = (() => {
     let idCount = 0; // idCount :: CountNumber
     let recursionCount = 0; // recursionCount :: CountNumber
 
-    // instNumbersParse :: (ExecString, ParameterString, Object, a -> ()
-            // , () -> (), ParameterString -> ()) -> ()
+    /* instNumbersParse :: (ExecString, ParameterString, Object, a -> ()
+            , () -> (), ParameterString -> ()) -> () */
     const instNumbersParse =
             (inst, str, obj, method, methodAll, toTrash = null) => {
         if(str === '*') {
@@ -874,13 +906,16 @@ const parseMain = (() => {
     // main :: (ExecString, FlagString) -> ()
     const main = (text, callFrom) => {
         // hashResult :: Maybe [Maybe String]
-        const hashResult = /^(#|->)(.*)$/.exec(text);
+        const hashResult = /^#(.*)$/.exec(text);
+        // arrowResult :: Maybe [Maybe String]
+        const arrowResult = /^->(.*)$/.exec(text);
         let isRawMode = false; // isRawMode :: Bool
+        let isHeadArrow = false; // isHeadArrow :: Bool
         if(hashResult !== null) {
-            text = hashResult[2];
-            if(hashResult[1] === '->') {
-                text = '->' + text;
-            }
+            text = hashResult[1];
+            isRawMode = true;
+        } else if(arrowResult !== null) {
+            isHeadArrow = true;
             isRawMode = true;
         }
         if(Macro.isAddSuccess(text)) return;
@@ -888,15 +923,17 @@ const parseMain = (() => {
             text = Macro.replace(text);
             text = evaluate(text);
         }
-        const texts = text.split(';');
-        if(texts.length > 1) {
-            recursionCount++;
-            if(recursionCount > 5) {
-                throw 'too much recursion';
+        if(!isHeadArrow) {
+            const texts = text.split(';');
+            if(texts.length > 1) {
+                recursionCount++;
+                if(recursionCount > 5) {
+                    throw 'too much recursion';
+                }
+                texts.forEach(element => main(element, callFrom));
+                recursionCount--;
+                return;
             }
-            texts.forEach(element => main(element, callFrom));
-            recursionCount--;
-            return;
         }
         // spaceSplit :: Maybe [Maybe String]
         const spaceSplit = /^([^ ]*)(?: (.*))?$/.exec(text);
@@ -963,6 +1000,12 @@ const parseMain = (() => {
             case 'default':
                 Task.setDefault(spaceSplit[2]);
                 return;
+            case 'show-menu':
+                Display.showMenu();
+                return;
+            case 'hide-menu':
+                Display.hideMenu();
+                return;
             case 'save':
                 Save.toString();
                 return;
@@ -974,6 +1017,9 @@ const parseMain = (() => {
                 return;
             case 'empty-trash':
                 Trash.reset();
+                return;
+            case 'empty-history':
+                History.reset();
                 return;
         }
         const taskItem = Task.parse(text); // taskItem :: Maybe TaskObject
@@ -1009,6 +1055,7 @@ const parseMain = (() => {
 
 const Display = (() => {
     let isShowDeadline = true; // isShowDeadline :: Bool
+    let isShowMenu = true; // isShowMenu :: Bool
 
     // deadlineStr :: (DateNumber, DateNumber) -> DisplayString
     const deadlineStr = (deadline, now) => {
@@ -1072,9 +1119,20 @@ const Display = (() => {
                     break;
             }
         },
+        // Display.showMenu :: () -> ()
+        showMenu: () => {
+            document.getElementById('menu').className = 'inline-block';
+            isShowMenu = true;
+        },
+        // Display.hideMenu :: () -> ()
+        hideMenu: () => {
+            document.getElementById('menu').className = 'none';
+            isShowMenu = false;
+        },
         // Display.save :: () -> [ExecString]
         save: () => {
-            return ['switch ' + (isShowDeadline ? 'alarm' : 'timer')];
+            return ['switch ' + (isShowDeadline ? 'alarm' : 'timer'),
+                    isShowMenu ? 'show-menu' : 'hide-menu'];
         }
     };
 })();
@@ -1128,19 +1186,29 @@ document.getElementById('cover').addEventListener('click', () => {
     window.addEventListener('keydown', event => {
         if(event.ctrlKey) {
             switch(event.keyCode) {
-                case 79:
+                case 79: // 'o'
                     parseMain('#load');
                     event.preventDefault();
                     break;
-                case 83:
+                case 83: // 's'
                     parseMain('#save');
                     event.preventDefault();
                     break;
-                case 90:
+                case 90: // 'z'
                     parseMain('#undo');
                     event.preventDefault();
                     break;
             }
+            return;
+        }
+        switch(event.keyCode) {
+            case 38: // 'up'
+                document.cui_form.input.value =
+                        History.up(document.cui_form.input.value);
+                break;
+            case 40: // 'down'
+                document.cui_form.input.value = History.down();
+                break;
         }
     });
     document.getElementById('cover').className = 'none';

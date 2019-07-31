@@ -123,6 +123,10 @@ a:active, .red {
     display: block;
 }
 
+.inline-block {
+    display: inline-block;
+}
+
 .none {
     display: none;
 }
@@ -158,7 +162,6 @@ a:active, .red {
 }
 
 #menu {
-    display: inline-block;
     margin: 8px 0px;
 }
 

@@ -1,7 +1,174 @@
+body {
+    box-sizing: border-box;
+    width: 100%;
+    margin: 8px 0px;
+    padding: 0px 8px;
+}
+
+details {
+    display: inline;
+}
+
+h1 {
+    display: block;
+    font-size: 2em;
+    margin: 0.67em 0px;
+    font-weight: normal;
+}
+
+kbd {
+    background-color: #f1f1f1;
+    padding: 0.1em 0.4em;
+    font-size: 0.9em;
+}
+
+p {
+    line-height: 1.8em;
+}
+
+a {
+    text-decoration: none;
+}
+
+a:link, a:visited {
+    color: #005aff;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+select {
+    height: 1.7em;
+}
+
+details > div {
+    padding-left: 1em;
+}
+
+input[type=range], select {
+    vertical-align: middle;
+}
+
+form[name=cui_form], #div_volume, #button_parent, #macros {
+    margin: 8px 0px;
+}
+
+form[name=gui_form] {
+    line-height: 1.8em;
+}
+
+.bg-red {
+    background-color: #ff4b00;
+}
+
+.bg-yellow {
+    background-color: #fff100;
+}
+
+.bg-white {
+    background-color: white;
+}
+
+.bg-pink {
+    background-color: #ffcabf;
+}
+
 .strike {
     text-decoration: line-through;
 }
 
+.h2 {
+    display: block;
+    margin: 1.245em 0px;
+}
+
+.h2 > details > summary {
+    font-size: 1.5em;
+    font-weight: bold;
+}
+
+.h3 {
+    display: block;
+    margin: 1.17em 0px;
+}
+
+.h3 > details > summary {
+    font-size: 1.17em;
+    font-weight: bold;
+}
+
+.h4 {
+    display: block;
+    margin: 1.33em 0px;
+}
+
+.h4 > details > summary {
+    font-weight: bold;
+}
+
+.textbox_2digits {
+    width: 5em;
+}
+
+a:active, .red {
+    color: #ff4b00;
+}
+
+.gray {
+    color: #84919e;
+}
+
+.block {
+    display: block;
+}
+
+.inline-block {
+    display: inline-block;
+}
+
+.none {
+    display: none;
+}
+
+.of_hidden {
+    overflow: hidden;
+}
+
+.of_auto {
+    overflow: auto;
+}
+
 #clock {
-    font-size: 200%;
+    font-size: 2em;
+    margin: 8px 0px;
+    font-family: monospace, serif;
+}
+
+#cover {
+    position: fixed;
+    margin: 0px;
+    padding: 0px;
+    top: 0px;
+    left: 0px;
+    width: 100%;
+    height: 100%;
+    opacity: 0.75;
+    z-index: 1;
+}
+
+#notice {
+    font-size: 0.95em;
+}
+
+#menu {
+    margin: 8px 0px;
+}
+
+#document * {
+    letter-spacing: 0.05em;
+}
+
+#document li {
+    line-height: 1.8em;
 }

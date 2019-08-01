@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <title>Task Master Help</title>
+        <meta charset="utf-8">
+        <link rel="stylesheet" href="style.css">
+    </head>
+    <body id="document">
+        <h1>Task Masterについて</h1>
+        <div class="h2">
+            <details open><summary>1 概要</summary>
+                <div>
+                    <p><a href="index.html">Task Master</a>は、WEB上で利用できるリマインダーツールです。</p>
+                    <div class="h3">
+                        <details open><summary>1.1 諸情報</summary>
+                            <div>
+                                <ul>
+                                    <li>最新版: Version 0.1.0 (2019-08-01)</li>
+                                    <li>製作者: takisai</li>
+                                    <li>動作環境: Chrome・Firefox</li>
+                                </ul>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+            </details>
+        </div>
+        <div class="h2">
+            <details open><summary>2 使い方|基本編</summary>
+                <div>
+                    <p>Task Masterは、基本的に上から2行目の入力欄にコマンド+Enterを入れて動かします。</p>
+                    <div class="h3">
+                        <details id="task" open><summary>2.1 リマインダーの入力</summary>
+                            <div>
+                                <p>リマインダーは、決められた時刻になると音を鳴らすなどの動作を行います。リマインダーは、次の項目を入力することで設定できます。</p>
+                                <ol>
+                                    <li>時間設定: タイマー式/アラーム式</li>
+                                    <li>通知設定: 音/重要度</li>
+                                    <li>リマインダー名: リマインダーにつける名前</li>
+                                </ol>
+                                <p>時間設定は<a href="#taskTime">2.1.1</a>で、通知設定は<a href="#taskMode">2.1.2</a>で、リマインダー名は<a href="#taskName">2.1.3</a>で紹介します。</p>
+                                <div class="h4">
+                                    <details id="taskTime" open><summary>2.1.1 時間設定: タイマー式/アラーム式</summary>
+                                        <div>
+                                            <p>リマインダーが動作する時刻は、動作する時刻までの時間を指定する2つの方法と、時刻を直接指定する方法があります。書き方は下の通りです。</p>
+                                            <ol>
+                                                <li><kbd>&lt;日&gt;,&lt;時間&gt;&lt;分(2桁)&gt;.&lt;秒&gt;</kbd></li>
+                                                <li><kbd>&lt;日&gt;d&lt;時間&gt;h&lt;分&gt;m&lt;秒&gt;s</kbd></li>
+                                                <li><kbd>&lt;年&gt;-&lt;月&gt;-&lt;日&gt;,&lt;時&gt;:&lt;分&gt;:&lt;秒&gt;</kbd></li>
+                                            </ol>
+                                            <p>1の書き方は、タイマーのように「これだけ時間が経ったら音を鳴らす」という指定の方法です。例えば、3分なら<kbd>3</kbd>と入力します。また、4分33秒のように秒単位で指定したいときは、<kbd>4.33</kbd>と指定します。ただし、分の指定は2桁までの数値で、3桁以上の場合は「右側2桁が分、残りが時間」を表します。例えば、1時間5分なら<kbd>105</kbd>のようになります。日単位の指定は、時分秒の指定の前に日数と<kbd>,</kbd>(コンマ)を並べて書きます。例えば、<kbd>10,537.43</kbd>は10日と5時間37分43秒を表しています。</p>
+                                            <p>2の書き方もタイマー式の指定方法です。この指定では<kbd>1.5h</kbd>のように、少数での指定もすることができます。また、0分や0秒などの指定では<kbd>m</kbd>や<kbd>s</kbd>も省略することができます。</p>
+                                            <p>3の書き方は、アラームのように「ある時刻になったら」という指定の方法です。時分秒の区切りには<kbd>:</kbd>(コロン)、年月日の区切りには<kbd>-</kbd>、年月日と時分秒の間には<kbd>,</kbd>(コンマ)を入れて表します。例えば、21時38分は<kbd>21:38</kbd>、7時38分46秒なら<kbd>7:38:46</kbd>、3月7日の22時なら<kbd>3-7,22:0</kbd>のように書きます。これらの例のように、年月日や月日、秒は必要なければ省略することができます。</p>
+                                            <p>アラームで設定される時間は、書かれたものと等しい一番始めの時刻になります。例えば、朝8時に<kbd>13:00</kbd>を指定すると、5時間後にリマインダーは設定されます。一方で、15時に<kbd>13:00</kbd>と指定すると、次の日の13時にリマインダーが動作します。</p>
+                                        </div>
+                                    </details>
+                                </div>
+                                <div class="h4">
+                                    <details id="taskMode" open><summary>2.1.2 通知設定: 音/重要度</summary>
+                                        <div>
+                                            <p>Task Masterは10種類の音を出すことができます。それぞれ0から9までの数字が割り当てられています。リマインダーが動作するときの音の設定には、その数字を指定すればOKです。音の確認は<a href="#sound">3.3.1</a>の<kbd>sound</kbd>コマンドを使います。</p>
+                                            <p>重要度の指定をすると、動作する時刻を過ぎたときのリマインダーの表示が変わります。</p>
+                                            <ul>
+                                                <li>重要度: 低のとき<br>
+                                                    <kbd>.</kbd>(ピリオド)で表します。重要度: 低のリマインダーだけは、時間を過ぎると勝手に消えます。</li>
+                                                <li>重要度: 中のとき<br>
+                                                    <kbd>!</kbd>で表します。動作する時刻を過ぎると、そのリマインダーが黄色で強調されます。</li>
+                                                <li>重要度: 高のとき<br>
+                                                    <kbd>!!</kbd>で表します。動作する時刻を過ぎるとそのリマインダーは赤色で強調されて、Task Masterの画面全体が赤っぽくなります。</li>
+                                                <li>重要度: 超のとき(重要度: 高よりも重要なリマインダーの設定です)<br>
+                                                    <kbd>!!!</kbd>で表します。重要度: 高の動作に加えて、ブラウザのアラートが出ます。<br>アラートが出ている間は他の処理が止まるため、注意が必要です。</li>
+                                            </ul>
+                                            <p>音と重要度の設定は、<kbd>2.</kbd>のようにつなげて表現します。例えば、音: 1番、重要度: 中と指定するときは、<kbd>1!</kbd>のように指定します。また、これらの指定は必要に応じて省略できます。その場合、省略した設定には既定値が適用されます。</p>
+                                        </div>
+                                    </details>
+                                </div>
+                                <div class="h4">
+                                    <details id="taskName" open><summary>2.1.3 リマインダー名</summary>
+                                        <div>
+                                            <p>リマインダー名は、<kbd>;</kbd>(セミコロン)以外の文字が使えます。省略すると、<a href="#taskTime">2.1.1</a>で指定した文字列がリマインダー名になります。</p>
+                                        </div>
+                                    </details>
+                                </div>
+                                <div class="h4">
+                                    <details open><summary>2.1.4 ここまでのまとめ</summary>
+                                        <div>
+                                            <p><a href="#taskTime">2.1.1</a>・<a href="#taskMode">2.1.2</a>・<a href="#taskName">2.1.3</a>を<kbd>/</kbd>でつないだものが、リマインダーの指定文字列です。例えば、12時に5番の音を出す重要度低のリマインダー「昼休み」を設定するときは、<kbd>12:00/5./昼休み</kbd>と入力します。また、リマインダー名は省略できて、その場合は<kbd>12:00/5.</kbd>のように<kbd>/</kbd>も省略します。また、リマインダー名に加えて音や重要度の設定も省略するときは、<kbd>12:00</kbd>のように最初の<kbd>/</kbd>も省きます。</p>
+                                        </div>
+                                    </details>
+                                </div>
+                                <div class="h4">
+                                    <details open><summary>2.1.5 繰り返しリマインダーを動かす</summary>
+                                        <div>
+                                            <p>ここまでのリマインダーは、一度動作するとそれで終わりでした。しかし、繰り返し動くリマインダーを設定することもできます。例えば、朝6時30分とそれから5分おきに3番の音を鳴らす「GOOD MORNING!」というリマインダーは<kbd>6:30+5+/3/GOOD MORNING!</kbd>のように表します。</p>
+                                            <p>繰り返し動くリマインダーは、<kbd>10+2+3</kbd>のように<a href="#taskTime">2.1.1</a>で作る文字列を複数<kbd>+</kbd>でつなげるだけです。例えば、<kbd>10+2+3</kbd>という文字列は、始めに10分のタイマーを設定します。10分経って音が鳴るときに、新たに<kbd>2+3</kbd>というリマインダーが設定されます。同様に2分が経過すると、音が鳴ると同時に<kbd>3</kbd>というリマインダーが設定されます。</p>
+                                            <p>また、<kbd>+</kbd>でつなげる文字列を<kbd>+</kbd>で終わらせると、最後の指定がずっと繰り返されるようになります。例えば<kbd>5+</kbd>というリマインダーなら、5分おきに繰り返しリマインダーが動くようになります。</p>
+                                            <p>ただし、これで新たに追加されるリマインダーの音や重要度は、最初に指定したものと同じになります。最初の例(<kbd>6:30+5+/3/GOOD MORNING!</kbd>)なら、5分おきに3番の音が鳴る「GOOD MORNING!」というリマインダーが繰り返し設定されるので、途中で音は変えられません。</p>
+                                        </div>
+                                    </details>
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+                    <div class="h3">
+                        <details open><summary>2.2 リマインダーの入力(別の方法)</summary>
+                            <div>
+                                <p><a href="#task">2.1</a>ではリマインダーの入力方法を紹介しましたが、menu&gt;リマインダー設定からでも設定することができます。</p>
+                            </div>
+                        </details>
+                    </div>
+                    <div class="h3">
+                        <details id="taskRemove" open><summary>2.3 リマインダーの削除</summary>
+                            <div>
+                                <p>リマインダーの削除は、2つ方法があります。1つ目は、リマインダーリストの左側にある<input type="button" value="remove">ボタンを押す方法です。</p>
+                                <p>もうひとつは、<kbd>remove</kbd>コマンドを使う方法です。リマインダーリストの一番左の番号を<kbd>remove</kbd>の後に書くことで、そのコマンドが消去されます。また、番号は複数書くことができます。例えば、<kbd>remove 3 4 5</kbd>なら3から5番目のリマインダーを削除します。一度にすべてのリマインダーを消去するには、<kbd>remove *</kbd>を入力します。</p>
+                                <p>また、時刻が過ぎて取り消し線が引かれたリマインダーを全て削除するには、番号なしの<kbd>remove</kbd>コマンドを使います。</p>
+                            </div>
+                        </details>
+                    </div>
+                    <div class="h3">
+                        <details open><summary>2.4 リマインダーの既定値の設定</summary>
+                            <div>
+                                <p><a href="#taskMode">2.1.2</a>で指定を省略したときの既定値は、<kbd>default</kbd>コマンドで変更できます。<kbd>default &lt;音番号&gt;&lt;重要度&gt;</kbd>のように指定します。<kbd>&lt;音番号&gt;&lt;重要度&gt;</kbd>のどちらも、<a href="#taskMode">2.1.2</a>と同じ方法で記述します。また、どちらかを省略することもできます。例えば、<kbd>default !!</kbd>は既定の音はそのまま、重要度だけ高に変更するコマンドです。</p>
+                                <p>また、現在設定されている既定値は<kbd>default</kbd>で確認することができます。</p>
+                            </div>
+                        </details>
+                    </div>
+                    <div class="h3">
+                        <details open><summary>2.5 リマインダーの表示方法の切り替え</summary>
+                            <div>
+                                <p>リマインダーの後ろには、それがいつ動作するのか時間が表示されています。これを切り替えるには、<kbd>switch</kbd>コマンドを使います。</p>
+                                <p><kbd>switch alarm</kbd>とすると、時間の表示は(18:30:00)のような形式になります。これは「18時30分に動作する」という意味です。また、<kbd>switch timer</kbd>とすると、時間の表示は[01:53:20]のような形式になります。これは「あと1時間53分20秒で動作する」という意味です。<kbd>switch</kbd>とすると、時間の表示を今の設定とは別のものに切り替えます。</p>
+                            </div>
+                        </details>
+                    </div>
+                    <div class="h3">
+                        <details open><summary>2.6 音量操作/音を止める</summary>
+                            <div>
+                                <p>音量操作は、volumeバーでの操作か<kbd>volume</kbd>コマンドを使います。<kbd>volume 50</kbd>のように、音量を示す数値を指定します。0が音を出さない設定、100は音を一番大きくする設定になります。</p>
+                                <p>Task Masterの音を止める方法は2つあります。1つ目は<input type="button" value="stop">ボタンを押す方法です。ただし、このボタンは音が鳴っているリマインダーにしか表示されません。</p>
+                                <p>もうひとつは<kbd>stop</kbd>コマンドを使う方法です。<a href="#taskRemove">2.3</a>の<kbd>remove</kbd>コマンドと同様に、リマインダーリスト一番左の番号を使って、そのリマインダーの音を止めることができます。また、<kbd>stop *</kbd>とすることで、全ての音を止めることができます。</p>
+                            </div>
+                        </details>
+                    </div>
+                    <div class="h3">
+                        <details id="button" open><summary>2.7 ボタンの作成</summary>
+                            <div>
+                                <p>今まで書いてきたコマンドは、ボタンを押すことで実行することもできます。<kbd>button</kbd>コマンドの後ろに入力したいコマンドを入れて実行すると、volume操作バーとリマインダーリストの間にボタンが現れます。このボタンを押すことで、登録された内容が実行されます。例えば、<kbd>button switch</kbd>というコマンドで作成したボタンは、押すたびに<kbd>switch</kbd>コマンドを実行します。ただし、コマンドに<kbd>;</kbd>を含めることはできません。</p>
+                                <p>ボタンの削除は、<kbd>remove-button</kbd>コマンドで行います。<a href="#taskRemove">2.3</a>の<kbd>remove</kbd>コマンドと同様に、左上のボタンを1としたときのボタンの番号や<kbd>*</kbd>で削除を行います。</p>
+                            </div>
+                        </details>
+                    </div>
+                    <div class="h3">
+                        <details id="undo" open><summary>2.8 消去したものを元に戻す</summary>
+                            <div>
+                                <p><kbd>remove</kbd>や<kbd>remove-macro</kbd>、<kbd>remove-button</kbd>、<input type="button" value="remove">ボタンで消したものは、<kbd>undo</kbd>コマンドまたはCtrl+Zで元に戻すことができます。</p>
+                            </div>
+                        </details>
+                    </div>
+                    <div class="h3">
+                        <details open><summary>2.9 一度に複数のコマンドを実行する</summary>
+                            <div>
+                                <p>マクロを除くこれまでのコマンドは、<kbd>;</kbd>(セミコロン)でつなぐことで一度にすべて実行することができます。</p>
+                            </div>
+                        </details>
+                    </div>
+                    <div class="h3">
+                        <details open><summary>2.10 セーブデータの外部保存</summary>
+                            <div>
+                                <p>Task Masterはブラウザにデータを保存しているので、履歴の消去などでデータは消えてしまいます。また、同じ設定を入力しない限り、別の端末で同じリマインダーは管理できません。</p>
+                                <p><kbd>save</kbd>コマンドまたはCtrl+Sを使うと、Task Masterの全ての設定をセーブデータとして保存することができます。セーブデータを読み込むときは、<kbd>load</kbd>コマンドまたはCtrl+Oを実行して出てくる入力欄にその文字列を貼り付けてください。</p>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+            </details>
+        </div>
+        <div class="h2">
+            <details open><summary>3 使い方|詳細編</summary>
+                <div>
+                    <div class="h3">
+                        <details id="exec_task" open><summary>3.1 指定した時刻に別のコマンドを実行する</summary>
+                            <div>
+                                <p>リマインダーで指定した時刻に、別のコマンドを実行することができます。ただし、実行できるコマンドは<kbd>;</kbd>や<kbd>/</kbd>が入っていないこと、最後の文字が<kbd>.</kbd>や<kbd>!</kbd>でないことが必要です。例えば、5分後に<kbd>hoge</kbd>というコマンドを実行するリマインダーは<kbd>5/*hoge</kbd>のように今までの<kbd>&lt;音番号&gt;</kbd>の部分を<kbd>*&lt;実行したいコマンド&gt;</kbd>に置き換えます。今までのリマインダー指定と同様に、重要度やリマインダー名を設定することもできます。</p>
+                            </div>
+                        </details>
+                    </div>
+                    <div class="h3">
+                        <details open><summary>3.2 コマンド文字列の置き換え</summary>
+                            <div>
+                                <p>入力されたコマンドを、前処理として置き換えることができます。前処理は<a href="#macro">マクロ</a>、<a href="#eval">式の展開</a>の順に行われます。これらの置き換えが行われないようにするには、マクロでの置換が行われないようにするには、先頭に<kbd>#</kbd>をつけてコマンドを入力します。</p>
+                                <div class="h4">
+                                    <details id="macro" open><summary>3.2.1 マクロ</summary>
+                                        <div>
+                                            <p>マクロを使うと、例えば<kbd>ramen</kbd>と入力すれば、自動で<kbd>3//ramen</kbd>というコマンドに置き換えて実行することができます。また、<a href="#button">2.7</a>や<a href="#exec_task">3.1</a>で指定できなかったコマンドでも、マクロで置き換えることで実行することができます。</p>
+                                            <p>マクロの指定方法は<kbd>&lt;元文字列&gt;-&gt;&lt;置き換え後文字列&gt;</kbd>です。ただし、<kbd>&lt;元文字列&gt;</kbd>に<kbd>-&gt;</kbd>を含めることはできません。<kbd>&lt;元文字列&gt;</kbd>と<kbd>&lt;置き換え後文字列&gt;</kbd>はJavaScriptの<code>replace</code>メソッドを利用しているため、複雑な指定をすることができます。例えば、<kbd>dup (.*)$-&gt;$1;button $1</kbd>というマクロを指定しておくと、<kbd>dup 50</kbd>という文字列は<kbd>50;button 50</kbd>というコマンドに置き換えられます。詳しくは、JavaScriptの<code>replace</code>メソッドを参照してください。</p>
+                                            <p>マクロによる置き換えは、登録順にすべてのマクロで行われます。例えば、<kbd>a-&gt;b</kbd>と<kbd>b-&gt;c</kbd>というマクロをこの順番に登録した場合、<kbd>a</kbd>というコマンドは<kbd>c</kbd>に置き換えられます。</p>
+                                            <p>マクロの一覧は<kbd>show-macro</kbd>コマンドで見ることができます。マクロの消去は、マクロリストの左にある<input type="button" value="remove">ボタンを押すか、<kbd>remove-macro</kbd>コマンドにより行います。このコマンドは<a href="#taskRemove">2.3</a>の<kbd>remove</kbd>コマンドと同様に、<kbd>remove-macro 1 3 4</kbd>や<kbd>remove-macro *</kbd>と入力できます。マクロ一覧を隠すときは<kbd>hide-macro</kbd>を実行します。</p>
+                                            <p>参考: <a href="https://www.google.co.jp/search?q=JavaScript+replace" target="_blank">JavaScript replace - Google 検索</a></p>
+                                        </div>
+                                    </details>
+                                </div>
+                                <div class="h4">
+                                    <details open><summary>3.2.2 式の展開</summary>
+                                        <div>
+                                            <p>命令文字列の中に<kbd>${</kbd>～<kbd>$}</kbd>と記述すると、～の部分がJavaScriptの文として評価されます。たとえば、<kbd>^hoge (\d+)->${$1*5$}m</kbd>というマクロは、<kbd>hoge 12</kbd>という指定を<kbd>${12*5$}m</kbd>に変換します。さらに12*5が評価される結果、<kbd>60m</kbd>と等しくなります。詳しくは、JavaScriptの文法を参照してください。</p>
+                                            <p>参考: <a href="https://www.google.co.jp/search?q=JavaScript" target="_blank">JavaScript - Google 検索</a></p>
+                                        </div>
+                                    </details>
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+                    <div class="h3">
+                        <details open><summary>3.3 その他のコマンド</summary>
+                            <div>
+                                <p>これまで説明した以外のコマンドを、ここでは説明します。</p>
+                                <div class="h4">
+                                    <details id="sound" open><summary>3.3.1 <code>sound</code>コマンド</summary>
+                                        <div>
+                                            <p><kbd>sound &lt;音番号&gt;</kbd>の形式で0から9の数字を指定すると、音の確認をすることができます。</p>
+                                        </div>
+                                    </details>
+                                </div>
+                                <div class="h4">
+                                    <details open><summary>3.3.2 <code>empty-trash</code>コマンド</summary>
+                                        <div>
+                                            <p><kbd>empty-trash</kbd>コマンドは、<a href="#undo">2.8</a>の<kbd>undo</kbd>コマンドの履歴を消去します。このコマンドを使った後は、それより前に消去したリマインダーなどは復元できなくなります。</p>
+                                        </div>
+                                    </details>
+                                </div>
+                                <div class="h4">
+                                    <details open><summary>3.3.3 <code>show-menu</code>/<code>hide-menu</code>コマンド</summary>
+                                        <div>
+                                            <p>リマインダーリストやマクロリストの下にあるmenuは、<kbd>hide-menu</kbd>コマンドによって非表示にすることができます。再び表示するためには<kbd>show-menu</kbd>コマンドを使います。</p>
+                                        </div>
+                                    </details>
+                                </div>
+                                <div class="h4">
+                                    <details open><summary>3.3.4 <code>empty-history</code>コマンド</summary>
+                                        <div>
+                                            <p>入力欄で上下キーを押すと、以前入力したコマンドをもう一度使うことができます。この履歴を消すことができるのが<kbd>empty-history</kbd>コマンドです。</p>
+                                        </div>
+                                    </details>
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+            </details>
+        </div>
+    </body>
+</html>

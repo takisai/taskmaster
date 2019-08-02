@@ -3,6 +3,7 @@
     <head>
         <title>Task Master</title>
         <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1">
         <link rel="stylesheet" href="style.css">
     </head>
     <body id="body" class="of_hidden">
@@ -10,7 +11,9 @@
             --:--:--
         </div>
         <form name="cui_form" onsubmit="getText();return false;">
+            <input type="password" class="cui_dummy"></input>
             <input type="text" name="input" id="text_cui_form"></input> <span id="item_global"></span><span id="notice"></span>
+            <input type="submit" class="cui_dummy"></input>
         </form>
         <div id="div_volume">
             volume <input id="range_volume" type="range" min="0" max="100" step="1" value="100"> <span id="volume">100</span>

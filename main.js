@@ -222,6 +222,9 @@ const parseMain = (() => {
             case 'empty-history':
                 History.reset();
                 return;
+            case 'help':
+                window.open('help.html', '_blank');
+                return;
         }
         const taskItem = Task.parse(text); // taskItem :: Maybe TaskObject
         if(taskItem === null) {
@@ -473,6 +476,7 @@ const Task = (() => {
                 , {get: 'getHours', set: 'setHours', c: 0, r: 0}
                 , {get: 'getMinutes', set: 'setMinutes', c: 0, r: 0}
                 , {get: 'getSeconds', set: 'setSeconds', c: 0, r: 0}];
+        ret.setMilliseconds(0);
         for(let i = 0; i < 6; i++) { // i :: IndexNumber
             const t = table[i]; // t :: Object
             if(result[i + 1] !== '' && result[i + 1] !== undefined) {
@@ -518,11 +522,12 @@ const Task = (() => {
         // Task.parse :: ExecString -> Maybe TaskObject
         parse: s => {
             // regex :: RegExp
-            const regex = /^(?:(\d+)#)?([^\/]*)((?:\/(?:([-\d])|\*([^\/]*?))??(\.|!{1,3})?(?:\/(.*))?)?)$/;
+            const regex = /^(?:(\d+)#)?([^\/]*)((?:\/(?:([-\d])|([^\/]*?)\*)??(\.|!{1,3})?(?:\/(.*))?)?)$/;
             const result = regex.exec(s); // result :: Maybe [Maybe String]
             const ret = new Object(); // ret :: TaskObject
             const execs = []; // execs :: [ExecString]
             let now; // now :: DateNumber
+            if(result === null) return null;
             if(result[1] !== undefined) {
                 now = parseInt(result[1], 10);
                 ret.saveText = result[1];
@@ -555,7 +560,7 @@ const Task = (() => {
                 ret.saveText += result[4];
             } else if(result[5] !== undefined) {
                 execs.push(result[5]);
-                ret.saveText += '*' + result[5];
+                ret.saveText += result[5] + '*';
             } else {
                 execs.push('#sound ' + defaultSound);
                 ret.saveText += defaultSound;
@@ -842,7 +847,7 @@ const Macro = (() => {
     const regex = /^([^;]*?)->(.*)$/; // regex :: RegExp
     const macros = []; // macros :: [MacroObject]
     let macroCount = 0; // macroCount :: CountNumber
-    let isHide = true; // isHide :: Bool;
+    let isListShow = false; // isListShow :: Bool
 
     // formatter :: ExecString -> DisplayString
     const formatter = s => s.replace(regex, '$1 -> $2');
@@ -883,7 +888,7 @@ const Macro = (() => {
                 dgebi('macro_parent').appendChild(newElement);
                 macros.push(macroItem);
             }
-            if(isHide && isNull) {
+            if(!isListShow && isNull) {
                 Notice.set('macro: ' + formatStr);
             }
             return true;
@@ -903,7 +908,7 @@ const Macro = (() => {
         remove: id => {
             if(!removeDom('macro_' + id)) return;
             const i = macros.findIndex(x => x.id === id); // i :: IndexNumber
-            if(isHide) {
+            if(!isListShow) {
                 Notice.set('removed: ' + formatter(macros[i].str));
             }
             macros.splice(i, 1);
@@ -924,19 +929,19 @@ const Macro = (() => {
         },
         // Macro.show :: () -> ()
         show: () => {
-            dgebi('macros').className = 'block';
-            isHide = false;
+            dgebi('macros').className = 'inline-block';
+            isListShow = true;
         },
         // Macro.hide :: () -> ()
         hide: () => {
             dgebi('macros').className = 'none';
-            isHide = true;
+            isListShow = false;
         },
         // Macro.save :: () -> [ExecString]
         save: () => {
             // ret :: [ExecString]
             const ret = macros.map(x => x.saveText);
-            if(!isHide) {
+            if(isListShow) {
                 ret.push('show-macro');
             }
             return ret;
@@ -1020,10 +1025,13 @@ const TaskQueue = (() => {
             }
             taskQueue.splice(index, 1);
         },
-        // TaskQueue.moreveAlerted :: () -> ()
-        removeAlerted: () => taskQueue.filter(x => !x.isValid)
-                                      .map(x => x.id)
-                                      .forEach(x => TaskQueue.remove(x)),
+        // TaskQueue.removeAlerted :: () -> ()
+        removeAlerted: () => {
+            const ids = taskQueue.filter(x => !x.isValid)
+                                 .map(x => x.id); // ids :: [IDString]
+            TaskQueue.moveToTrash(ids.join(' '));
+            ids.forEach(x => TaskQueue.remove(x));
+        },
         // TaskQueue.removeAll :: () -> ()
         removeAll: () => taskQueue.map(x => x.id)
                                   .forEach(x => TaskQueue.remove(x)),
@@ -1131,10 +1139,12 @@ dgebi('cover').addEventListener('click', () => {
                 case 'ArrowUp':
                     document.cui_form.input.value =
                             History.up(document.cui_form.input.value);
+                    event.preventDefault();
                     break;
                 case 'ArrowDown':
                     document.cui_form.input.value =
                             History.down(document.cui_form.input.value);
+                    event.preventDefault();
                     break;
             }
         }

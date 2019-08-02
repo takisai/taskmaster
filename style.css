@@ -142,7 +142,13 @@ a:active, .red {
 #clock {
     font-size: 2em;
     margin: 8px 0px;
-    font-family: monospace, serif;
+    font-family: monospace, sans-serif;
+}
+
+.cui_dummy {
+    top: -100px;
+    left: -100px;
+    position: fixed;
 }
 
 #cover {

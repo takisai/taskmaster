@@ -1,6 +1,7 @@
 'use strict';
 const UPDATE_TIME = 200; // UPDATE_TIME :: DateNumber
 const SEPARATOR = '\v'; // SEPARATOR :: String
+const VERSION = [0, 3, 0]; // VERSION :: [VersionNumber]
 
 // deadlineStr :: (DateNumber, DateNumber) -> DisplayString
 const deadlineStr = (deadline, now) => {
@@ -34,6 +35,18 @@ const removeDom = id => {
     return true;
 };
 
+// parameterCheck :: (ParameterString, IndexNumber) -> [DOMString]
+const parameterCheck = (str, max) => {
+    return str.split(' ').map(x => {
+        const index = parseInt(x, 10); // index :: Maybe IndexNumber
+        if(index > 0 && index <= max && /^\d+$/.test(x)) {
+            return x;
+        } else {
+            return `<span class="red">${x}</span>`;
+        }
+    });
+};
+
 // getText :: () -> ()
 const getText = () => {
     const input = document.cui_form.input.value; // input :: ExecString
@@ -41,49 +54,28 @@ const getText = () => {
     History.push(input);
     parseMain(input);
 };
+// getByGui :: () -> ()
+const getByGui = () => {
+    const form = document.gui_form; // form :: Element
+    let main, type; // main :: String;  type :: FlagString
+    if(form.task_type.value === 'timer') {
+        main = `${form.timer_hour.value}h${form.timer_minute.value}m${form.timer_second.value}s`;
+        type = 't';
+    } else { // form.task_type.value === 'alarm'
+        main = [form.alarm_hour.value
+                , form.alarm_minute.value
+                , form.alarm_second.value].join(':');
+        type = 'a';
+    }
+    parseMain([main, form.sound.value + type + form.importance.value
+            , form.text.value].join('/'));
+};
 
 // parseMain :: (ExecString, FlagString) -> ()
 const parseMain = (() => {
     let idCount = 0; // idCount :: CountNumber
     let recursionCount = 0; // recursionCount :: CountNumber
 
-    /* instNumbersParse :: (ExecString, ParameterString, Object, a -> ()
-            , () -> (), ParameterString -> ()) -> () */
-    const instNumbersParse =
-            (inst, str, obj, method, methodAll, toTrash = null) => {
-        if(str === '*') {
-            if(toTrash !== null) {
-                toTrash('*');
-            }
-            methodAll();
-            return;
-        }
-        const noSet = [...new Set(str.split(' '))]; // noSet :: [String]
-        // ids :: [a]
-        const ids = noSet.filter(x => /^\d+$/.test(x))
-                         .map(x => obj.getIdByIndex(parseInt(x, 10) - 1));
-        if(toTrash !== null) {
-            toTrash(ids.join(' '));
-        }
-        ids.forEach(x => method(x));
-        if(noSet.some(x => /\D/.test(x))) {
-            Notice.set(`parse error: ${inst} ${
-                    noSet.map(x => x.replace(/^(\d*\D.*)$/
-                            , '<span class="red">$1</span>'))
-                         .join(' ')}`);
-        }
-    };
-    /* isIdCall :: (IDString -> (), ParameterString, ParameterString -> ())
-            -> Bool */
-    const isIdCall = (method, str, toTrash = null) => {
-        const result = /^\$(\d+)$/.exec(str); // result :: Maybe [Maybe String]
-        if(result === null) return false
-        if(toTrash !== null) {
-            toTrash(result[1]);
-        }
-        method(result[1]);
-        return true;
-    };
     // evaluate :: ExecString -> ExecString
     const evaluate = str => {
         // safeEval :: String -> String
@@ -105,6 +97,14 @@ const parseMain = (() => {
         }
         return ret.join('');
     };
+    // play :: (ParameterString, FlagString) -> ()
+    const play = (parameter, callFrom) => {
+        if(!/^(?:-|\d)$/.test(parameter)) {
+            Notice.set(`error: sound <span class="red">${parameter}</span>`);
+            return;
+        }
+        Sound.play(`sound/alarm${parameter}.mp3`, callFrom);
+    }
 
     // main :: (ExecString, FlagString) -> ()
     const main = (text, callFrom) => {
@@ -127,7 +127,7 @@ const parseMain = (() => {
             text = evaluate(text);
         }
         if(!isHeadArrow) {
-            const texts = text.split(';');
+            const texts = text.split(';'); // texts :: [ExecString]
             if(texts.length > 1) {
                 recursionCount++;
                 if(recursionCount > 5) throw 'too much recursion';
@@ -138,31 +138,30 @@ const parseMain = (() => {
         }
         // spaceSplit :: Maybe [Maybe String]
         const spaceSplit = /^([^ ]*)(?: (.*))?$/.exec(text);
+        // parameter :: ParameterString
+        const parameter = spaceSplit[2] === undefined ? ''
+                : spaceSplit[2].replace(/^\s+|\s+$/g, '').replace(/\s+/g, ' ');
         switch(spaceSplit[1]) {
             case 'switch':
-                Display.setMode(spaceSplit[2]);
+                TaskQueue.setDisplay(parameter, '');
+                return;
+            case 'switch-alarm':
+                TaskQueue.setDisplay(parameter, '-alarm');
+                return;
+            case 'switch-timer':
+                TaskQueue.setDisplay(parameter, '-timer');
                 return;
             case 'remove':
-                if(spaceSplit[2] === undefined) {
-                    TaskQueue.removeAlerted();
-                    return;
-                }
-                if(isIdCall(TaskQueue.remove, spaceSplit[2]
-                        , TaskQueue.moveToTrash)) return;
-                instNumbersParse('remove', spaceSplit[2], TaskQueue
-                        , TaskQueue.remove, TaskQueue.removeAll
-                        , TaskQueue.moveToTrash);
+                TaskQueue.remove(parameter);
                 return;
             case 'button':
-                if(spaceSplit[2] === undefined || spaceSplit[2] === '') return;
                 Button.insert(spaceSplit[2]);
                 return;
             case '$button':
                 Button.insertByData(spaceSplit[2]);
                 return;
             case 'remove-button':
-                instNumbersParse('remove-button', spaceSplit[2], Button
-                        , Button.remove, Button.removeAll, Button.moveToTrash);
+                Button.remove(parameter);
                 return;
             case '->':
                 Macro.insertByData(spaceSplit[2]);
@@ -174,32 +173,19 @@ const parseMain = (() => {
                 Macro.hide();
                 return;
             case 'remove-macro':
-                if(isIdCall(x => Macro.remove(parseInt(x, 10)), spaceSplit[2]
-                        , Macro.moveToTrash)) return;
-                instNumbersParse('remove-macro', spaceSplit[2], Macro
-                        , Macro.remove, Macro.removeAll, Macro.moveToTrash);
+                Macro.remove(parameter);
                 return;
             case 'sound':
-                if(!/^\d$/.test(spaceSplit[2])) return;
-                Sound.play(`sound/alarm${spaceSplit[2]}.mp3`, callFrom);
+                play(parameter, callFrom);
                 return;
             case 'stop':
-                if(spaceSplit[2] === undefined || spaceSplit[2] === '$global') {
-                    Sound.stop('global');
-                    return;
-                }
-                if(isIdCall(Sound.stop, spaceSplit[2])) return;
-                instNumbersParse('stop', spaceSplit[2], TaskQueue, Sound.stop
-                        , Sound.stopAll);
+                Sound.stop(parameter);
                 return;
             case 'volume':
-                const volume = parseInt(spaceSplit[2], 10);
-                if(volume >= 0 && volume <= 100) {
-                    Sound.setVolume(volume);
-                }
+                Sound.setVolume(parameter);
                 return;
             case 'default':
-                Task.setDefault(spaceSplit[2]);
+                Task.setDefault(parameter);
                 return;
             case 'show-menu':
                 Display.showMenu();
@@ -229,7 +215,7 @@ const parseMain = (() => {
         const taskItem = Task.parse(text); // taskItem :: Maybe TaskObject
         if(taskItem === null) {
             if(text === '') return;
-            Notice.set('undefined: ' + text);
+            Notice.set(`error: <span class="red">${text}</span>`);
             return;
         }
         TaskQueue.insert(taskItem);
@@ -342,7 +328,7 @@ const Notice = (() => {
             const target = dgebi('notice');
             if(id !== undefined) {
                 window.clearTimeout(id);
-                target.innerHTML += ' , ';
+                target.innerHTML += ' ; ';
             }
             target.innerHTML += html;
             id = window.setTimeout(Notice.clear, 5000);
@@ -380,8 +366,13 @@ const Sound = (() => {
     let volume = 100; // volume :: VolumeNumber
 
     return {
-        // Sound.setVolume :: VolumeNumber -> ()
-        setVolume: n => {
+        // Sound.setVolume :: ParameterString -> ()
+        setVolume: str => {
+            const n = parseInt(str, 10); // n :: VolumeNumber
+            if(n < 0 || n > 100 || !/^\d+$/.test(str)) {
+                Notice.set(`error: volume <span class="red">${str}</span>`);
+                return;
+            }
             volume = n;
             TaskQueue.setVolume(volume / 100);
             dgebi('range_volume').value = volume;
@@ -398,11 +389,7 @@ const Sound = (() => {
         },
         // Sound.play :: (URLString, IDString) -> ()
         play: (url, id) => {
-            if(sounds[url] === undefined) {
-                console.log(`"${url}" is unregistered`);
-                return;
-            }
-            if(sounds[url].readyState < 2) return;
+            if(sounds[url] === undefined || sounds[url].readyState < 2) return;
             const sound = new Audio(); // sound :: Audio
             sound.src = sounds[url].src;
             sound.volume = volume / 100;
@@ -420,10 +407,8 @@ const Sound = (() => {
             dgebi('item_' + id).innerHTML +=
                     `<input id="stopButton_${id}" type="button" value="stop" onclick="parseMain('#stop $${id}');">`;
         },
-        // Sound.stop :: IDString -> ()
+        // Sound.stop :: ParameterString -> ()
         stop: id => TaskQueue.stopSound(id),
-        // Sound.stopAll :: () -> ()
-        stopAll: () => TaskQueue.stopAllSound(),
         // Sound.save :: () -> [ExecString]
         save: () => ['volume ' + volume]
     };
@@ -432,16 +417,16 @@ const Sound = (() => {
 const Task = (() => {
     let defaultSound = '0'; // defaultSound :: SoundFlagString
     let defaultImportance = 0; // defaultImportance :: ImportanceFlagNumber
+    let defaultDisplay = 'a'; // defaultDisplay :: DisplayFlagString
 
     // importanceStr :: () -> ImportanceFlagString
     const importanceStr = () => ['.', '!', '!!', '!!!'][defaultImportance];
     // importanceToNumber :: ImportanceFlagString -> ImportanceFlagNumber
     const importanceToNumber = str => str === '.' ? 0 : str.length;
-
     // timer :: (TimerString, DateNumber) -> Maybe DateNumber
     const timer = (s, now) => {
         // regex :: RegExp
-        const regex = /^((?:(\d+),)?(\d*?)(\d{1,2})(?:\.(\d+))?)$|^((?:(.*)d)?(?:(.*)h)?(?:(.*)m)?(?:(.*)s)?)$/;
+        const regex = /^((?:(\d+),)?(\d*?)(\d{0,2})(?:\.(\d+))?)$|^((?:(.*)d)?(?:(.*)h)?(?:(.*)m)?(?:(.*)s)?)$/;
         const result = regex.exec(s); // result :: Maybe [Maybe String]
         if(s === '' || result === null) return null;
         let ret = 0; // ret :: DateNumber
@@ -458,7 +443,6 @@ const Task = (() => {
         }
         return now + 1000 * ret;
     };
-
     // alarm :: (AlarmString, DateNumber) -> Maybe DateNumber
     const alarm = (s, now) => {
         // regex :: RegExp
@@ -502,12 +486,13 @@ const Task = (() => {
     return {
         // Task.setDefault :: Maybe ConfigString -> ()
         setDefault: s => {
-            if(s === undefined) {
-                Notice.set('default: ' + defaultSound + importanceStr());
+            if(s === '') {
+                Notice.set('default: ' + defaultSound + defaultDisplay
+                        + importanceStr());
                 return;
             }
             // result :: Maybe [Maybe String]
-            let result = /^([-\d]?)(\.|!{1,3})?$/.exec(s);
+            let result = /^([-\d]?)([at]?)(\.|!{1,3})?$/.exec(s);
             if(result === null) {
                 Notice.set(`parse error: default <span class="red">${s}</span>`);
                 return;
@@ -515,14 +500,17 @@ const Task = (() => {
             if(result[1] !== '') {
                 defaultSound = result[1];
             }
-            if(result[2] !== undefined) {
-                defaultImportance = importanceToNumber(result[2]);
+            if(result[2] !== null) {
+                defaultDisplay = result[2];
+            }
+            if(result[3] !== undefined) {
+                defaultImportance = importanceToNumber(result[3]);
             }
         },
         // Task.parse :: ExecString -> Maybe TaskObject
         parse: s => {
             // regex :: RegExp
-            const regex = /^(?:(\d+)#)?([^\/]*)((?:\/(?:([-\d])|([^\/]*?)\*)??(\.|!{1,3})?(?:\/(.*))?)?)$/;
+            const regex = /^(?:(\d+)([at]))?([^\/]*)((?:\/(?:([-\d])|([^\/]*?)\*)??([at])?(\.|!{1,3})?(?:\/(.*))?)?)$/;
             const result = regex.exec(s); // result :: Maybe [Maybe String]
             const ret = new Object(); // ret :: TaskObject
             const execs = []; // execs :: [ExecString]
@@ -530,74 +518,66 @@ const Task = (() => {
             if(result === null) return null;
             if(result[1] !== undefined) {
                 now = parseInt(result[1], 10);
-                ret.saveText = result[1];
+                ret.when = result[1];
+                ret.display = result[2];
             } else {
                 now = Date.now();
-                ret.saveText = now;
+                ret.when = String(now);
+                ret.display = defaultDisplay;
             }
             // plusSplit :: Maybe [Maybe String]
-            const plusSplit = /^([^\+]*?)(?:\+(.*))?$/.exec(result[2]);
+            const plusSplit = /^([^\+]*?)(?:\+(.*))?$/.exec(result[3]);
             ret.deadline = timer(plusSplit[1], now);
             if(ret.deadline === null) {
                 ret.deadline = alarm(plusSplit[1], now);
                 if(ret.deadline === null) return null;
             }
             ret.isValid = Date.now() - ret.deadline < -UPDATE_TIME / 2;
-            ret.saveText += '#' + result[2];
+            ret.saveText = result[3];
             switch(plusSplit[2]) {
                 case undefined:
                     break;
                 case '':
-                    execs.push(plusSplit[1] + '+' + result[3]);
+                    execs.push(plusSplit[1] + '+' + result[4]);
                     break;
                 default:
-                    execs.push(plusSplit[2] + result[3]);
+                    execs.push(plusSplit[2] + result[4]);
                     break;
             }
             ret.saveText += '/';
-            if(result[4] !== undefined) {
-                execs.push('#sound ' + result[4]);
-                ret.saveText += result[4];
-            } else if(result[5] !== undefined) {
-                execs.push(result[5]);
-                ret.saveText += result[5] + '*';
+            if(result[5] !== undefined) {
+                execs.push('#sound ' + result[5]);
+                ret.saveText += result[5];
+            } else if(result[6] !== undefined) {
+                execs.push(result[6]);
+                ret.saveText += result[6] + '*';
             } else {
                 execs.push('#sound ' + defaultSound);
                 ret.saveText += defaultSound;
             }
-            if(result[6] !== undefined) {
-                ret.importance = importanceToNumber(result[6]);
-                ret.saveText += result[6];
+            ret.display = result[7] !== undefined ? result[7] : ret.display;
+            if(result[8] !== undefined) {
+                ret.importance = importanceToNumber(result[8]);
+                ret.saveText += result[8];
             } else {
                 ret.importance = defaultImportance;
                 ret.saveText += importanceStr();
             }
-            if(result[7] !== undefined) {
-                ret.name = result[7];
-                ret.saveText += '/' + result[7];
+            if(result[9] !== undefined) {
+                ret.name = result[9];
+                ret.saveText += '/' + result[9];
             } else {
                 ret.name = plusSplit[1];
             }
             ret.exec = execs.join(';');
-            ret.tipText = (/^\d+#(.*)$/.exec(ret.saveText))[1];
+            ret.tipText = ret.saveText;
             return ret;
         },
-        // Task.sendByGui :: () -> ()
-        sendByGui: () => {
-            const form = document.gui_form; // form :: Element
-            let main; // main :: String
-            if(form.task_type.value === 'timer') {
-                main = `${form.timer_hour.value}h${form.timer_minute.value}m${form.timer_second.value}s`;
-            } else { // form.task_type.value === 'alarm'
-                main = [form.alarm_hour.value
-                        , form.alarm_minute.value
-                        , form.alarm_second.value].join(':');
-            }
-            parseMain([main, form.sound.value + form.importance.value
-                    , form.text.value].join('/'));
-        },
         // Task.save :: () -> [ExecString]
-        save: () => ['default ' + defaultSound + importanceStr()]
+        save: () => {
+            return ['default ' + defaultSound + defaultDisplay
+                    + importanceStr()];
+        }
     };
 })();
 
@@ -652,8 +632,10 @@ const Base64 = (() => {
 
 const Save = (() => {
     // makeData :: () -> SaveString
-    const makeData = () => [TaskQueue, Button, Display, Sound, Task, Macro]
+    const makeData = () => {
+        return [Legacy, TaskQueue, Button, Display, Sound, Task, Macro]
                 .map(x => x.save()).flat().join(SEPARATOR);
+    };
 
     return  {
         // Save.exec :: () -> ()
@@ -667,7 +649,18 @@ const Save = (() => {
 
 const Load = (() => {
     // parse :: SaveString -> ()
-    const parse = data => data.split(SEPARATOR).forEach(x => parseMain(x));
+    const parse = data => {
+        let version, rest; // version :: String;  rest :: SaveString
+        [version, ...rest] = data.split(SEPARATOR);
+        if(!/ver \d+\.\d+\.\d+/.test(version)) {
+            rest.unshift(version);
+            version = 'ver 0.1.0';
+        }
+        if(Legacy.isPast(version)) {
+            rest = Legacy.convert(rest, version);
+        }
+        rest.forEach(x => parseMain(x));
+    };
 
     return {
         // Load.exec :: () -> ()
@@ -686,8 +679,8 @@ const Load = (() => {
             // text :: Maybe Base64String
             const text = window.prompt('読み込むデータを入れてください:', '');
             if(text === '' || text === null) return;
-            parseMain('##remove-macro *;remove *;remove-button *;default 0.;\
-                    switch alarm;volume 100;empty-trash');
+            parseMain('##remove-macro *;remove *;remove-button *;default 0a.;\
+                    volume 100;empty-trash');
             parse(Base64.decode(text));
             Notice.set('data loaded');
         }
@@ -698,13 +691,22 @@ const Button = (() => {
     let buttonCount = 0; // buttonCount :: CountNumber
     const buttons = []; // buttons :: [ButtonObject]
 
+    // rm :: [IDNumber] -> ()
+    const rm = ids => {
+        if(ids.length === 0) return;
+        // items :: [MacroObject]
+        const items = ids.map(id => buttons.find(x => x.id === id));
+        Trash.push(items.map(item => '#' + item.saveText).join(SEPARATOR));
+        ids.forEach(id => {
+            removeDom('button_' + id);
+            buttons.splice(buttons.findIndex(x => x.id === id), 1);
+        });
+    };
+
     return {
-        // Button.getIdByIndex :: IndexNumber -> Maybe IDNumber
-        getIdByIndex: index => {
-            return buttons[index] === undefined ? undefined : buttons[index].id;
-        },
         // Button.insert :: (ExecString, DateNumber) -> ()
         insert: (str, now = null) => {
+            if(str === undefined) return;
             // execStr :: ExecString
             const execStr = str.replace(/'/g, '\\\'').replace(/\\/g, '\\\\');
             if(now === null) {
@@ -737,24 +739,22 @@ const Button = (() => {
             const result = /^(\d+)#(.+)$/.exec(str);
             Button.insert(result[2], parseInt(result[1], 10));
         },
-        // Button.remove :: IDNumber -> ()
-        remove: id => {
-            if(!removeDom('button_' + id)) return;
-            buttons.splice(buttons.findIndex(x => x.id === id), 1);
-        },
-        // Button.removeAll :: () -> ()
-        removeAll: () => buttons.map(x => x.id).forEach(x => Button.remove(x)),
-        // Button.moveToTrash :: ParameterString -> ()
-        moveToTrash: str => {
-            if(str === '*') {
-                Trash.push(buttons.map(x => '#' + x.saveText).join(SEPARATOR));
-                return;
+        // Button.remove :: ParameterString -> ()
+        remove: str => {
+            switch(str) {
+                case '':
+                    return;
+                case '*':
+                    rm(buttons.map(x => x.id));
+                    return;
             }
-            Trash.push(str.split(' ')
-                          .map(x => buttons.find(y => y.id === parseInt(x, 10)))
-                          .filter(x => x !== undefined)
-                          .map(x => '#' + x.saveText)
-                          .join(SEPARATOR));
+            // strs :: [DOMString]
+            const strs = parameterCheck(str, buttons.length);
+            rm([...new Set(strs.filter(x => /^\d/.test(x))
+                   .map(i => buttons[parseInt(i, 10) - 1].id))]);
+            if(strs.some(x => !/^\d/.test(x))) {
+                Notice.set('error: remove-button ' + strs.join(' '));
+            }
         },
         // Button.save :: () -> [ExecString]
         save: () => buttons.map(x => x.saveText)
@@ -762,49 +762,11 @@ const Button = (() => {
 })();
 
 const Display = (() => {
-    let isShowDeadline = true; // isShowDeadline :: Bool
     let isShowMenu = true; // isShowMenu :: Bool
 
-    // dlStr :: (DateNumber, DateNumber) -> DisplayString
-    const dlStr = (deadline, now) => '(' + deadlineStr(deadline, now) + ')';
-    // restStr :: (DateNumber, DateNumber) -> DisplayString
-    const restStr = (deadline, now) => {
-        let rest = (deadline - now) / 1000; // rest :: DateNumber
-        const d = Math.floor(rest / 86400); // d :: Number
-        rest -= d * 86400;
-        const h = Math.floor(rest / 3600); // h :: Number
-        rest -= h * 3600;
-        const m = Math.floor(rest / 60); // m :: Number
-        rest -= m * 60;
-        const s = Math.floor(rest); // s :: Number
-        // ret :: DisplayString
-        let ret = [h, m, s].map(x => ('0' + x).slice(-2)).join(':');
-        if(d > 0) {
-            ret = d + ',' + ret;
-        }
-        return '[' + ret + ']';
-    };
-
     return {
-        // Display.setMode :: ParameterString -> ()
-        setMode: str => {
-            switch(str) {
-                case 'timer':
-                    isShowDeadline = false;
-                    break;
-                case 'alarm':
-                    isShowDeadline = true;
-                    break;
-                default:
-                    isShowDeadline = !isShowDeadline;
-                    break;
-            }
-        },
         // Display.show :: () -> ()
-        show: () => {
-            return TaskQueue.show(isShowDeadline
-                    , isShowDeadline ? dlStr : restStr);
-        },
+        show: () => TaskQueue.show(),
         // Display.doStrike :: (IDString, ImportanceFlagNumber) -> ()
         doStrike: (id, importance) => {
             // target :: Element
@@ -837,8 +799,7 @@ const Display = (() => {
         },
         // Display.save :: () -> [ExecString]
         save: () => {
-            return ['switch ' + (isShowDeadline ? 'alarm' : 'timer'),
-                    isShowMenu ? 'show-menu' : 'hide-menu'];
+            return [isShowMenu ? 'show-menu' : 'hide-menu'];
         }
     };
 })();
@@ -851,12 +812,22 @@ const Macro = (() => {
 
     // formatter :: ExecString -> DisplayString
     const formatter = s => s.replace(regex, '$1 -> $2');
+    // rm :: [IDNumber] -> ()
+    const rm = ids => {
+        if(ids.length === 0) return;
+        // items :: [MacroObject]
+        const items = ids.map(id => macros.find(x => x.id === id));
+        Trash.push(items.map(item => item.saveText).join(SEPARATOR));
+        if(!isListShow) {
+            Notice.set('removed: ' + items.map(item => item.str).join(' , '));
+        }
+        ids.forEach(id => {
+            removeDom('macro_' + id);
+            macros.splice(macros.findIndex(x => x.id === id), 1);
+        });
+    };
 
     return {
-        // Macro.getIdByIndex :: IndexNumber -> Maybe IDNumber
-        getIdByIndex: index => {
-            macros[index] === undefined ? undefined : macros[index].id
-        },
         // Macro.isInsertSuccess :: (ExecString, DateNumber) -> Bool
         isInsertSuccess: (s, now = null) => {
             const result = regex.exec(s); // result :: Maybe [Maybe String]
@@ -904,28 +875,28 @@ const Macro = (() => {
             macros.forEach(x => s = s.replace(x.key, x.value));
             return s;
         },
-        // Macro.remove :: IDNumber -> ()
-        remove: id => {
-            if(!removeDom('macro_' + id)) return;
-            const i = macros.findIndex(x => x.id === id); // i :: IndexNumber
-            if(!isListShow) {
-                Notice.set('removed: ' + formatter(macros[i].str));
+        // Macro.remove :: ParameterString -> ()
+        remove: str => {
+            switch(str) {
+                case '':
+                    return;
+                case '*':
+                    rm(macros.map(x => x.id));
+                    return;
             }
-            macros.splice(i, 1);
-        },
-        // Macro.removeAll :: () -> ()
-        removeAll: () => macros.map(x => x.id).forEach(x => Macro.remove(x)),
-        // Macro.moveToTrash :: ParameterString -> ()
-        moveToTrash: str => {
-            if(str === '*') {
-                Trash.push(macros.map(x => x.saveText).join(SEPARATOR));
+            // idResult :: Maybe [Maybe String]
+            const idResult = /^\$(\d+)$/.exec(str);
+            if(idResult !== null) {
+                rm([parseInt(idResult[1], 10)]);
                 return;
             }
-            Trash.push(str.split(' ')
-                          .map(x => macros.find(y => y.id === parseInt(x, 10)))
-                          .filter(x => x !== undefined)
-                          .map(x => x.saveText)
-                          .join(SEPARATOR));
+            // strs :: [DOMString]
+            const strs = parameterCheck(str, macros.length);
+            rm([...new Set(strs.filter(x => /^\d/.test(x))
+                   .map(i => macros[parseInt(i, 10) - 1].id))]);
+            if(strs.some(x => !/^\d/.test(x))) {
+                Notice.set('error: remove-macro ' + strs.join(' '));
+            }
         },
         // Macro.show :: () -> ()
         show: () => {
@@ -962,12 +933,85 @@ const TaskQueue = (() => {
         }
         return undefined;
     };
+    // makeSaveText :: TaskObject -> SaveString
+    const makeSaveText = obj => obj.when + obj.display + obj.saveText;
+    // display :: ([IDString], FlagString) -> ()
+    const display = (ids, flag) => {
+        if(ids.length === 0) return;
+        let func; // func :: FlagString -> FlagString
+        switch(flag) {
+            case '':
+                func = x => x === 'a' ? 't' : 'a';
+                break;
+            case '-alarm':
+                func = x => 'a';
+                break;
+            case '-timer':
+                func = x => 't';
+                break;
+        }
+        ids.forEach(id => {
+            const i = taskQueue.findIndex(x => x.id === id); // i :: IndexNumber
+            taskQueue[i].display = func(taskQueue[i].display);
+        });
+    };
+    // rm :: [IDString] -> ()
+    const rm = ids => {
+        // items :: [TaskObject]
+        const items = ids.map(id => taskQueue.find(x => x.id === id))
+                         .filter(x => x !== undefined);
+        if(items.length === 0) return;
+        Trash.push(items.map(item => '#' + makeSaveText(item)).join(SEPARATOR));
+        ids.forEach(id => {
+            TaskQueue.stopSound('$' + id);
+            removeDom('item_' + id);
+            const i = taskQueue.findIndex(x => x.id === id); // i :: IndexNumber
+            if(!taskQueue[i].isValid && taskQueue[i].importance > 1) {
+                BackgroundAlert.off();
+            }
+            taskQueue.splice(i, 1);
+        });
+    };
+    // stop :: [IDString] -> ()
+    const stop = ids => {
+        if(ids.length === 0) return;
+        ids.forEach(id => {
+            removeDom('stopButton_' + id);
+            const index = getIndexById(id); // index :: Maybe IndexNumber
+            taskQueue[index].sound.forEach(x => x.pause());
+            taskQueue[index].sound = [];
+        });
+    };
 
     return {
-        // TaskQueue.getIdByIndex :: IndexNumber -> Maybe IDString
-        getIdByIndex: index => {
-            return taskQueue[index] === undefined
-                    ? undefined : taskQueue[index].id
+        // TaskQueue.setDisplay :: (ParameterString, FlagString) -> ()
+        setDisplay: (str, flag) => {
+            if(str === '' || str === '*') {
+                display(taskQueue.map(x => x.id), flag);
+                return;
+            }
+            // strs :: [DOMString]
+            const strs = parameterCheck(str, taskQueue.length);
+            display([...new Set(strs.filter(x => /^\d/.test(x))
+                   .map(i => taskQueue[parseInt(i, 10) - 1].id))], flag);
+            if(strs.some(x => !/^\d/.test(x))) {
+                Notice.set(`error: switch${flag} ${strs.join(' ')}`);
+            }
+        },
+        remove: str => {
+            // idResult :: Maybe [Maybe String]
+            const idResult = /^\$(\d+)$/.exec(str);
+            if(idResult !== null) {
+                rm([idResult[1]]);
+                return;
+            }
+            // strs :: [DOMString]
+            const strs = parameterCheck(str, taskQueue.length);
+            rm([...new Set(strs.filter(x => /^\d/.test(x))
+                   .map(i => taskQueue[parseInt(i, 10) - 1].id))]);
+            if(strs.some(x => !/^\d/.test(x))) {
+                Notice.set('error: remove ' + strs.join(' '));
+            }
         },
         // TaskQueue.setSound :: (Sound, IDString) -> IDNumber
         setSound: (sound, id) => {
@@ -1015,26 +1059,53 @@ const TaskQueue = (() => {
                 taskQueue.push(taskItem);
             }
         },
-        // TaskQueue.remove :: IDString -> ()
-        remove: id => {
-            TaskQueue.stopSound(id);
-            if(!removeDom('item_' + id)) return;
-            const index = getIndexById(id); // index :: IndexNumber
-            if(!taskQueue[index].isValid && taskQueue[index].importance > 1) {
-                BackgroundAlert.off();
+        // TaskQueue.remove :: ParameterString -> ()
+        remove: str => {
+            switch(str) {
+                case '':
+                    rm(taskQueue.filter(x => !x.isValid).map(x => x.id));
+                    return;
+                case '*':
+                    rm(taskQueue.map(x => x.id));
+                    return;
             }
-            taskQueue.splice(index, 1);
+            // idResult :: Maybe [Maybe String]
+            const idResult = /^\$(\d+)$/.exec(str);
+            if(idResult !== null) {
+                rm([idResult[1]]);
+                return;
+            }
+            // strs :: [DOMString]
+            const strs = parameterCheck(str, taskQueue.length);
+            rm([...new Set(strs.filter(x => /^\d/.test(x))
+                   .map(i => taskQueue[parseInt(i, 10) - 1].id))]);
+            if(strs.some(x => !/^\d/.test(x))) {
+                Notice.set('error: remove ' + strs.join(' '));
+            }
         },
-        // TaskQueue.removeAlerted :: () -> ()
-        removeAlerted: () => {
-            const ids = taskQueue.filter(x => !x.isValid)
-                                 .map(x => x.id); // ids :: [IDString]
-            TaskQueue.moveToTrash(ids.join(' '));
-            ids.forEach(x => TaskQueue.remove(x));
+        // TaskQueue.stopSound :: IDString -> ()
+        stopSound: str => {
+            switch(str) {
+                case '':
+                case '$global':
+                    stop(['global']);
+                    return;
+                case '*':
+                    stop(['global', ...taskQueue.map(x => x.id)]);
+                    return;
+            }
+            // idResult :: Maybe [Maybe String]
+            const idResult = /^\$(\d+)$/.exec(str);
+            if(idResult !== null) {
+                stop([idResult[1]]);
+                return;
+            }
+            stop([...new Set(str.split(' ').filter(x => {
+                const index = parseInt(x, 10); // index :: Maybe IndexNumber
+                return index > 0 && index <= taskQueue.length
+                        && /^\d+$/.test(x);
+            }).map(i => taskQueue[parseInt(i, 10) - 1].id))]);
         },
-        // TaskQueue.removeAll :: () -> ()
-        removeAll: () => taskQueue.map(x => x.id)
-                                  .forEach(x => TaskQueue.remove(x)),
         // TaskQueue.removeSound :: (IDString, IDNumber) -> ()
         removeSound: (id, soundId) => {
             const index = getIndexById(id); // index :: Maybe IndexNumber
@@ -1047,16 +1118,38 @@ const TaskQueue = (() => {
             for(let i = 0; taskQueue[i] !== undefined
                     && Date.now() - taskQueue[i].deadline >= -UPDATE_TIME / 2
                     ; i++) { // i :: IndexNumber
-                if(taskQueue[i].isValid) {
+                const item = taskQueue[i]; // item :: TaskObject
+                if(item.isValid) {
                     taskQueue[i].isValid = false;
-                    const id = taskQueue[i].id; // id :: IDString
-                    parseMain(taskQueue[i].exec, id);
-                    Display.doStrike(id, taskQueue[i].importance);
+                    const id = item.id; // id :: IDString
+                    parseMain(item.exec, id);
+                    Display.doStrike(id, item.importance);
                 }
             }
         },
-        // TaskQueue.show :: (Bool, (DateNumber, DateNumber) -> String) -> ()
-        show: (isShowDeadline, makeStr) => {
+        // TaskQueue.show :: () -> ()
+        show: () => {
+            // dlStr :: (DateNumber, DateNumber) -> DisplayString
+            const dlStr = (deadline, now) => {
+                return '(' + deadlineStr(deadline, now) + ')';
+            };
+            // restStr :: (DateNumber, DateNumber) -> DisplayString
+            const restStr = (deadline, now) => {
+                let rest = (deadline - now) / 1000; // rest :: DateNumber
+                const d = Math.floor(rest / 86400); // d :: Number
+                rest -= d * 86400;
+                const h = Math.floor(rest / 3600); // h :: Number
+                rest -= h * 3600;
+                const m = Math.floor(rest / 60); // m :: Number
+                rest -= m * 60;
+                const s = Math.floor(rest); // s :: Number
+                // ret :: DisplayString
+                let ret = [h, m, s].map(x => ('0' + x).slice(-2)).join(':');
+                if(d > 0) {
+                    ret = d + ',' + ret;
+                }
+                return '[' + ret + ']';
+            };
             const now = Date.now(); // now :: DateNumber
             taskQueue.forEach(x => {
                 // target :: Element
@@ -1064,37 +1157,48 @@ const TaskQueue = (() => {
                 if(!x.isValid) {
                     target.innerText = '@' + deadlineStr(x.deadline, now);
                 } else {
-                    target.innerText = makeStr(x.deadline, now);
+                    if(x.display === 'a') {
+                        target.innerText = dlStr(x.deadline, now);
+                    } else { // x.display === 't'
+                        target.innerText = restStr(x.deadline, now);
+                    }
                 }
             });
         },
-        // TaskQueue.stopSound :: IDString -> ()
-        stopSound: id => {
-            if(!removeDom('stopButton_' + id)) return;
-            const index = getIndexById(id); // index :: Maybe IndexNumber
-            taskQueue[index].sound.forEach(x => x.pause());
-            taskQueue[index].sound = [];
-        },
-        // TaskQueue.stopAllSound :: () -> ()
-        stopAllSound: () => {
-            ['global', ...taskQueue.map(x => x.id)]
-                    .forEach(x => TaskQueue.stopSound(x))
-        },
-        // TaskQueue.moveToTrash :: ParameterString -> ()
-        moveToTrash: str => {
-            if(str === '*') {
-                Trash.push(taskQueue.map(x => '#' + x.saveText)
-                                    .join(SEPARATOR));
-                return;
-            }
-            Trash.push(str.split(' ')
-                          .map(x => taskQueue.find(y => y.id === x))
-                          .filter(x => x !== undefined)
-                          .map(x => '#' + x.saveText)
-                          .join(SEPARATOR));
-        },
         // TaskQueue.save :: () -> [ExecString]
-        save: () => taskQueue.map(x => x.saveText)
+        save: () => taskQueue.map(x => makeSaveText(x))
+    };
+})();
+
+const Legacy = (() => {
+    // parseVersion :: VersionString -> [VersionNumber]
+    const parseVersion = version => {
+        // result :: Maybe [Maybe String]
+        const result = /^ver (\d+)\.(\d+)\.(\d+)$/.exec(version);
+        return [result[1], result[2], result[3]].map(x => parseInt(x, 10));
+    };
+
+    return {
+        // Legacy.isPast :: VersionString -> Bool
+        isPast: version => parseVersion(version) < VERSION,
+        // Legacy.convert :: ([ExecString], VersionString) -> [ExecString]
+        convert: (data, version) => {
+            // inputVer :: [VersionNumber]
+            const inputVer = parseVersion(version);
+            let isChecked = false; // isChecked :: Bool
+            if(isChecked || inputVer < [0, 3, 0]) {
+                isChecked = true;
+                // display :: Bool
+                const display = data.filter(x => /^switch .*$/.test(x))[0]
+                        === 'switch alarm' ? 'a' : 't';
+                // regex :: RegExp
+                const regex = /^(\d+)#([^\/]*(?:\/(?:[-\d]|[^\/]*?\*)??(?:\.|!{1,3})?(?:\/.*)?)?)$/;
+                data = data.map(x => x.replace(regex, `$1${display}$2`));
+            }
+            return data;
+        },
+        // Legacy.save :: () -> [ExecString]
+        save: () => [`ver ${VERSION[0]}.${VERSION[1]}.${VERSION[2]}`]
     };
 })();
 
@@ -1105,8 +1209,10 @@ dgebi('cover').addEventListener('click', () => {
         let target = event.target; // target :: Maybe Element
         while(target !== null) {
             if(target.id === 'menu'
-                    || (target.tagName === 'INPUT' && target.type === 'button'))
+                    || (target.tagName === 'INPUT'
+                    && target.type === 'button')) {
                 return;
+            }
             target = target.parentNode;
         }
         document.cui_form.input.focus();

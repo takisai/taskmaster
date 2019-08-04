@@ -1,7 +1,7 @@
 'use strict';
 const UPDATE_TIME = 200; // UPDATE_TIME :: DateNumber
 const SEPARATOR = '\v'; // SEPARATOR :: String
-const VERSION = [0, 3, 0]; // VERSION :: [VersionNumber]
+const VERSION = [0, 3, 1]; // VERSION :: [VersionNumber]
 
 // deadlineStr :: (DateNumber, DateNumber) -> DisplayString
 const deadlineStr = (deadline, now) => {
@@ -680,7 +680,7 @@ const Load = (() => {
             const text = window.prompt('読み込むデータを入れてください:', '');
             if(text === '' || text === null) return;
             parseMain('##remove-macro *;remove *;remove-button *;default 0a.;\
-                    volume 100;empty-trash');
+                    volume 100;show-menu;hide-macro;empty-trash;empty-history');
             parse(Base64.decode(text));
             Notice.set('data loaded');
         }
@@ -910,12 +910,8 @@ const Macro = (() => {
         },
         // Macro.save :: () -> [ExecString]
         save: () => {
-            // ret :: [ExecString]
-            const ret = macros.map(x => x.saveText);
-            if(isListShow) {
-                ret.push('show-macro');
-            }
-            return ret;
+            return [isListShow ? 'show-macro' : 'hide-macro'
+                    , ...macros.map(x => x.saveText)];
         }
     };
 })();

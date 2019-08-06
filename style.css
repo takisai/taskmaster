@@ -50,12 +50,14 @@ input[type=range], select {
     vertical-align: middle;
 }
 
-form[name=cui_form], #div_volume, #button_parent, #macros {
+form[name=gui_form], #div_volume, #button_parent, #macros {
     margin: 8px 0px;
 }
 
 form[name=gui_form] {
     line-height: 1.8em;
+    margin-top: 8px;
+    padding-bottom: 8px;
 }
 
 .bg-red {
@@ -143,12 +145,6 @@ a:active, .red {
     font-size: 2em;
     margin: 8px 0px;
     font-family: monospace, sans-serif;
-}
-
-.cui_dummy {
-    top: -100px;
-    left: -100px;
-    position: fixed;
 }
 
 #cover {

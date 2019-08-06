@@ -11,9 +11,7 @@
             --:--:--
         </div>
         <form name="cui_form" onsubmit="getText();return false;">
-            <input type="password" class="cui_dummy"></input>
-            <input type="text" name="input" id="text_cui_form"></input> <span id="item_global"></span><span id="notice"></span>
-            <input type="submit" class="cui_dummy"></input>
+            <input type="text" name="input" id="text_cui_form" autocomplete="off"></input> <span id="item_global"></span><span id="notice"></span>
         </form>
         <div id="div_volume">
             volume <input id="range_volume" type="range" min="0" max="100" step="1" value="100"> <span id="volume">100</span>
@@ -31,7 +29,7 @@
             <details id="menu_details"><summary>menu</summary>
                 <div>
                     <details><summary>リマインダー設定</summary>
-                        <form name="gui_form">
+                        <form name="gui_form" autocomplete="off">
                             <input id="radio_timer" type="radio" name="task_type" value="timer" onclick="showTimerGUI()">
                             <label id="label_radio_timer" for="radio_timer">タイマー</label>
                             <input id="radio_alarm" type="radio" name="task_type" value="alarm" onclick="showAlarmGUI()">
@@ -74,9 +72,9 @@
                         <div>
                             <p>Task Masterは、WEB上で利用できるリマインダーツールです。</p>
                                 <ul>
-                                    <li>最新版: Version 0.3.1 (2019-08-04)</li>
+                                    <li>最新版: Version 0.3.2 (2019-08-06)</li>
                                     <li>製作者: takisai</li>
-                                    <li>動作環境: Chrome・Firefox</li>
+                                    <li>推薦環境: Chrome・Firefox</li>
                                 </ul>
                             <p>使い方など詳しくは<a href="help.html" target="_blank">help</a>を参照してください。</p>
                         </div>

@@ -532,7 +532,7 @@ const Task = (() => {
                 ret.deadline = alarm(plusSplit[1], now);
                 if(ret.deadline === null) return null;
             }
-            ret.isValid = Date.now() - ret.deadline < -UPDATE_TIME / 2;
+            ret.isValid = ret.deadline > Date.now();
             ret.saveText = result[3];
             switch(plusSplit[2]) {
                 case undefined:
@@ -1111,9 +1111,9 @@ const TaskQueue = (() => {
         },
         // TaskQueue.checkDeadline :: () -> ()
         checkDeadline: () => {
+            // i :: IndexNumber
             for(let i = 0; taskQueue[i] !== undefined
-                    && Date.now() - taskQueue[i].deadline >= -UPDATE_TIME / 2
-                    ; i++) { // i :: IndexNumber
+                    && Date.now() >= taskQueue[i].deadline; i++) {
                 const item = taskQueue[i]; // item :: TaskObject
                 if(item.isValid) {
                     taskQueue[i].isValid = false;

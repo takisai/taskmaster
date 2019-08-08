@@ -1,7 +1,7 @@
 'use strict';
 const UPDATE_TIME = 200; // UPDATE_TIME :: DateNumber
 const SEPARATOR = '\v'; // SEPARATOR :: String
-const VERSION = [0, 3, 1]; // VERSION :: [VersionNumber]
+const VERSION = [0, 3, 3]; // VERSION :: [VersionNumber]
 
 // deadlineStr :: (DateNumber, DateNumber) -> DisplayString
 const deadlineStr = (deadline, now) => {
@@ -57,18 +57,48 @@ const getText = () => {
 // getByGui :: () -> ()
 const getByGui = () => {
     const form = document.gui_form; // form :: Element
-    let main, type; // main :: String;  type :: FlagString
+    const timeUnit = ['hour', 'minute', 'second']; // timeUnit :: [String]
+    const ret = []; // [String]
+    // error :: () -> ()
+    const error = () => {
+        Notice.clear();
+        Notice.set('適切でない入力です');
+        return;
+    };
+    // isValid :: (String -> Bool, [String]) -> Bool
+    const isValid = (func, strs) => {
+        if(strs.some(x => func(x) || Number(x) < 0)) {
+            error();
+            return false;
+        }
+        return true;
+    };
+    // makeMode :: FlagString -> String
+    const makeMode = str => {
+        return form.gui_sound.value + str + form.gui_importance.value;
+    };
     if(form.task_type.value === 'timer') {
-        main = `${form.timer_hour.value}h${form.timer_minute.value}m${form.timer_second.value}s`;
-        type = 't';
+        const unit = ['h', 'm', 's']; // unit :: [String]
+        // value :: [String]
+        const value = timeUnit.map(x => form['timer_' + x].value);
+        let main = '' // main :: String
+        if(!isValid(x => isNaN(Number(x)), value)) return;
+        [0, 1, 2].map(i => main += Number(value[i]) + unit[i]);
+        ret.push(main, makeMode('t'));
     } else { // form.task_type.value === 'alarm'
-        main = [form.alarm_hour.value
-                , form.alarm_minute.value
-                , form.alarm_second.value].join(':');
-        type = 'a';
+        // value :: [String]
+        const value = timeUnit.map(x => form['alarm_' + x].value);
+        if(!isValid(x => !/^\d*$/.test(x), value)) return;
+        ret.push(value.map(x => parseInt(x, 10)).join(':'), makeMode('a'));
     }
-    parseMain([main, form.sound.value + type + form.importance.value
-            , form.text.value].join('/'));
+    if(form.gui_text.value !== '') {
+        if(/;/.test(form.gui_text.value)) {
+            error();
+            return;
+        }
+        ret.push(form.gui_text.value);
+    }
+    parseMain(ret.join('/'));
 };
 
 // parseMain :: (ExecString, FlagString) -> ()
@@ -108,18 +138,11 @@ const parseMain = (() => {
 
     // main :: (ExecString, FlagString) -> ()
     const main = (text, callFrom) => {
-        // hashResult :: Maybe [Maybe String]
-        const hashResult = /^#(.*)$/.exec(text);
-        // arrowResult :: Maybe [Maybe String]
-        const arrowResult = /^->(.*)$/.exec(text);
-        let isRawMode = false; // isRawMode :: Bool
-        let isHeadArrow = false; // isHeadArrow :: Bool
-        if(hashResult !== null) {
-            text = hashResult[1];
-            isRawMode = true;
-        } else if(arrowResult !== null) {
-            isHeadArrow = true;
-            isRawMode = true;
+        const isHeadHash = /^#/.test(text); // isHeadHash :: Bool
+        const isHeadArrow = /^->/.test(text); // isHeadArrow :: Bool
+        const isRawMode = isHeadHash || isHeadArrow; // isRawMode :: Bool
+        if(isHeadHash) {
+            text = text.slice(1);
         }
         if(Macro.isInsertSuccess(text)) return;
         if(!isRawMode) {
@@ -460,7 +483,7 @@ const Task = (() => {
                 , {get: 'getHours', set: 'setHours', c: 0, r: 0}
                 , {get: 'getMinutes', set: 'setMinutes', c: 0, r: 0}
                 , {get: 'getSeconds', set: 'setSeconds', c: 0, r: 0}];
-        ret.setMilliseconds(0);
+        ret.setMilliseconds(500);
         for(let i = 0; i < 6; i++) { // i :: IndexNumber
             const t = table[i]; // t :: Object
             if(result[i + 1] !== '' && result[i + 1] !== undefined) {
@@ -486,26 +509,24 @@ const Task = (() => {
     return {
         // Task.setDefault :: Maybe ConfigString -> ()
         setDefault: s => {
-            if(s === '') {
-                Notice.set('default: ' + defaultSound + defaultDisplay
-                        + importanceStr());
-                return;
+            if(s !== '') {
+                // result :: Maybe [Maybe String]
+                const result = /^([-\d]?)([at]?)(\.|!{1,3})?$/.exec(s);
+                if(result !== null) {
+                    if(result[1] !== '') {
+                        defaultSound = result[1];
+                    }
+                    if(result[2] !== null) {
+                        defaultDisplay = result[2];
+                    }
+                    if(result[3] !== undefined) {
+                        defaultImportance = importanceToNumber(result[3]);
+                    }
+                }
             }
-            // result :: Maybe [Maybe String]
-            let result = /^([-\d]?)([at]?)(\.|!{1,3})?$/.exec(s);
-            if(result === null) {
-                Notice.set(`parse error: default <span class="red">${s}</span>`);
-                return;
-            }
-            if(result[1] !== '') {
-                defaultSound = result[1];
-            }
-            if(result[2] !== null) {
-                defaultDisplay = result[2];
-            }
-            if(result[3] !== undefined) {
-                defaultImportance = importanceToNumber(result[3]);
-            }
+            Notice.set('default: ' + defaultSound + defaultDisplay
+                    + importanceStr());
+            return;
         },
         // Task.parse :: ExecString -> Maybe TaskObject
         parse: s => {
@@ -514,14 +535,14 @@ const Task = (() => {
             const result = regex.exec(s); // result :: Maybe [Maybe String]
             const ret = new Object(); // ret :: TaskObject
             const execs = []; // execs :: [ExecString]
-            let now; // now :: DateNumber
             if(result === null) return null;
+            // now :: DateNumber
+            const now = result[1] !== undefined
+                    ? parseInt(result[1], 10) : Date.now();
             if(result[1] !== undefined) {
-                now = parseInt(result[1], 10);
                 ret.when = result[1];
                 ret.display = result[2];
             } else {
-                now = Date.now();
                 ret.when = String(now);
                 ret.display = defaultDisplay;
             }
@@ -532,7 +553,7 @@ const Task = (() => {
                 ret.deadline = alarm(plusSplit[1], now);
                 if(ret.deadline === null) return null;
             }
-            ret.isValid = ret.deadline > Date.now();
+            ret.isValid = ret.deadline - Date.now() >= -UPDATE_TIME / 2;
             ret.saveText = result[3];
             switch(plusSplit[2]) {
                 case undefined:
@@ -573,6 +594,26 @@ const Task = (() => {
             ret.tipText = ret.saveText;
             return ret;
         },
+        // Task.init :: () -> ()
+        init: () => {
+            // soundElements :: [Element]
+            const soundElements = dgebi('gui_sound').childNodes;
+            for(let i = 0; i < soundElements.length; i++) { // i :: IndexNumber
+                if(soundElements[i].value === defaultSound) {
+                    soundElements[i].selected = true;
+                    break;
+                }
+            }
+            // importanceElements :: [Element]
+            const importanceElements = dgebi('gui_importance').childNodes;
+            // i :: IndexNumber
+            for(let i = 0; i < importanceElements.length; i++) {
+                if(importanceElements[i].value === importanceStr()) {
+                    importanceElements[i].selected = true;
+                    break;
+                }
+            }
+        },
         // Task.save :: () -> [ExecString]
         save: () => {
             return ['default ' + defaultSound + defaultDisplay
@@ -594,16 +635,16 @@ const Base64 = (() => {
                 // c :: [Maybe UnicodeNumber]
                 const c = [0, 1, 2].map(x => str.charCodeAt(i + x));
                 ret.push(c[0] >> 2);
-                let t = (c[0] & 3) << 4; // t :: UnicodeNumber
+                const t1 = (c[0] & 3) << 4; // t1 :: UnicodeNumber
                 if(isNaN(c[1])) {
-                    ret.push(t, 64, 64);
+                    ret.push(t1, 64, 64);
                 } else {
-                    ret.push(t | (c[1] >> 4))
-                    t = (c[1] & 15) << 2;
+                    ret.push(t1 | (c[1] >> 4))
+                    const t2 = (c[1] & 15) << 2; // t2 :: UnicodeNumber
                     if(isNaN(c[2])) {
-                        ret.push(t, 64);
+                        ret.push(t2, 64);
                     } else {
-                        ret.push(t | (c[2] >> 6), c[2] & 63);
+                        ret.push(t2 | (c[2] >> 6), c[2] & 63);
                     }
                 }
             }
@@ -650,16 +691,13 @@ const Save = (() => {
 const Load = (() => {
     // parse :: SaveString -> ()
     const parse = data => {
-        let version, rest; // version :: String;  rest :: SaveString
-        [version, ...rest] = data.split(SEPARATOR);
-        if(!/ver \d+\.\d+\.\d+/.test(version)) {
-            rest.unshift(version);
-            version = 'ver 0.1.0';
-        }
+        const rest = data.split(SEPARATOR); // rest :: SaveString
+        const version = rest.shift(); // version :: String
         if(Legacy.isPast(version)) {
-            rest = Legacy.convert(rest, version);
+            Legacy.convert(rest, version).forEach(x => parseMain(x));
+        } else {
+            rest.forEach(x => parseMain(x));
         }
-        rest.forEach(x => parseMain(x));
     };
 
     return {
@@ -798,9 +836,7 @@ const Display = (() => {
             isShowMenu = false;
         },
         // Display.save :: () -> [ExecString]
-        save: () => {
-            return [isShowMenu ? 'show-menu' : 'hide-menu'];
-        }
+        save: () => [isShowMenu ? 'show-menu' : 'hide-menu']
     };
 })();
 
@@ -934,18 +970,9 @@ const TaskQueue = (() => {
     // display :: ([IDString], FlagString) -> ()
     const display = (ids, flag) => {
         if(ids.length === 0) return;
-        let func; // func :: FlagString -> FlagString
-        switch(flag) {
-            case '':
-                func = x => x === 'a' ? 't' : 'a';
-                break;
-            case '-alarm':
-                func = x => 'a';
-                break;
-            case '-timer':
-                func = x => 't';
-                break;
-        }
+        // func :: FlagString -> FlagString
+        const func = flag === '-alarm' ? (x => 'a') : flag === '-timer'
+                ? (x => 't') : (x => x === 'a' ? 't' : 'a');
         ids.forEach(id => {
             const i = taskQueue.findIndex(x => x.id === id); // i :: IndexNumber
             taskQueue[i].display = func(taskQueue[i].display);
@@ -1109,17 +1136,17 @@ const TaskQueue = (() => {
             taskQueue[index].sound.splice(taskQueue[index].sound
                     .findIndex(x => x.soundId === soundId), 1);
         },
-        // TaskQueue.checkDeadline :: () -> ()
-        checkDeadline: () => {
+        // TaskQueue.checkDeadline :: DateNumber -> ()
+        checkDeadline: interval => {
             // i :: IndexNumber
             for(let i = 0; taskQueue[i] !== undefined
-                    && Date.now() >= taskQueue[i].deadline; i++) {
+                    && Date.now() - taskQueue[i].deadline >= -interval / 2
+                    ; i++) {
                 const item = taskQueue[i]; // item :: TaskObject
                 if(item.isValid) {
                     taskQueue[i].isValid = false;
-                    const id = item.id; // id :: IDString
-                    parseMain(item.exec, id);
-                    Display.doStrike(id, item.importance);
+                    parseMain(item.exec, item.id);
+                    Display.doStrike(item.id, item.importance);
                 }
             }
         },
@@ -1131,20 +1158,16 @@ const TaskQueue = (() => {
             };
             // restStr :: (DateNumber, DateNumber) -> DisplayString
             const restStr = (deadline, now) => {
-                let rest = (deadline - now) / 1000; // rest :: DateNumber
-                const d = Math.floor(rest / 86400); // d :: Number
-                rest -= d * 86400;
-                const h = Math.floor(rest / 3600); // h :: Number
-                rest -= h * 3600;
-                const m = Math.floor(rest / 60); // m :: Number
-                rest -= m * 60;
-                const s = Math.floor(rest); // s :: Number
+                const r1 = (deadline - now) / 1000; // r1 :: DateNumber
+                const d = Math.floor(r1 / 86400); // d :: Number
+                const r2 = r1 - d * 86400; // r2 :: DateNumber
+                const h = Math.floor(r2 / 3600); // h :: Number
+                const r3 = r2 - h * 3600; // r3 :: DateNumber
+                const m = Math.floor(r3 / 60); // m :: Number
+                const s = Math.floor(r3 - m * 60); // s :: Number
                 // ret :: DisplayString
-                let ret = [h, m, s].map(x => ('0' + x).slice(-2)).join(':');
-                if(d > 0) {
-                    ret = d + ',' + ret;
-                }
-                return '[' + ret + ']';
+                const ret = [h, m, s].map(x => ('0' + x).slice(-2)).join(':');
+                return d > 0 ? `[${d},${ret}]` : `[${ret}]`;
             };
             const now = Date.now(); // now :: DateNumber
             taskQueue.forEach(x => {
@@ -1213,8 +1236,9 @@ dgebi('cover').addEventListener('click', () => {
         }
         document.cui_form.input.focus();
     });
-    dgebi('range_volume').addEventListener('input', () =>
-            parseMain('#volume ' + dgebi('range_volume').value));
+    dgebi('range_volume').addEventListener('input', () => {
+        parseMain('#volume ' + dgebi('range_volume').value)
+    });
     window.addEventListener('keydown', event => {
         if(event.ctrlKey) {
             switch(event.key) {
@@ -1251,14 +1275,51 @@ dgebi('cover').addEventListener('click', () => {
             }
         }
     });
+    // isParseSuccess :: (String -> Bool, String) -> Bool
+    const isParseSuccess = (func, value) => func(value) || Number(value) < 0;
+    ['timer_hour', 'timer_minute', 'timer_second'].map(x => {
+        dgebi(x).addEventListener('input', event => {
+            // value :: String
+            const value = document.gui_form[event.target.id].value;
+            if(isParseSuccess(x => isNaN(Number(x)), value)) {
+                dgebi(event.target.id).className = 'bg-pink';
+            } else {
+                dgebi(event.target.id).className = 'bg-white';
+            }
+        });
+    });
+    ['alarm_hour', 'alarm_minute', 'alarm_second'].map(x => {
+        dgebi(x).addEventListener('input', event => {
+            // value :: String
+            const value = document.gui_form[event.target.id].value;
+            if(isParseSuccess(x => !/^\d*$/.test(x), value)) {
+                dgebi(event.target.id).className = 'bg-pink';
+            } else {
+                dgebi(event.target.id).className = 'bg-white';
+            }
+        });
+    });
+    dgebi('gui_text').addEventListener('input', event => {
+        if(/;/.test(document.gui_form.gui_text.value)) {
+            dgebi('gui_text').className = 'bg-pink';
+        } else {
+            dgebi('gui_text').className = 'bg-white';
+        }
+    });
     dgebi('cover').className = 'none';
     dgebi('body').className = 'of_auto';
     Sound.init();
-    window.setInterval(() => {
-        dgebi('clock').innerText = toHms(new Date());
-        Display.show();
-        TaskQueue.checkDeadline();
-    }, UPDATE_TIME);
+    Task.init();
+    window.setInterval((() => {
+        let pre; // pre :: DateNumber
+
+        return () => {
+            dgebi('clock').innerText = toHms(new Date());
+            Display.show();
+            TaskQueue.checkDeadline(Date.now() - pre);
+            pre = Date.now();
+        }
+    })(), UPDATE_TIME);
 }, {once: true});
 
 Load.exec();

@@ -1275,36 +1275,34 @@ dgebi('cover').addEventListener('click', () => {
             }
         }
     });
-    // isParseSuccess :: (String -> Bool, String) -> Bool
-    const isParseSuccess = (func, value) => func(value) || Number(value) < 0;
+    // formCheck :: (Bool, StringID) -> ()
+    const formCheck = (cond, id) => {
+        if(cond) {
+            dgebi(id).className = 'bg-pink';
+        } else {
+            dgebi(id).className = 'bg-white';
+        }
+    };
     ['timer_hour', 'timer_minute', 'timer_second'].map(x => {
         dgebi(x).addEventListener('input', event => {
             // value :: String
             const value = document.gui_form[event.target.id].value;
-            if(isParseSuccess(x => isNaN(Number(x)), value)) {
-                dgebi(event.target.id).className = 'bg-pink';
-            } else {
-                dgebi(event.target.id).className = 'bg-white';
-            }
+            // isValid :: Bool
+            const isValid = isNaN(Number(value)) || Number(value) < 0;
+            formCheck(isValid, event.target.id);
         });
     });
     ['alarm_hour', 'alarm_minute', 'alarm_second'].map(x => {
         dgebi(x).addEventListener('input', event => {
             // value :: String
             const value = document.gui_form[event.target.id].value;
-            if(isParseSuccess(x => !/^\d*$/.test(x), value)) {
-                dgebi(event.target.id).className = 'bg-pink';
-            } else {
-                dgebi(event.target.id).className = 'bg-white';
-            }
+            // isValid :: Bool
+            const isValid = !/^\d*$/.test(value) || Number(value) < 0;
+            formCheck(isValid, event.target.id);
         });
     });
     dgebi('gui_text').addEventListener('input', event => {
-        if(/;/.test(document.gui_form.gui_text.value)) {
-            dgebi('gui_text').className = 'bg-pink';
-        } else {
-            dgebi('gui_text').className = 'bg-white';
-        }
+        formCheck(/;/.test(document.gui_form.gui_text.value), 'gui_text');
     });
     dgebi('cover').className = 'none';
     dgebi('body').className = 'of_auto';
@@ -1316,7 +1314,8 @@ dgebi('cover').addEventListener('click', () => {
         return () => {
             dgebi('clock').innerText = toHms(new Date());
             Display.show();
-            TaskQueue.checkDeadline(Date.now() - pre);
+            const subst = Date.now() - pre; // subst :: DateNumber
+            TaskQueue.checkDeadline(subst > 1000 ? 1000 : subst);
             pre = Date.now();
         }
     })(), UPDATE_TIME);

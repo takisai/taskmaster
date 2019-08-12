@@ -50,7 +50,7 @@ input[type=range], select {
     vertical-align: middle;
 }
 
-form[name=gui_form], #div_volume, #button_parent, #macros {
+form[name=gui_form], #div_volume, #macros {
     margin: 8px 0px;
 }
 
@@ -138,10 +138,30 @@ a:active, .red {
     overflow: auto;
 }
 
+.sticky {
+    position: sticky;
+}
+
+#body {
+    margin: 0px 0px 8px 0px;
+    padding: 0px 8px;
+}
+
+#header {
+    position: sticky;
+    top: 0;
+    background-color: white;
+    padding: 8px 0px;
+}
+
 #clock {
     font-size: 2em;
-    margin: 8px 0px;
+    margin: 0px 0px 8px 0px;
     font-family: monospace, sans-serif;
+}
+
+#button_parent {
+    margin-top: 8px;
 }
 
 #cover {

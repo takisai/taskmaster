@@ -1,7 +1,7 @@
 'use strict';
 const UPDATE_TIME = 200; // UPDATE_TIME :: DateNumber
 const SEPARATOR = '\v'; // SEPARATOR :: String
-const VERSION = [0, 3, 3]; // VERSION :: [VersionNumber]
+const VERSION = [0, 4, 0]; // VERSION :: [VersionNumber]
 
 // deadlineStr :: (DateNumber, DateNumber) -> DisplayString
 const deadlineStr = (deadline, now) => {
@@ -508,16 +508,17 @@ const Task = (() => {
 
     return {
         // Task.setDefault :: Maybe ConfigString -> ()
-        setDefault: s => {
-            if(s !== '') {
+        setDefault: str => {
+            if(str !== '') {
                 // result :: Maybe [Maybe String]
-                const result = /^([-\d]?)([at]?)(\.|!{1,3})?$/.exec(s);
+                const result = /^([-\d]?)([ast]?)(\.|!{1,3})?$/.exec(str);
                 if(result !== null) {
                     if(result[1] !== '') {
                         defaultSound = result[1];
                     }
                     if(result[2] !== null) {
-                        defaultDisplay = result[2];
+                        defaultDisplay = result[2] !== 's' ? result[2]
+                                : defaultDisplay === 'a' ? 't' : 'a';
                     }
                     if(result[3] !== undefined) {
                         defaultImportance = importanceToNumber(result[3]);
@@ -537,8 +538,8 @@ const Task = (() => {
             const execs = []; // execs :: [ExecString]
             if(result === null) return null;
             // now :: DateNumber
-            const now = result[1] !== undefined
-                    ? parseInt(result[1], 10) : Date.now();
+            const now = result[1] !== undefined ? parseInt(result[1], 10)
+                    : Date.now();
             if(result[1] !== undefined) {
                 ret.when = result[1];
                 ret.display = result[2];
@@ -695,6 +696,7 @@ const Load = (() => {
         const version = rest.shift(); // version :: String
         if(Legacy.isPast(version)) {
             Legacy.convert(rest, version).forEach(x => parseMain(x));
+            Notice.set('new version ' + VERSION.join('.'));
         } else {
             rest.forEach(x => parseMain(x));
         }
@@ -936,7 +938,7 @@ const Macro = (() => {
         },
         // Macro.show :: () -> ()
         show: () => {
-            dgebi('macros').className = 'inline-block';
+            dgebi('macros').className = 'block';
             isListShow = true;
         },
         // Macro.hide :: () -> ()
@@ -971,8 +973,8 @@ const TaskQueue = (() => {
     const display = (ids, flag) => {
         if(ids.length === 0) return;
         // func :: FlagString -> FlagString
-        const func = flag === '-alarm' ? (x => 'a') : flag === '-timer'
-                ? (x => 't') : (x => x === 'a' ? 't' : 'a');
+        const func = flag === '-alarm' ? (x => 'a')
+                : flag === '-timer' ? (x => 't') : (x => x === 'a' ? 't' : 'a');
         ids.forEach(id => {
             const i = taskQueue.findIndex(x => x.id === id); // i :: IndexNumber
             taskQueue[i].display = func(taskQueue[i].display);
@@ -1136,52 +1138,39 @@ const TaskQueue = (() => {
             taskQueue[index].sound.splice(taskQueue[index].sound
                     .findIndex(x => x.soundId === soundId), 1);
         },
-        // TaskQueue.checkDeadline :: DateNumber -> ()
-        checkDeadline: interval => {
+        // TaskQueue.checkDeadline :: (DateNumber, now) -> ()
+        checkDeadline: (interval, now) => {
             // i :: IndexNumber
             for(let i = 0; taskQueue[i] !== undefined
-                    && Date.now() - taskQueue[i].deadline >= -interval / 2
-                    ; i++) {
-                const item = taskQueue[i]; // item :: TaskObject
-                if(item.isValid) {
+                    && now - taskQueue[i].deadline >= -interval / 2; i++) {
+                if(taskQueue[i].isValid) {
                     taskQueue[i].isValid = false;
-                    parseMain(item.exec, item.id);
-                    Display.doStrike(item.id, item.importance);
+                    parseMain(taskQueue[i].exec, taskQueue[i].id);
+                    Display.doStrike(taskQueue[i].id, taskQueue[i].importance);
                 }
             }
         },
         // TaskQueue.show :: () -> ()
         show: () => {
             // dlStr :: (DateNumber, DateNumber) -> DisplayString
-            const dlStr = (deadline, now) => {
-                return '(' + deadlineStr(deadline, now) + ')';
-            };
+            const dlStr = (deadline, now) => `(${deadlineStr(deadline, now)})`;
             // restStr :: (DateNumber, DateNumber) -> DisplayString
             const restStr = (deadline, now) => {
-                const r1 = (deadline - now) / 1000; // r1 :: DateNumber
-                const d = Math.floor(r1 / 86400); // d :: Number
-                const r2 = r1 - d * 86400; // r2 :: DateNumber
-                const h = Math.floor(r2 / 3600); // h :: Number
-                const r3 = r2 - h * 3600; // r3 :: DateNumber
-                const m = Math.floor(r3 / 60); // m :: Number
-                const s = Math.floor(r3 - m * 60); // s :: Number
+                const r = (deadline - now) / 1000; // r :: DateNumber
+                const d = Math.floor(r / 86400); // d :: Number
                 // ret :: DisplayString
-                const ret = [h, m, s].map(x => ('0' + x).slice(-2)).join(':');
+                const ret = [(r % 86400) / 3600, (r % 3600) / 60, r % 60]
+                        .map(x => ('0' + Math.floor(x)).slice(-2)).join(':');
                 return d > 0 ? `[${d},${ret}]` : `[${ret}]`;
             };
             const now = Date.now(); // now :: DateNumber
             taskQueue.forEach(x => {
                 // target :: Element
-                const target = dgebi('time_' + x.id);
-                if(!x.isValid) {
-                    target.innerText = '@' + deadlineStr(x.deadline, now);
-                } else {
-                    if(x.display === 'a') {
-                        target.innerText = dlStr(x.deadline, now);
-                    } else { // x.display === 't'
-                        target.innerText = restStr(x.deadline, now);
-                    }
-                }
+                dgebi('time_' + x.id).innerText = !x.isValid
+                        ? '@' + deadlineStr(x.deadline, now)
+                        : x.display === 'a'
+                            ? dlStr(x.deadline, now)
+                            : restStr(x.deadline, now);
             });
         },
         // TaskQueue.save :: () -> [ExecString]
@@ -1217,7 +1206,7 @@ const Legacy = (() => {
             return data;
         },
         // Legacy.save :: () -> [ExecString]
-        save: () => [`ver ${VERSION[0]}.${VERSION[1]}.${VERSION[2]}`]
+        save: () => ['ver ' + VERSION.join('.')]
     };
 })();
 
@@ -1243,17 +1232,14 @@ dgebi('cover').addEventListener('click', () => {
         if(event.ctrlKey) {
             switch(event.key) {
                 case 'o':
-                case 'O':
                     parseMain('#load');
                     event.preventDefault();
                     break;
                 case 's':
-                case 'S':
                     parseMain('#save');
                     event.preventDefault();
                     break;
                 case 'z':
-                case 'Z':
                     parseMain('#undo');
                     event.preventDefault();
                     break;
@@ -1277,11 +1263,7 @@ dgebi('cover').addEventListener('click', () => {
     });
     // formCheck :: (Bool, StringID) -> ()
     const formCheck = (cond, id) => {
-        if(cond) {
-            dgebi(id).className = 'bg-pink';
-        } else {
-            dgebi(id).className = 'bg-white';
-        }
+        dgebi(id).className = cond ? 'bg-pink' : 'bg-white';
     };
     ['timer_hour', 'timer_minute', 'timer_second'].map(x => {
         dgebi(x).addEventListener('input', event => {
@@ -1308,14 +1290,14 @@ dgebi('cover').addEventListener('click', () => {
     dgebi('body').className = 'of_auto';
     Sound.init();
     Task.init();
-    window.setInterval((() => {
+    window.setTimeout(window.setInterval, 200 - Date.now() % 200, (() => {
         let pre; // pre :: DateNumber
 
         return () => {
             dgebi('clock').innerText = toHms(new Date());
             Display.show();
             const subst = Date.now() - pre; // subst :: DateNumber
-            TaskQueue.checkDeadline(subst > 1000 ? 1000 : subst);
+            TaskQueue.checkDeadline(subst > 1000 ? 1000 : subst, Date.now());
             pre = Date.now();
         }
     })(), UPDATE_TIME);

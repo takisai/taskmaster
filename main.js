@@ -1,7 +1,7 @@
 'use strict';
 const UPDATE_TIME = 200; // UPDATE_TIME :: DateNumber
 const SEPARATOR = '\v'; // SEPARATOR :: String
-const VERSION = [0, 4, 0]; // VERSION :: [VersionNumber]
+const VERSION = [0, 4, 1]; // VERSION :: [VersionNumber]
 
 // deadlineStr :: (DateNumber, DateNumber) -> DisplayString
 const deadlineStr = (deadline, now) => {
@@ -129,7 +129,8 @@ const parseMain = (() => {
     };
     // play :: (ParameterString, FlagString) -> ()
     const play = (parameter, callFrom) => {
-        if(!/^(?:-|\d)$/.test(parameter)) {
+        if(!/^\d+$/.test(parameter)) {
+            if(parameter === '-') return;
             Notice.set(`error: sound <span class="red">${parameter}</span>`);
             return;
         }
@@ -311,7 +312,7 @@ const History = (() => {
         push: str => {
             if(str === '') return;
             strs.push(str);
-            if(index < strs.length - 1) {
+            if(index < strs.length - 1 && strs[index] === str) {
                 strs.splice(index, 1);
             }
             index = strs.length;
@@ -412,7 +413,10 @@ const Sound = (() => {
         },
         // Sound.play :: (URLString, IDString) -> ()
         play: (url, id) => {
-            if(sounds[url] === undefined || sounds[url].readyState < 2) return;
+            if(sounds[url] === undefined || sounds[url].readyState < 2) {
+                console.log('failed to play: ' + url);
+                return;
+            }
             const sound = new Audio(); // sound :: Audio
             sound.src = sounds[url].src;
             sound.volume = volume / 100;
@@ -511,12 +515,12 @@ const Task = (() => {
         setDefault: str => {
             if(str !== '') {
                 // result :: Maybe [Maybe String]
-                const result = /^([-\d]?)([ast]?)(\.|!{1,3})?$/.exec(str);
+                const result = /^(-|\d+)?([ast])?(\.|!{1,3})?$/.exec(str);
                 if(result !== null) {
-                    if(result[1] !== '') {
+                    if(result[1] !== undefined) {
                         defaultSound = result[1];
                     }
-                    if(result[2] !== null) {
+                    if(result[2] !== undefined) {
                         defaultDisplay = result[2] !== 's' ? result[2]
                                 : defaultDisplay === 'a' ? 't' : 'a';
                     }
@@ -532,7 +536,7 @@ const Task = (() => {
         // Task.parse :: ExecString -> Maybe TaskObject
         parse: s => {
             // regex :: RegExp
-            const regex = /^(?:(\d+)([at]))?([^\/]*)((?:\/(?:([-\d])|([^\/]*?)\*)??([at])?(\.|!{1,3})?(?:\/(.*))?)?)$/;
+            const regex = /^(?:(\d+)([at]))?([^\/]*)((?:\/(?:(-|\d+)|([^\/]*?)\*)??([at])?(\.|!{1,3})?(?:\/(.*))?)?)$/;
             const result = regex.exec(s); // result :: Maybe [Maybe String]
             const ret = new Object(); // ret :: TaskObject
             const execs = []; // execs :: [ExecString]
@@ -744,7 +748,7 @@ const Button = (() => {
     };
 
     return {
-        // Button.insert :: (ExecString, DateNumber) -> ()
+        // Button.insert :: (ExecString, Maybe DateNumber) -> ()
         insert: (str, now = null) => {
             if(str === undefined) return;
             // execStr :: ExecString
@@ -866,7 +870,7 @@ const Macro = (() => {
     };
 
     return {
-        // Macro.isInsertSuccess :: (ExecString, DateNumber) -> Bool
+        // Macro.isInsertSuccess :: (ExecString, Maybe DateNumber) -> Bool
         isInsertSuccess: (s, now = null) => {
             const result = regex.exec(s); // result :: Maybe [Maybe String]
             if(result === null || result[1] === '') return false;
@@ -1156,7 +1160,7 @@ const TaskQueue = (() => {
             const dlStr = (deadline, now) => `(${deadlineStr(deadline, now)})`;
             // restStr :: (DateNumber, DateNumber) -> DisplayString
             const restStr = (deadline, now) => {
-                const r = (deadline - now) / 1000; // r :: DateNumber
+                const r = Math.ceil((deadline - now) / 1000); // r :: DateNumber
                 const d = Math.floor(r / 86400); // d :: Number
                 // ret :: DisplayString
                 const ret = [(r % 86400) / 3600, (r % 3600) / 60, r % 60]

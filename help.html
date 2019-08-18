@@ -7,7 +7,7 @@
         <link rel="stylesheet" href="style.css">
     </head>
     <body id="document">
-        <h1>Task Masterについて</h1>
+        <h1>Task Master Help</h1>
         <div class="h2">
             <details open><summary>1 概要</summary>
                 <div>
@@ -16,7 +16,7 @@
                         <details><summary>1.1 諸情報</summary>
                             <div>
                                 <ul>
-                                    <li>最新版: Version 0.4.0 | 2019-08-12</li>
+                                    <li>最新版: Version 0.4.1 | 2019-08-18</li>
                                     <li>製作者: takisai</li>
                                     <li>推薦環境: Chrome・Firefox</li>
                                 </ul>
@@ -27,6 +27,15 @@
                         <details><summary>1.2 更新履歴</summary>
                             <div>
                                 <ul>
+                                    <li>
+                                        Version 0.4.1 | 2019-08-18
+                                        <ul>
+                                            <li>音番号を10以降も指定できるように変更</li>
+                                            <li>historyの挙動を修正</li>
+                                            <li>タイマーの表示を修正</li>
+                                            <li>ヘルプの文章を修正</li>
+                                        </ul>
+                                    </li>
                                     <li>
                                         Version 0.4.0 | 2019-08-12
                                         <ul>
@@ -231,7 +240,7 @@
                     <div class="h3" id="button">
                         <details><summary>2.8 ボタンの作成 | <code>button</code>コマンド</summary>
                             <div>
-                                <p>今まで書いてきたコマンドは、ボタンを押すことで実行することもできます。<kbd>button</kbd>コマンドの後ろに入力したいコマンドを入れて実行すると、volume操作バーとリマインダーリストの間にボタンが現れます。このボタンを押すことで、入力した内容が実行されます。例えば、<kbd>button switch</kbd>というコマンドで作成したボタンは、押すたびに<kbd>switch</kbd>コマンドを実行します。ただし、コマンドに<kbd>;</kbd>を含めることはできません。</p>
+                                <p>今まで書いてきたコマンドは、ボタンを押すことで実行することもできます。<kbd>button</kbd>コマンドの後ろに入力したいコマンドを入れて実行すると、入力欄とvolume操作バーの間にボタンが現れます。このボタンを押すことで、入力した内容が実行されます。例えば、<kbd>button switch</kbd>というコマンドで作成したボタンは、押すたびに<kbd>switch</kbd>コマンドを実行します。ただし、コマンドに<kbd>;</kbd>を含めることはできません。</p>
                                 <p>ボタンの削除は、<kbd>remove-button</kbd>コマンドで行います。<a href="#taskRemove">2.3</a>の<kbd>remove</kbd>コマンドと同様に、左上のボタンを1としたときのボタンの番号や<kbd>*</kbd>で削除を行います。</p>
                             </div>
                         </details>

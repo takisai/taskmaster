@@ -1,7 +1,7 @@
 'use strict';
 const UPDATE_TIME = 200; // UPDATE_TIME :: DateNumber
 const SEPARATOR = '\v'; // SEPARATOR :: String
-const VERSION = [0, 4, 1]; // VERSION :: [VersionNumber]
+const VERSION = [0, 4, 2]; // VERSION :: [VersionNumber]
 
 // deadlineStr :: (DateNumber, DateNumber) -> DisplayString
 const deadlineStr = (deadline, now) => {
@@ -293,12 +293,14 @@ const BackgroundAlert = (() => {
         on: () => {
             semaphore++;
             dgebi('body').className = 'bg-pink';
+            dgebi('header').className = 'bg-pink';
         },
         // BackgroundAlert.off :: () -> ()
         off: () => {
             semaphore--;
             if(semaphore > 0) return;
             dgebi('body').className = 'bg-white';
+            dgebi('header').className = 'bg-white';
         }
     };
 })();

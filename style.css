@@ -150,7 +150,6 @@ a:active, .red {
 #header {
     position: sticky;
     top: 0;
-    background-color: white;
     padding: 8px 0px;
 }
 

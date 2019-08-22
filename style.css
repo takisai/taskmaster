@@ -1,3 +1,4 @@
+/*  this code is all copyright takisai, 2019. */
 body {
     box-sizing: border-box;
     width: 100%;
@@ -50,7 +51,7 @@ input[type=range], select {
     vertical-align: middle;
 }
 
-form[name=gui_form], #div_volume, #macros {
+form[name=gui_form], #macros {
     margin: 8px 0px;
 }
 
@@ -161,6 +162,10 @@ a:active, .red {
 
 #button_parent {
     margin-top: 8px;
+}
+
+#div_volume {
+    margin: 0px 0px 8px 0px;
 }
 
 #cover {

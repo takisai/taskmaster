@@ -1,7 +1,8 @@
+/*  this code is all copyright takisai, 2019. */
 'use strict';
 const UPDATE_TIME = 200; // UPDATE_TIME :: DateNumber
 const SEPARATOR = '\v'; // SEPARATOR :: String
-const VERSION = [0, 4, 2]; // VERSION :: [VersionNumber]
+const VERSION = [0, 4, 3]; // VERSION :: [VersionNumber]
 
 // deadlineStr :: (DateNumber, DateNumber) -> DisplayString
 const deadlineStr = (deadline, now) => {
@@ -388,6 +389,11 @@ const Trash = (() => {
 })();
 
 const Sound = (() => {
+    /*  NUMBER_OF_SOUNDSの数だけmp3ファイルを登録して音を鳴らすことができます。
+        soundフォルダー内にファイル名を"alarm<数値>.mp3"として、
+        0からNUMBER_OF_SOUNDS-1までの数値を入れたmp3ファイルを用意してください。
+        Task Masterで利用している音声はsoundjay.comからお借りしています。 */
+    const NUMBER_OF_SOUNDS = 10; // NUMBER_OF_SOUNDS :: Number
     const sounds = []; // sounds :: Map URLString Audio
     let volume = 100; // volume :: VolumeNumber
 
@@ -406,7 +412,7 @@ const Sound = (() => {
         },
         // Sound.init :: () ~-> ()
         init: () => {
-            for(let i = 0; i < 10; i++) { // i :: IndexNumber
+            for(let i = 0; i < NUMBER_OF_SOUNDS; i++) { // i :: IndexNumber
                 const url = `sound/alarm${i}.mp3`; // url :: URLString
                 sounds[url] = new Audio(url);
                 sounds[url].muted = true;
@@ -1222,9 +1228,7 @@ dgebi('cover').addEventListener('click', () => {
         if(str.length > 0 && str !== '\n') return;
         let target = event.target; // target :: Maybe Element
         while(target !== null) {
-            if(target.id === 'menu'
-                    || (target.tagName === 'INPUT'
-                    && target.type === 'button')) {
+            if(target.id === 'menu') {
                 return;
             }
             target = target.parentNode;

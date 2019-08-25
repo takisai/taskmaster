@@ -2,7 +2,15 @@
 'use strict';
 const UPDATE_TIME = 200; // UPDATE_TIME :: DateNumber
 const SEPARATOR = '\v'; // SEPARATOR :: String
-const VERSION = [0, 4, 3]; // VERSION :: [VersionNumber]
+const NOTICE_CLEAR_TIME = 5000; // NOTICE_CLEAR_TIME :: DateNumber
+const VERSION = [0, 5, 0]; // VERSION :: [VersionNumber]
+
+const NUMBER_OF_SOUNDS = 10; // NUMBER_OF_SOUNDS :: Number
+/*  NUMBER_OF_SOUNDSの数だけmp3ファイルを登録して音を鳴らすことができます。
+    このファイルと同じフォルダーにあるsoundフォルダー内に、
+    "alarm<数値>.mp3"という名前のmp3ファイル用意してください。
+    <数値>は0からNUMBER_OF_SOUNDS-1までの数値です。
+    なお、Task Masterで利用している音声はsoundjay.comからお借りしています。 */
 
 // deadlineStr :: (DateNumber, DateNumber) -> DisplayString
 const deadlineStr = (deadline, now) => {
@@ -39,13 +47,28 @@ const removeDom = id => {
 // parameterCheck :: (ParameterString, IndexNumber) -> [DOMString]
 const parameterCheck = (str, max) => {
     return str.split(' ').map(x => {
-        const index = parseInt(x, 10); // index :: Maybe IndexNumber
-        if(index > 0 && index <= max && /^\d+$/.test(x)) {
-            return x;
-        } else {
-            return `<span class="red">${x}</span>`;
+        if(x === '*') {
+            x = '1-' + max;
         }
-    });
+        // rangeResult :: Maybe [Maybe String]
+        const rangeResult = /^(\d*)-(\d*)$/.exec(x);
+        if(x !== '-' && rangeResult !== null) {
+            // border :: [IndexNumber]
+            const border = rangeResult.slice(1).map(x => parseInt(x, 10));
+            if(isNaN(border[0]) || border[0] < 1) {
+                border[0] = 1;
+            }
+            if(isNaN(border[1]) || border[1] > max) {
+                border[1] = max;
+            }
+            // ret :: [IndexNumber]
+            const ret = [...Array(border[1] - border[0] + 1).keys()];
+            return ret.map(t => t + border[0]);
+        }
+        const index = parseInt(x, 10); // index :: Maybe IndexNumber
+        return index > 0 && index <= max && /^\d+$/.test(x) ? [x]
+                : [`<span class="red">${x}</span>`];
+    }).flat();
 };
 
 // getText :: () -> ()
@@ -244,9 +267,6 @@ const parseMain = (() => {
             return;
         }
         TaskQueue.insert(taskItem);
-        if(!taskItem.isValid) {
-            Display.doStrike(taskItem.id, taskItem.importance);
-        }
     };
 
     return (text, callFrom = 'global') => {
@@ -358,7 +378,7 @@ const Notice = (() => {
                 target.innerHTML += ' ; ';
             }
             target.innerHTML += html;
-            id = window.setTimeout(Notice.clear, 5000);
+            id = window.setTimeout(Notice.clear, NOTICE_CLEAR_TIME);
         },
         // Notice.clear :: () -> ()
         clear: () => {
@@ -389,11 +409,6 @@ const Trash = (() => {
 })();
 
 const Sound = (() => {
-    /*  NUMBER_OF_SOUNDSの数だけmp3ファイルを登録して音を鳴らすことができます。
-        soundフォルダー内にファイル名を"alarm<数値>.mp3"として、
-        0からNUMBER_OF_SOUNDS-1までの数値を入れたmp3ファイルを用意してください。
-        Task Masterで利用している音声はsoundjay.comからお借りしています。 */
-    const NUMBER_OF_SOUNDS = 10; // NUMBER_OF_SOUNDS :: Number
     const sounds = []; // sounds :: Map URLString Audio
     let volume = 100; // volume :: VolumeNumber
 
@@ -609,23 +624,18 @@ const Task = (() => {
         },
         // Task.init :: () -> ()
         init: () => {
-            // soundElements :: [Element]
-            const soundElements = dgebi('gui_sound').childNodes;
-            for(let i = 0; i < soundElements.length; i++) { // i :: IndexNumber
-                if(soundElements[i].value === defaultSound) {
-                    soundElements[i].selected = true;
-                    break;
+            // setDefault :: (IDString, a) -> ()
+            const setDefault = (id, value) => {
+                const elements = dgebi(id).childNodes; // elements :: [Element]
+                for(let i = 0; i < elements.length; i++) { // i :: IndexNumber
+                    if(elements[i].value === value) {
+                        elements[i].selected = true;
+                        return;
+                    }
                 }
-            }
-            // importanceElements :: [Element]
-            const importanceElements = dgebi('gui_importance').childNodes;
-            // i :: IndexNumber
-            for(let i = 0; i < importanceElements.length; i++) {
-                if(importanceElements[i].value === importanceStr()) {
-                    importanceElements[i].selected = true;
-                    break;
-                }
-            }
+            };
+            setDefault('gui_sound', defaultSound);
+            setDefault('gui_importance', importanceStr());
         },
         // Task.save :: () -> [ExecString]
         save: () => {
@@ -666,20 +676,21 @@ const Base64 = (() => {
         // Base64.decode :: Base64String -> SaveString
         decode: str => {
             str = str.replace(/[^A-Za-z\d+/=]/g, '');
-            const ret = []; // ret :: UnicodeNumber
+            const tmp = []; // tmp :: [UnicodeNumber]
             for(let i = 0; i < str.length; i += 4) { // i :: IndexNumber
                 // c :: [Base64Number]
                 const c = [0, 1, 2, 3].map(x => KEY.indexOf(str.charAt(i + x)));
-                ret.push((c[0] << 2) | (c[1] >> 4));
+                tmp.push((c[0] << 2) | (c[1] >> 4));
                 if(c[2] < 64) {
-                    ret.push(((c[1] & 15) << 4) | (c[2] >> 2));
+                    tmp.push(((c[1] & 15) << 4) | (c[2] >> 2));
                     if(c[3] < 64) {
-                        ret.push(((c[2] & 3) << 6) | c[3]);
+                        tmp.push(((c[2] & 3) << 6) | c[3]);
                     }
                 }
             }
-            return decodeURIComponent(ret.map(x => String.fromCharCode(x))
-                                         .join(''));
+            // ret :: String
+            const ret = tmp.map(x => String.fromCharCode(x)).join('');
+            return decodeURIComponent(ret);
         }
     }
 })();
@@ -687,8 +698,9 @@ const Base64 = (() => {
 const Save = (() => {
     // makeData :: () -> SaveString
     const makeData = () => {
-        return [Legacy, TaskQueue, Button, Display, Sound, Task, Macro]
-                .map(x => x.save()).flat().join(SEPARATOR);
+        // obj :: [Object]
+        const obj = [Legacy, TaskQueue, Button, Display, Sound, Task, Macro];
+        return obj.map(x => x.save()).flat().join(SEPARATOR);
     };
 
     return  {
@@ -793,13 +805,7 @@ const Button = (() => {
         },
         // Button.remove :: ParameterString -> ()
         remove: str => {
-            switch(str) {
-                case '':
-                    return;
-                case '*':
-                    rm(buttons.map(x => x.id));
-                    return;
-            }
+            if(str === '') return;
             // strs :: [DOMString]
             const strs = parameterCheck(str, buttons.length);
             rm([...new Set(strs.filter(x => /^\d/.test(x))
@@ -814,6 +820,8 @@ const Button = (() => {
 })();
 
 const Display = (() => {
+    const ALERT_WAIT_TIME = 1000; // ALERT_WAIT_TIME :: DateNumber
+    const AUTO_REMOVE_TIME = 15000; // AUTO_REMOVE_TIME :: DateNumber
     let isShowMenu = true; // isShowMenu :: Bool
 
     return {
@@ -826,7 +834,8 @@ const Display = (() => {
             target.className = 'strike';
             switch(importance) {
                 case 3:
-                    window.setTimeout(window.alert, 1000, target.innerText);
+                    window.setTimeout(window.alert, ALERT_WAIT_TIME
+                            , target.innerText);
                 case 2:
                     target.className += ' bg-red';
                     BackgroundAlert.on();
@@ -835,13 +844,14 @@ const Display = (() => {
                     target.className += ' bg-yellow';
                     break;
                 case 0:
-                    window.setTimeout(parseMain, 15000, '#remove $' + id);
+                    window.setTimeout(parseMain, AUTO_REMOVE_TIME
+                            , '#remove $' + id);
                     break;
             }
         },
         // Display.showMenu :: () -> ()
         showMenu: () => {
-            dgebi('menu').className = 'inline-block';
+            dgebi('menu').className = 'block';
             isShowMenu = true;
         },
         // Display.hideMenu :: () -> ()
@@ -927,13 +937,7 @@ const Macro = (() => {
         },
         // Macro.remove :: ParameterString -> ()
         remove: str => {
-            switch(str) {
-                case '':
-                    return;
-                case '*':
-                    rm(macros.map(x => x.id));
-                    return;
-            }
+            if(str === '') return;
             // idResult :: Maybe [Maybe String]
             const idResult = /^\$(\d+)$/.exec(str);
             if(idResult !== null) {
@@ -1023,7 +1027,7 @@ const TaskQueue = (() => {
     return {
         // TaskQueue.setDisplay :: (ParameterString, FlagString) -> ()
         setDisplay: (str, flag) => {
-            if(str === '' || str === '*') {
+            if(str === '') {
                 display(taskQueue.map(x => x.id), flag);
                 return;
             }
@@ -1033,21 +1037,6 @@ const TaskQueue = (() => {
                    .map(i => taskQueue[parseInt(i, 10) - 1].id))], flag);
             if(strs.some(x => !/^\d/.test(x))) {
                 Notice.set(`error: switch${flag} ${strs.join(' ')}`);
-            }
-        },
-        remove: str => {
-            // idResult :: Maybe [Maybe String]
-            const idResult = /^\$(\d+)$/.exec(str);
-            if(idResult !== null) {
-                rm([idResult[1]]);
-                return;
-            }
-            // strs :: [DOMString]
-            const strs = parameterCheck(str, taskQueue.length);
-            rm([...new Set(strs.filter(x => /^\d/.test(x))
-                   .map(i => taskQueue[parseInt(i, 10) - 1].id))]);
-            if(strs.some(x => !/^\d/.test(x))) {
-                Notice.set('error: remove ' + strs.join(' '));
             }
         },
         // TaskQueue.setSound :: (Sound, IDString) -> IDNumber
@@ -1095,16 +1084,15 @@ const TaskQueue = (() => {
                 dgebi('parent').appendChild(newElement);
                 taskQueue.push(taskItem);
             }
+            if(!taskItem.isValid) {
+                Display.doStrike(taskItem.id, taskItem.importance);
+            }
         },
         // TaskQueue.remove :: ParameterString -> ()
         remove: str => {
-            switch(str) {
-                case '':
-                    rm(taskQueue.filter(x => !x.isValid).map(x => x.id));
-                    return;
-                case '*':
-                    rm(taskQueue.map(x => x.id));
-                    return;
+            if(str === '') {
+                rm(taskQueue.filter(x => !x.isValid).map(x => x.id));
+                return;
             }
             // idResult :: Maybe [Maybe String]
             const idResult = /^\$(\d+)$/.exec(str);
@@ -1180,9 +1168,8 @@ const TaskQueue = (() => {
                 // target :: Element
                 dgebi('time_' + x.id).innerText = !x.isValid
                         ? '@' + deadlineStr(x.deadline, now)
-                        : x.display === 'a'
-                            ? dlStr(x.deadline, now)
-                            : restStr(x.deadline, now);
+                        : x.display === 'a' ? dlStr(x.deadline, now)
+                        : restStr(x.deadline, now);
             });
         },
         // TaskQueue.save :: () -> [ExecString]

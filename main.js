@@ -3,7 +3,8 @@
 const UPDATE_TIME = 200; // UPDATE_TIME :: DateNumber
 const SEPARATOR = '\v'; // SEPARATOR :: String
 const NOTICE_CLEAR_TIME = 5000; // NOTICE_CLEAR_TIME :: DateNumber
-const VERSION = [0, 5, 0]; // VERSION :: [VersionNumber]
+const RECURSION_LIMIT = 5; // RECURSION_LIMIT :: Number
+const VERSION = [0, 5, 1]; // VERSION :: [VersionNumber]
 
 const NUMBER_OF_SOUNDS = 10; // NUMBER_OF_SOUNDS :: Number
 /*  NUMBER_OF_SOUNDSの数だけmp3ファイルを登録して音を鳴らすことができます。
@@ -178,7 +179,7 @@ const parseMain = (() => {
             const texts = text.split(';'); // texts :: [ExecString]
             if(texts.length > 1) {
                 recursionCount++;
-                if(recursionCount > 5) throw 'too much recursion';
+                if(recursionCount > RECURSION_LIMIT) throw 'too much recursion';
                 texts.forEach(element => main(element, callFrom));
                 recursionCount--;
                 return;

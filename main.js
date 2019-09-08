@@ -1,4 +1,8 @@
-/*  this code is all copyright takisai, 2019. */
+/*
+Copyright (c) 2019 takisai
+Released under the MIT license
+https://opensource.org/licenses/mit-license.php
+*/
 'use strict';
 const UPDATE_TIME = 200; // UPDATE_TIME :: DateNumber
 const SEPARATOR = '\v'; // SEPARATOR :: String
@@ -6,12 +10,11 @@ const NOTICE_CLEAR_TIME = 5000; // NOTICE_CLEAR_TIME :: DateNumber
 const RECURSION_LIMIT = 5; // RECURSION_LIMIT :: Number
 const VERSION = [0, 5, 1]; // VERSION :: [VersionNumber]
 
-const NUMBER_OF_SOUNDS = 10; // NUMBER_OF_SOUNDS :: Number
+const NUMBER_OF_SOUNDS = 15; // NUMBER_OF_SOUNDS :: Number
 /*  NUMBER_OF_SOUNDSの数だけmp3ファイルを登録して音を鳴らすことができます。
     このファイルと同じフォルダーにあるsoundフォルダー内に、
     "alarm<数値>.mp3"という名前のmp3ファイル用意してください。
-    <数値>は0からNUMBER_OF_SOUNDS-1までの数値です。
-    なお、Task Masterで利用している音声はsoundjay.comからお借りしています。 */
+    <数値>は0からNUMBER_OF_SOUNDS-1までの数値です。 */
 
 // deadlineStr :: (DateNumber, DateNumber) -> DisplayString
 const deadlineStr = (deadline, now) => {
@@ -190,84 +193,109 @@ const parseMain = (() => {
         // parameter :: ParameterString
         const parameter = spaceSplit[2] === undefined ? ''
                 : spaceSplit[2].replace(/^\s+|\s+$/g, '').replace(/\s+/g, ' ');
-        switch(spaceSplit[1]) {
-            case 'switch':
-                TaskQueue.setDisplay(parameter, '');
-                return;
-            case 'switch-alarm':
-                TaskQueue.setDisplay(parameter, '-alarm');
-                return;
-            case 'switch-timer':
-                TaskQueue.setDisplay(parameter, '-timer');
-                return;
-            case 'remove':
-                TaskQueue.remove(parameter);
-                return;
-            case 'button':
-                Button.insert(spaceSplit[2]);
-                return;
-            case '$button':
-                Button.insertByData(spaceSplit[2]);
-                return;
-            case 'remove-button':
-                Button.remove(parameter);
-                return;
-            case '->':
-                Macro.insertByData(spaceSplit[2]);
-                return;
-            case 'show-macro':
-                Macro.show();
-                return;
-            case 'hide-macro':
-                Macro.hide();
-                return;
-            case 'remove-macro':
-                Macro.remove(parameter);
-                return;
-            case 'sound':
-                play(parameter, callFrom);
-                return;
-            case 'stop':
-                Sound.stop(parameter);
-                return;
-            case 'volume':
-                Sound.setVolume(parameter);
-                return;
-            case 'default':
-                Task.setDefault(parameter);
-                return;
-            case 'show-menu':
-                Display.showMenu();
-                return;
-            case 'hide-menu':
-                Display.hideMenu();
-                return;
-            case 'save':
-                Save.toString();
-                return;
-            case 'load':
-                Load.fromString();
-                return;
-            case 'undo':
-                Trash.pop();
-                return;
-            case 'empty-trash':
-                Trash.reset();
-                return;
-            case 'empty-history':
-                History.reset();
-                return;
-            case 'help':
-                window.open('help.html', '_blank');
-                return;
+        if(callFrom === 'merge') {
+            switch(spaceSplit[1]) {
+                case 'switch':
+                case 'switch-alarm':
+                case 'switch-timer':
+                case 'show-macro':
+                case 'hide-macro':
+                case 'volume':
+                case 'default':
+                case 'show-menu':
+                case 'hide-menu':
+                    return;
+                case '$button':
+                    Button.insertByData(spaceSplit[2]);
+                    return;
+                case '->':
+                    Macro.insertByData(spaceSplit[2]);
+                    return;
+            }
+        } else {
+            switch(spaceSplit[1]) {
+                case 'switch':
+                    TaskQueue.setDisplay(parameter, '');
+                    return;
+                case 'switch-alarm':
+                    TaskQueue.setDisplay(parameter, '-alarm');
+                    return;
+                case 'switch-timer':
+                    TaskQueue.setDisplay(parameter, '-timer');
+                    return;
+                case 'remove':
+                    TaskQueue.remove(parameter);
+                    return;
+                case 'button':
+                    Button.insert(spaceSplit[2]);
+                    return;
+                case '$button':
+                    Button.insertByData(spaceSplit[2]);
+                    return;
+                case 'remove-button':
+                    Button.remove(parameter);
+                    return;
+                case '->':
+                    Macro.insertByData(spaceSplit[2]);
+                    return;
+                case 'show-macro':
+                    Macro.show();
+                    return;
+                case 'hide-macro':
+                    Macro.hide();
+                    return;
+                case 'remove-macro':
+                    Macro.remove(parameter);
+                    return;
+                case 'sound':
+                    play(parameter, callFrom);
+                    return;
+                case 'stop':
+                    Sound.stop(parameter);
+                    return;
+                case 'volume':
+                    Sound.setVolume(parameter);
+                    return;
+                case 'default':
+                    Task.setDefault(parameter);
+                    return;
+                case 'show-menu':
+                    Display.showMenu();
+                    return;
+                case 'hide-menu':
+                    Display.hideMenu();
+                    return;
+                case 'save':
+                    Save.toString();
+                    return;
+                case 'load':
+                    Load.fromString();
+                    return;
+                case 'merge':
+                    Load.mergeFromString();
+                    return;
+                case 'undo':
+                    Trash.pop();
+                    return;
+                case 'empty-trash':
+                    Trash.reset();
+                    return;
+                case 'empty-history':
+                    History.reset();
+                    return;
+                case 'help':
+                    window.open('help.html', '_blank');
+                    return;
+            }
         }
-        const taskItem = Task.parse(text); // taskItem :: Maybe TaskObject
+        // taskItem :: Maybe TaskObject
+        const taskItem = Task.parse(text);
         if(taskItem === null) {
             if(text === '') return;
             Notice.set(`error: <span class="red">${text}</span>`);
             return;
         }
-        TaskQueue.insert(taskItem);
+        TaskQueue.insert(taskItem, callFrom);
     };
 
     return (text, callFrom = 'global') => {
@@ -715,15 +743,15 @@ const Save = (() => {
 })();
 
 const Load = (() => {
-    // parse :: SaveString -> ()
-    const parse = data => {
+    // parse :: (SaveString, FlagString) -> ()
+    const parse = (data, flag) => {
         const rest = data.split(SEPARATOR); // rest :: SaveString
         const version = rest.shift(); // version :: String
         if(Legacy.isPast(version)) {
-            Legacy.convert(rest, version).forEach(x => parseMain(x));
+            Legacy.convert(rest, version).forEach(x => parseMain(x, flag));
             Notice.set('new version ' + VERSION.join('.'));
         } else {
-            rest.forEach(x => parseMain(x));
+            rest.forEach(x => parseMain(x, flag));
         }
     };
 
@@ -746,8 +774,16 @@ const Load = (() => {
             if(text === '' || text === null) return;
             parseMain('##remove-macro *;remove *;remove-button *;default 0a.;\
                     volume 100;show-menu;hide-macro;empty-trash;empty-history');
-            parse(Base64.decode(text));
-            Notice.set('data loaded');
+            parse(Base64.decode(text), 'global');
+            Notice.set('loaded');
+        },
+        // Load.mergeFromString :: () -> ()
+        mergeFromString: () => {
+            // text :: Maybe Base64String
+            const text = window.prompt('追加するデータを入れてください:', '');
+            if(text === '' || text === null) return;
+            parse(Base64.decode(text), 'merge');
+            Notice.set('merged');
         }
     };
 })();
@@ -787,7 +823,8 @@ const Button = (() => {
                     `<input type="button" value="${str}" onclick="parseMain('${execStr}');"> `;
             newElement.setAttribute('id', 'button_' + buttonItem.id);
             // i :: IndexNumber
-            const i = buttons.findIndex(x => x.time > buttonItem.time);
+            const i = buttons.findIndex(x => x.time >= buttonItem.time);
+            if(i >= 0 && buttonItem.saveText === buttons[i].saveText) return;
             if(i >= 0) {
                 // target :: Element
                 const target = dgebi('button_' + buttons[i].id);
@@ -910,7 +947,8 @@ const Macro = (() => {
                     `<input type="button" value="remove" onclick="parseMain('#remove-macro $${id}');"> ${formatStr}`;
             newElement.setAttribute('id', 'macro_' + id);
             // i :: IndexNumber
-            const i = macros.findIndex(x => x.time > macroItem.time);
+            const i = macros.findIndex(x => x.time >= macroItem.time);
+            if(i >= 0 && macroItem.saveText === macros[i].saveText) return;
             if(i >= 0) {
                 // target :: Element
                 const target = dgebi('macro_' + macros[i].id);
@@ -1062,8 +1100,8 @@ const TaskQueue = (() => {
             const ret = taskQueue[getIndexById(id)]; // ret :: Maybe TaskObject
             return ret !== undefined && ret.sound.length > 0;
         },
-        // TaskQueue.insert :: TaskObject -> ()
-        insert: taskItem => {
+        // TaskQueue.insert :: (TaskObject, FlagString) -> ()
+        insert: (taskItem, flag) => {
             const id = idCount; // id :: IDNumber
             idCount++;
             taskItem.id = String(id);
@@ -1076,6 +1114,8 @@ const TaskQueue = (() => {
             newElement.setAttribute('id', 'item_' + id);
             // i :: IndexNumber
             const i = taskQueue.findIndex(x => x.deadline > taskItem.deadline);
+            if(flag === 'merge' && i !== 0 && taskItem.saveText === taskQueue[
+                    i > 0 ? i - 1 : taskQueue.length - 1].saveText) return;
             if(i >= 0) {
                 // target :: Element
                 const target = dgebi('item_' + taskQueue[i].id);
@@ -1229,6 +1269,10 @@ dgebi('cover').addEventListener('click', () => {
     window.addEventListener('keydown', event => {
         if(event.ctrlKey) {
             switch(event.key) {
+                case 'O':
+                    parseMain('#merge');
+                    event.preventDefault();
+                    break;
                 case 'o':
                     parseMain('#load');
                     event.preventDefault();

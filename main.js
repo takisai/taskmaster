@@ -1329,7 +1329,7 @@ dgebi('cover').addEventListener('click', () => {
         formCheck(/;/.test(document.gui_form.gui_text.value), 'gui_text');
     });
     dgebi('cover').className = 'none';
-    dgebi('body').className = 'of_auto';
+    dgebi('body').className += ' of_auto';
     Sound.init();
     Task.init();
     window.setTimeout(window.setInterval, 200 - Date.now() % 200, (() => {

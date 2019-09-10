@@ -21,7 +21,7 @@ https://opensource.org/licenses/mit-license.php
                         <details><summary>1.1 諸情報</summary>
                             <div>
                                 <ul>
-                                    <li>最新版: Version 0.5.1 | 2019-09-01</li>
+                                    <li>最新版: Version 0.6.0 | 2019-09-10</li>
                                     <li>製作者: takisai</li>
                                     <li>動作確認環境: Chrome・Firefox</li>
                                 </ul>
@@ -32,6 +32,15 @@ https://opensource.org/licenses/mit-license.php
                         <details><summary>1.2 更新履歴</summary>
                             <div>
                                 <ul>
+                                    <li>
+                                        Version 0.6.0 | 2019-09-10
+                                        <ul>
+                                            <li><kbd>merge</kbd>の追加</li>
+                                            <li>音を変更</li>
+                                            <li>背景が赤いときにページを読み込むときに発生するバグを修正</li>
+                                            <li>ヘルプの内容を追加</li>
+                                        </ul>
+                                    </li>
                                     <li>
                                         Version 0.5.1 | 2019-09-01
                                         <ul>
@@ -138,7 +147,20 @@ https://opensource.org/licenses/mit-license.php
                         </details>
                     </div>
                     <div class="h3">
-                        <details><summary>1.3 問い合わせ</summary>
+                        <details><summary>1.3 バージョンについて</summary>
+                            <div>
+                                <p>Task Masterのバージョン番号はX.Y.Zの形式としています。</p>
+                                <ul>
+                                    <li>Xはメジャーバージョンを表しています。大きな機能の追加や変更がある場合に、数字が大きくなります。</li>
+                                    <li>Yはマイナーバージョンを表しています。小さな機能の追加や変更がある場合に、数字が大きくなります。</li>
+                                    <li>Zはパッチバージョンを表しています。バグの修正があるたびに数字が大きくなります。</li>
+                                </ul>
+                                <p>メジャー/マイナーバージョンが上がったときには、マクロの動作が変わる可能性があります。</p>
+                            </div>
+                        </details>
+                    </div>
+                    <div class="h3">
+                        <details><summary>1.4 問い合わせ</summary>
                             <div>
                                 <p>感想・質問・提案などは<a href="https://marshmallow-qa.com/takisai" title="takisaiにマシュマロを投げる | マシュマロ" target="_blank">こちら</a>へお願いします。<!--質問のうち有用なものについては<a href="#answer">よくある質問</a>に掲載します。--></p>
                             </div>
@@ -321,10 +343,11 @@ https://opensource.org/licenses/mit-license.php
                         </details>
                     </div>
                     <div class="h3">
-                        <details><summary>2.12 セーブデータの外部保存 | <code>save</code>/<code>load</code>コマンド</summary>
+                        <details><summary>2.12 セーブデータの外部保存/読み込み | <code>save</code>/<code>load</code>/<code>merge</code>コマンド</summary>
                             <div>
                                 <p>Task Masterはブラウザにデータを保存しているので、キャッシュの消去をするとデータは消えてしまいます。また、同じ設定を入力しない限り、別の端末で同じリマインダーは管理できません。</p>
                                 <p><kbd>save</kbd>コマンドまたはCtrl+Sを使うと、Task Masterの全ての設定をセーブデータとして保存することができます。セーブデータを読み込むときは、<kbd>load</kbd>コマンドまたはCtrl+Oを使います。入力欄にセーブデータを貼り付けることで、セーブデータを読み込むことができます。</p>
+                                <p>また、<kbd>merge</kbd>コマンドまたはCtrl+Shift+Oを使うと、セーブデータのうちリマインダー・マクロ・ボタンの情報だけを読み込んで、現在のセーブデータに追加することができます。</p>
                             </div>
                         </details>
                     </div>
@@ -420,7 +443,7 @@ https://opensource.org/licenses/mit-license.php
         </div>-->
     </body>
     <script>
-const VERSION = [0, 5, 1]; // VERSION :: [VersionNumber]
+const VERSION = [0, 6, 0]; // VERSION :: [VersionNumber]
 
 // hrefOpen :: IDString -> ()
 const hrefOpen = id => {

@@ -27,8 +27,8 @@ kbd {
     font-size: 0.9em;
 }
 
-p {
-    line-height: 1.8em;
+h5 {
+    font-size: 1em;
 }
 
 a {
@@ -66,24 +66,20 @@ form[name=gui_form] {
     padding-bottom: 8px;
 }
 
-.bg-red {
+.background-color_red {
     background-color: #ff4b00;
 }
 
-.bg-yellow {
+.background-color_yellow {
     background-color: #fff100;
 }
 
-.bg-white {
+.background-color_white {
     background-color: white;
 }
 
-.bg-pink {
+.background-color_pink {
     background-color: #ffcabf;
-}
-
-.strike {
-    text-decoration: line-through;
 }
 
 .h2 {
@@ -115,37 +111,18 @@ form[name=gui_form] {
     font-weight: bold;
 }
 
-a:active, .red {
+a:active, .color_red {
     color: #ff4b00;
 }
 
-.gray {
+.color_gray {
     color: #84919e;
-}
-
-.block {
-    display: block;
-}
-
-.none {
-    display: none;
-}
-
-.of_hidden {
-    overflow: hidden;
-}
-
-.of_auto {
-    overflow: auto;
-}
-
-.sticky {
-    position: sticky;
 }
 
 #body {
     margin: 0px 0px 8px 0px;
     padding: 0px 8px;
+    overflow: hidden;
 }
 
 #header {
@@ -178,6 +155,7 @@ a:active, .red {
     height: 100%;
     opacity: 0.75;
     z-index: 1;
+    background-color: white;
 }
 
 #notice {
@@ -186,16 +164,18 @@ a:active, .red {
 
 #menu {
     margin: 8px 0px;
+    display: block;
 }
 
 #timer_hour, #timer_minute, #timer_second, #alarm_hour, #alarm_minute, #alarm_second {
     width: 5em;
 }
 
-#document * {
-    letter-spacing: 0.05em;
+#macros, #timer_setting, #alarm_setting {
+    display: none;
 }
 
-#document li {
+#document * {
     line-height: 1.8em;
+    letter-spacing: 0.05em;
 }

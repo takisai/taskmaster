@@ -11,8 +11,8 @@ https://opensource.org/licenses/mit-license.php
         <meta name="viewport" content="width=device-width,initial-scale=1">
         <link rel="stylesheet" href="style.css">
     </head>
-    <body id="body" class="of_hidden">
-        <div id="header" class="bg-white">
+    <body id="body">
+        <div id="header" class="background-color_white">
             <div id="clock">
                 --:--:--
             </div>
@@ -25,14 +25,15 @@ https://opensource.org/licenses/mit-license.php
             volume <input id="range_volume" type="range" min="0" max="100" step="1" value="100"> <span id="volume">100</span>
         </div>
         <ol id="parent"></ol>
-        <div id="macros" class="none">
+        <div id="tag_parent"></div>
+        <div id="macros">
             <details open><summary>macro</summary>
                 <div>
                     <ol id="macro_parent"></ol>
                 </div>
             </details>
         </div>
-        <div id="menu" class="block">
+        <div id="menu">
             <details id="menu_details"><summary>menu</summary>
                 <div>
                     <details><summary>リマインダー設定</summary>
@@ -41,30 +42,30 @@ https://opensource.org/licenses/mit-license.php
                             <label id="label_radio_timer" for="radio_timer">タイマー</label>
                             <input id="radio_alarm" type="radio" name="task_type" value="alarm" onclick="showAlarmGUI()">
                             <label id="label_radio_alarm" for="radio_alarm">アラーム</label>
-                            <div id="timer_setting" class="none">
+                            <div id="timer_setting">
                                 <input id="timer_hour" list="data_0-23"> 時間 <input id="timer_minute" list="data_0-59"> 分 <input id="timer_second" list="data_0-59"> 秒後
                             </div>
-                            <div id="alarm_setting" class="none">
+                            <div id="alarm_setting">
                                 <input id="alarm_hour" list="data_0-23"> 時 <input id="alarm_minute" list="data_0-59"> 分 <input id="alarm_second" list="data_0-59"> 秒
                             </div>
-                            <div id="gui_other_setting" class="none">
+                            <div id="gui_other_setting">
                                 テキスト: <input type="text" id="gui_text"><br>音:
                                 <select id="gui_sound">
-                                    <option value="0">アラーム1</option>
-                                    <option value="1">アラーム2</option>
-                                    <option value="2">チーン</option>
-                                    <option value="3">ホイッスル</option>
-                                    <option value="4">警告音1</option>
-                                    <option value="5">警告音2</option>
-                                    <option value="6">ゴング</option>
-                                    <option value="7">ドラ</option>
-                                    <option value="8">和太鼓</option>
-                                    <option value="9">ニワトリ</option>
-                                    <option value="10">カッコウ</option>
-                                    <option value="11">ウグイス</option>
-                                    <option value="12">ファンファーレ</option>
-                                    <option value="13">缶蹴り</option>
-                                    <option value="14">爆竹</option>
+                                    <option value="1">アラーム1</option>
+                                    <option value="2">アラーム2</option>
+                                    <option value="3">チーン</option>
+                                    <option value="4">ホイッスル</option>
+                                    <option value="5">警告音1</option>
+                                    <option value="6">警告音2</option>
+                                    <option value="7">ゴング</option>
+                                    <option value="8">ドラ</option>
+                                    <option value="9">和太鼓</option>
+                                    <option value="10">ニワトリ</option>
+                                    <option value="11">カッコウ</option>
+                                    <option value="12">ウグイス</option>
+                                    <option value="13">ファンファーレ</option>
+                                    <option value="14">缶蹴り</option>
+                                    <option value="15">爆竹</option>
                                     <option value="-">なし</option>
                                 </select>
                                 重要度
@@ -84,7 +85,7 @@ https://opensource.org/licenses/mit-license.php
                         <div>
                             <p>Task Masterは、WEB上で利用できるリマインダーツールです。</p>
                                 <ul>
-                                    <li>最新版: Version 0.6.0 | 2019-09-10</li>
+                                    <li>最新版: Version 0.7.0 | 2019-10-03</li>
                                     <li>製作者: takisai</li>
                                     <li>動作確認環境: Chrome・Firefox</li>
                                 </ul>
@@ -94,7 +95,7 @@ https://opensource.org/licenses/mit-license.php
                 </div>
             </details>
         </div>
-        <div id="cover" class="bg-white"></div>
+        <div id="cover"></div>
     </body>
     <script src="main.js"></script>
     <datalist id="data_0-23">

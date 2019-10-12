@@ -8,7 +8,7 @@ const UPDATE_TIME = 200; // UPDATE_TIME :: DateNumber
 const SEPARATOR = '\v'; // SEPARATOR :: String
 const NOTICE_CLEAR_TIME = 5000; // NOTICE_CLEAR_TIME :: DateNumber
 const RECURSION_LIMIT = 5; // RECURSION_LIMIT :: Number
-const VERSION = [0, 6, 0]; // VERSION :: [VersionNumber]
+const VERSION = [0, 7, 0]; // VERSION :: [VersionNumber]
 
 const NUMBER_OF_SOUNDS = 15; // NUMBER_OF_SOUNDS :: Number
 /*  NUMBER_OF_SOUNDSの数だけmp3ファイルを登録して音を鳴らすことができます。
@@ -48,9 +48,15 @@ const removeDom = id => {
     return true;
 };
 
-// parameterCheck :: (ParameterString, IndexNumber) -> [DOMString]
+// makeErrorDom :: String -> DomString
+const makeErrorDom = str => `<span class="color_red">${str}</span>`;
+
+// parameterCheck :: (ParameterString, IndexNumber) -> ParseObject
 const parameterCheck = (str, max) => {
-    return str.split(' ').map(x => {
+    // ret :: [Object]
+    const ret = str.split(' ').map(x => {
+        // errObj :: ParseObject
+        const errObj = {isErr: true, str: makeErrorDom(x)};
         if(x === '*') {
             x = '1-' + max;
         }
@@ -58,7 +64,8 @@ const parameterCheck = (str, max) => {
         const rangeResult = /^(\d*)-(\d*)$/.exec(x);
         if(x !== '-' && rangeResult !== null) {
             // border :: [IndexNumber]
-            const border = rangeResult.slice(1).map(x => parseInt(x, 10));
+            const border = rangeResult.slice(1).map(t => parseInt(t, 10));
+            if(border[0] > max || border[1] < 1) return errObj;
             if(isNaN(border[0]) || border[0] < 1) {
                 border[0] = 1;
             }
@@ -67,12 +74,27 @@ const parameterCheck = (str, max) => {
             }
             // ret :: [IndexNumber]
             const ret = [...Array(border[1] - border[0] + 1).keys()];
-            return ret.map(t => t + border[0]);
+            return {
+                data: ret.map(t => t + border[0] - 1),
+                isErr: false,
+                str: x
+            };
         }
         const index = parseInt(x, 10); // index :: Maybe IndexNumber
-        return index > 0 && index <= max && /^\d+$/.test(x) ? [x]
-                : [`<span class="red">${x}</span>`];
-    }).flat();
+        return index > 0 && index <= max && /^\d+$/.test(x)
+                ? {
+                    data: [index - 1],
+                    isErr: false,
+                    str: x
+                }
+                : errObj;
+    });
+    return {
+        data: [... new Set(ret.map(x => x.data))].flat()
+                                                 .filter(x => x !== undefined),
+        isErr: ret.some(x => x.isErr),
+        str: ret.map(x => x.str).join(' ')
+    };
 };
 
 // getText :: () -> ()
@@ -159,14 +181,17 @@ const parseMain = (() => {
     const play = (parameter, callFrom) => {
         if(!/^\d+$/.test(parameter)) {
             if(parameter === '-') return;
-            Notice.set(`error: sound <span class="red">${parameter}</span>`);
+            Notice.set('error: sound ' + makeErrorDom(parameter));
             return;
         }
-        Sound.play(`sound/alarm${parameter}.mp3`, callFrom);
+        Sound.play(`sound/alarm${parameter - 1}.mp3`, callFrom);
     }
 
     // main :: (ExecString, FlagString) -> ()
     const main = (text, callFrom) => {
+        text = text.replace(/^\s+/, '')
+                   .replace(/\s+$/, '')
+                   .replace(/\s+|　/g, ' ');
         const isHeadHash = /^#/.test(text); // isHeadHash :: Bool
         const isHeadArrow = /^->/.test(text); // isHeadArrow :: Bool
         const isRawMode = isHeadHash || isHeadArrow; // isRawMode :: Bool
@@ -191,8 +216,7 @@ const parseMain = (() => {
         // spaceSplit :: Maybe [Maybe String]
         const spaceSplit = /^([^ ]*)(?: (.*))?$/.exec(text);
         // parameter :: ParameterString
-        const parameter = spaceSplit[2] === undefined ? ''
-                : spaceSplit[2].replace(/^\s+|\s+$/g, '').replace(/\s+/g, ' ');
+        const parameter = spaceSplit[2] === undefined ? '' : spaceSplit[2];
         if(callFrom === 'merge') {
             switch(spaceSplit[1]) {
                 case 'switch':
@@ -205,11 +229,14 @@ const parseMain = (() => {
                 case 'show-menu':
                 case 'hide-menu':
                     return;
+                case '$tag':
+                    Tag.insertByData(parameter);
+                    return;
                 case '$button':
-                    Button.insertByData(spaceSplit[2]);
+                    Button.insertByData(parameter);
                     return;
                 case '->':
-                    Macro.insertByData(spaceSplit[2]);
+                    Macro.insertByData(parameter);
                     return;
             }
         } else {
@@ -226,17 +253,26 @@ const parseMain = (() => {
                 case 'remove':
                     TaskQueue.remove(parameter);
                     return;
+                case 'tag':
+                    Tag.insert(parameter);
+                    return;
+                case '$tag':
+                    Tag.insertByData(parameter);
+                    return;
+                case 'remove-tag':
+                    Tag.remove(parameter);
+                    return;
                 case 'button':
-                    Button.insert(spaceSplit[2]);
+                    Button.insert(parameter);
                     return;
                 case '$button':
-                    Button.insertByData(spaceSplit[2]);
+                    Button.insertByData(parameter);
                     return;
                 case 'remove-button':
                     Button.remove(parameter);
                     return;
                 case '->':
-                    Macro.insertByData(spaceSplit[2]);
+                    Macro.insertByData(parameter);
                     return;
                 case 'show-macro':
                     Macro.show();
@@ -288,10 +324,16 @@ const parseMain = (() => {
                     return;
             }
         }
+        // moveResult :: Maybe [Maybe String]
+        const moveResult = /^move(?:#(.*))?$/.exec(spaceSplit[1]);
+        if(moveResult !== null) {
+            TaskQueue.move(parameter, moveResult[1]);
+            return;
+        }
         const taskItem = Task.parse(text); // taskItem :: Maybe TaskObject
         if(taskItem === null) {
             if(text === '') return;
-            Notice.set(`error: <span class="red">${text}</span>`);
+            Notice.set('error: ' + makeErrorDom(text));
             return;
         }
         TaskQueue.insert(taskItem, callFrom);
@@ -318,20 +360,20 @@ const parseMain = (() => {
 
 // showAlarmGUI :: () -> ()
 const showAlarmGUI = () => {
-    dgebi('label_radio_alarm').className = '';
-    dgebi('alarm_setting').className = 'block';
-    dgebi('label_radio_timer').className = 'gray';
-    dgebi('timer_setting').className = 'none';
-    dgebi('gui_other_setting').className = 'block';
+    dgebi('label_radio_alarm').style.display = null;
+    dgebi('alarm_setting').style.display = 'block';
+    dgebi('label_radio_timer').className = 'color_gray';
+    dgebi('timer_setting').style.display = 'none';
+    dgebi('gui_other_setting').style.display = 'block';
 };
 
 // showTimerGUI :: () -> ()
 const showTimerGUI = () => {
-    dgebi('label_radio_timer').className = '';
-    dgebi('timer_setting').className = 'block';
-    dgebi('label_radio_alarm').className = 'gray';
-    dgebi('alarm_setting').className = 'none';
-    dgebi('gui_other_setting').className = 'block';
+    dgebi('label_radio_timer').style.display = null;
+    dgebi('timer_setting').style.display = 'block';
+    dgebi('label_radio_alarm').className = 'color_gray';
+    dgebi('alarm_setting').style.display = 'none';
+    dgebi('gui_other_setting').style.display = 'block';
 };
 
 const BackgroundAlert = (() => {
@@ -341,15 +383,15 @@ const BackgroundAlert = (() => {
         // BackgroundAlert.on :: () -> ()
         on: () => {
             semaphore++;
-            dgebi('body').className = 'bg-pink';
-            dgebi('header').className = 'bg-pink';
+            dgebi('body').className = 'background-color_pink';
+            dgebi('header').className = 'background-color_pink';
         },
         // BackgroundAlert.off :: () -> ()
         off: () => {
             semaphore--;
             if(semaphore > 0) return;
-            dgebi('body').className = 'bg-white';
-            dgebi('header').className = 'bg-white';
+            dgebi('body').className = 'background-color_white';
+            dgebi('header').className = 'background-color_white';
         }
     };
 })();
@@ -445,7 +487,7 @@ const Sound = (() => {
         setVolume: str => {
             const n = parseInt(str, 10); // n :: VolumeNumber
             if(n < 0 || n > 100 || !/^\d+$/.test(str)) {
-                Notice.set(`error: volume <span class="red">${str}</span>`);
+                Notice.set('error: volume ' + makeErrorDom(str));
                 return;
             }
             volume = n;
@@ -493,7 +535,7 @@ const Sound = (() => {
 })();
 
 const Task = (() => {
-    let defaultSound = '0'; // defaultSound :: SoundFlagString
+    let defaultSound = '1'; // defaultSound :: SoundFlagString
     let defaultImportance = 0; // defaultImportance :: ImportanceFlagNumber
     let defaultDisplay = 'a'; // defaultDisplay :: DisplayFlagString
 
@@ -531,13 +573,14 @@ const Task = (() => {
         let isFind = false; // isFind :: Bool
         const isFree = []; // isFree :: [Number]
         // table :: [Object]
-        const table =
-                [{get: 'getFullYear', set: 'setFullYear', c: 0, r: 0}
-                , {get: 'getMonth', set: 'setMonth', c: -1, r: 0}
-                , {get: 'getDate', set: 'setDate', c: 0, r: 1}
-                , {get: 'getHours', set: 'setHours', c: 0, r: 0}
-                , {get: 'getMinutes', set: 'setMinutes', c: 0, r: 0}
-                , {get: 'getSeconds', set: 'setSeconds', c: 0, r: 0}];
+        const table = [
+            {get: 'getFullYear', set: 'setFullYear', c: 0, r: 0},
+            {get: 'getMonth', set: 'setMonth', c: -1, r: 0},
+            {get: 'getDate', set: 'setDate', c: 0, r: 1},
+            {get: 'getHours', set: 'setHours', c: 0, r: 0},
+            {get: 'getMinutes', set: 'setMinutes', c: 0, r: 0},
+            {get: 'getSeconds', set: 'setSeconds', c: 0, r: 0}
+        ];
         ret.setMilliseconds(500);
         for(let i = 0; i < 6; i++) { // i :: IndexNumber
             const t = table[i]; // t :: Object
@@ -572,7 +615,8 @@ const Task = (() => {
                         defaultSound = result[1];
                     }
                     if(result[2] !== undefined) {
-                        defaultDisplay = result[2] !== 's' ? result[2]
+                        defaultDisplay = result[2] !== 's'
+                                ? result[2]
                                 : defaultDisplay === 'a' ? 't' : 'a';
                     }
                     if(result[3] !== undefined) {
@@ -587,13 +631,14 @@ const Task = (() => {
         // Task.parse :: ExecString -> Maybe TaskObject
         parse: s => {
             // regex :: RegExp
-            const regex = /^(?:(\d+)([at]))?([^\/]*)((?:\/(?:(-|\d+)|([^\/]*?)\*)??([at])?(\.|!{1,3})?(?:\/(.*))?)?)$/;
+            const regex = /^(?:(\d+)([at]))?([^\/]*)((?:\/(?:(-|\d+)|([^\/]*?)\*)??([at])?(\.|!{1,3})?(?:#([^ \/]*))?(?:\/(.*))?)?)$/;
             const result = regex.exec(s); // result :: Maybe [Maybe String]
             const ret = new Object(); // ret :: TaskObject
             const execs = []; // execs :: [ExecString]
-            if(result === null) return null;
+            if(result === null || result[9] === '*') return null;
             // now :: DateNumber
-            const now = result[1] !== undefined ? parseInt(result[1], 10)
+            const now = result[1] !== undefined
+                    ? parseInt(result[1], 10)
                     : Date.now();
             if(result[1] !== undefined) {
                 ret.when = result[1];
@@ -610,7 +655,7 @@ const Task = (() => {
                 if(ret.deadline === null) return null;
             }
             ret.isValid = ret.deadline - Date.now() >= -UPDATE_TIME / 2;
-            ret.saveText = result[3];
+            ret.tipText = result[3];
             switch(plusSplit[2]) {
                 case undefined:
                     break;
@@ -621,33 +666,40 @@ const Task = (() => {
                     execs.push(plusSplit[2] + result[4]);
                     break;
             }
-            ret.saveText += '/';
+            ret.tipText += '/';
             if(result[5] !== undefined) {
                 execs.push('#sound ' + result[5]);
-                ret.saveText += result[5];
+                ret.tipText += result[5];
             } else if(result[6] !== undefined) {
                 execs.push(result[6]);
-                ret.saveText += result[6] + '*';
+                ret.tipText += result[6] + '*';
             } else {
                 execs.push('#sound ' + defaultSound);
-                ret.saveText += defaultSound;
+                ret.tipText += defaultSound;
             }
             ret.display = result[7] !== undefined ? result[7] : ret.display;
             if(result[8] !== undefined) {
                 ret.importance = importanceToNumber(result[8]);
-                ret.saveText += result[8];
+                ret.tipText += result[8];
             } else {
                 ret.importance = defaultImportance;
-                ret.saveText += importanceStr();
+                ret.tipText += importanceStr();
             }
-            if(result[9] !== undefined) {
-                ret.name = result[9];
-                ret.saveText += '/' + result[9];
+            ret.tag = result[9];
+            // ret.saveText += result[9] === undefined ? '' : '#' + result[9];
+            if(result[10] !== undefined) {
+                ret.name = result[10];
+                ret.saveRawName = '/' + result[10];
             } else {
                 ret.name = plusSplit[1];
+                ret.saveRawName = '';
             }
             ret.exec = execs.join(';');
-            ret.tipText = ret.saveText;
+            ret.makeSaveText = () => {
+                return ret.when + ret.display + ret.tipText
+                        + (ret.tag === undefined ? '' : '#' + ret.tag)
+                        + ret.saveRawName;
+            };
             return ret;
         },
         // Task.init :: () -> ()
@@ -727,7 +779,8 @@ const Save = (() => {
     // makeData :: () -> SaveString
     const makeData = () => {
         // obj :: [Object]
-        const obj = [Legacy, TaskQueue, Button, Display, Sound, Task, Macro];
+        const obj
+                = [Legacy, Tag, TaskQueue, Button, Display, Sound, Task, Macro];
         return obj.map(x => x.save()).flat().join(SEPARATOR);
     };
 
@@ -771,8 +824,9 @@ const Load = (() => {
             // text :: Maybe Base64String
             const text = window.prompt('読み込むデータを入れてください:', '');
             if(text === '' || text === null) return;
-            parseMain('##remove-macro *;remove *;remove-button *;default 0a.;\
-                    volume 100;show-menu;hide-macro;empty-trash;empty-history');
+            parseMain('##remove-macro *;remove *#*;remove-tag *;\
+                    remove-button *;default 1a.;volume 100;show-menu;\
+                    hide-macro;empty-trash;empty-history');
             parse(Base64.decode(text), 'global');
             Notice.set('loaded');
         },
@@ -791,16 +845,23 @@ const Button = (() => {
     let buttonCount = 0; // buttonCount :: CountNumber
     const buttons = []; // buttons :: [ButtonObject]
 
-    // rm :: [IDNumber] -> ()
-    const rm = ids => {
-        if(ids.length === 0) return;
-        // items :: [MacroObject]
-        const items = ids.map(id => buttons.find(x => x.id === id));
-        Trash.push(items.map(item => '#' + item.saveText).join(SEPARATOR));
-        ids.forEach(id => {
+    // rm :: [IndexNumber] -> ()
+    const rm = indices => {
+        indices = indices.filter(x => x !== undefined);
+        if(indices.length === 0) return;
+        // items :: [ButtonObject]
+        const items = indices.map(i => buttons[i]);
+        Trash.push(items.map(item => item.saveText).join(SEPARATOR));
+        items.map(x => x.id).forEach(id => {
             removeDom('button_' + id);
             buttons.splice(buttons.findIndex(x => x.id === id), 1);
         });
+    };
+    // updateIndex :: () -> ()
+    const updateIndex = () => {
+        for(let i = 0; i < buttons.length; i++) {
+            dgebi('button_' + buttons[i].id).childNodes[0].title = i + 1;
+        }
     };
 
     return {
@@ -813,9 +874,12 @@ const Button = (() => {
                 now = Date.now();
             }
             // buttonItem :: ButtonObject
-            const buttonItem = {id: buttonCount, str: str, time: now
-                    , saveText: `$button ${now}#${str}`};
-            buttonCount++;
+            const buttonItem = {
+                id: buttonCount,
+                str: str,
+                time: now,
+                saveText: `#$button ${now}#${str}`
+            };
             // newElement :: Element
             const newElement = document.createElement('span');
             newElement.innerHTML =
@@ -824,6 +888,7 @@ const Button = (() => {
             // i :: IndexNumber
             const i = buttons.findIndex(x => x.time >= buttonItem.time);
             if(i >= 0 && buttonItem.saveText === buttons[i].saveText) return;
+            buttonCount++;
             if(i >= 0) {
                 // target :: Element
                 const target = dgebi('button_' + buttons[i].id);
@@ -833,6 +898,7 @@ const Button = (() => {
                 dgebi('button_parent').appendChild(newElement);
                 buttons.push(buttonItem);
             }
+            updateIndex();
         },
         // Button.insertByData :: ParameterString -> ()
         insertByData: str => {
@@ -843,13 +909,13 @@ const Button = (() => {
         // Button.remove :: ParameterString -> ()
         remove: str => {
             if(str === '') return;
-            // strs :: [DOMString]
-            const strs = parameterCheck(str, buttons.length);
-            rm([...new Set(strs.filter(x => /^\d/.test(x))
-                   .map(i => buttons[parseInt(i, 10) - 1].id))]);
-            if(strs.some(x => !/^\d/.test(x))) {
-                Notice.set('error: remove-button ' + strs.join(' '));
+            // result :: ParseObject
+            const result = parameterCheck(str, buttons.length);
+            rm(result.data);
+            if(result.isErr) {
+                Notice.set('error: remove-button ' + result.str);
             }
+            updateIndex();
         },
         // Button.save :: () -> [ExecString]
         save: () => buttons.map(x => x.saveText)
@@ -868,17 +934,17 @@ const Display = (() => {
         doStrike: (id, importance) => {
             // target :: Element
             const target = dgebi('text_' + id);
-            target.className = 'strike';
+            target.style.textDecoration = 'line-through';
             switch(importance) {
                 case 3:
                     window.setTimeout(window.alert, ALERT_WAIT_TIME
                             , target.innerText);
                 case 2:
-                    target.className += ' bg-red';
+                    target.className = 'background-color_red';
                     BackgroundAlert.on();
                     break;
                 case 1:
-                    target.className += ' bg-yellow';
+                    target.className = 'background-color_yellow';
                     break;
                 case 0:
                     window.setTimeout(parseMain, AUTO_REMOVE_TIME
@@ -888,12 +954,12 @@ const Display = (() => {
         },
         // Display.showMenu :: () -> ()
         showMenu: () => {
-            dgebi('menu').className = 'block';
+            dgebi('menu').style.display = 'block';
             isShowMenu = true;
         },
         // Display.hideMenu :: () -> ()
         hideMenu: () => {
-            dgebi('menu').className = 'none';
+            dgebi('menu').style.display = 'none';
             isShowMenu = false;
         },
         // Display.save :: () -> [ExecString]
@@ -909,16 +975,17 @@ const Macro = (() => {
 
     // formatter :: ExecString -> DisplayString
     const formatter = s => s.replace(regex, '$1 -> $2');
-    // rm :: [IDNumber] -> ()
-    const rm = ids => {
-        if(ids.length === 0) return;
+    // rm :: [IndexNumber] -> ()
+    const rm = indices => {
+        indices = indices.filter(x => x !== undefined);
+        if(indices.length === 0) return;
         // items :: [MacroObject]
-        const items = ids.map(id => macros.find(x => x.id === id));
+        const items = indices.map(i => macros[i]);
         Trash.push(items.map(item => item.saveText).join(SEPARATOR));
         if(!isListShow) {
             Notice.set('removed: ' + items.map(item => item.str).join(' , '));
         }
-        ids.forEach(id => {
+        items.map(x => x.id).forEach(id => {
             removeDom('macro_' + id);
             macros.splice(macros.findIndex(x => x.id === id), 1);
         });
@@ -936,9 +1003,14 @@ const Macro = (() => {
                 now = Date.now();
             }
             // macroItem :: MacroObject
-            const macroItem = {key: new RegExp(result[1], 'gu'), str: s
-                    , value: result[2], id: id, time: now
-                    , saveText: `-> ${now}#${s}`};
+            const macroItem = {
+                key: new RegExp(result[1], 'gu'),
+                str: s,
+                value: result[2],
+                id: id,
+                time: now,
+                saveText: `-> ${now}#${s}`
+            };
             // newElement :: Element
             const newElement = document.createElement('li');
             const formatStr = formatter(s); // formatStr :: DisplayString
@@ -979,25 +1051,24 @@ const Macro = (() => {
             // idResult :: Maybe [Maybe String]
             const idResult = /^\$(\d+)$/.exec(str);
             if(idResult !== null) {
-                rm([parseInt(idResult[1], 10)]);
+                rm([macros.findIndex(x => x.id === parseInt(idResult[1], 10))]);
                 return;
             }
-            // strs :: [DOMString]
-            const strs = parameterCheck(str, macros.length);
-            rm([...new Set(strs.filter(x => /^\d/.test(x))
-                   .map(i => macros[parseInt(i, 10) - 1].id))]);
-            if(strs.some(x => !/^\d/.test(x))) {
-                Notice.set('error: remove-macro ' + strs.join(' '));
+            // result :: ParseObject
+            const result = parameterCheck(str, macros.length);
+            rm(result.data);
+            if(result.isErr) {
+                Notice.set('error: remove-macro ' + result.str);
             }
         },
         // Macro.show :: () -> ()
         show: () => {
-            dgebi('macros').className = 'block';
+            dgebi('macros').style.display = 'block';
             isListShow = true;
         },
         // Macro.hide :: () -> ()
         hide: () => {
-            dgebi('macros').className = 'none';
+            dgebi('macros').style.display = 'none';
             isListShow = false;
         },
         // Macro.save :: () -> [ExecString]
@@ -1008,57 +1079,304 @@ const Macro = (() => {
     };
 })();
 
+const Tag = (() => {
+    let tagCount = 0; // tagCount :: CountNumber
+    const tagTable = []; // tagTable :: [TagObject]
+
+    // rm :: [IndexNumber] -> ()
+    const rm = indices => {
+        indices = indices.filter(x => x !== undefined);
+        if(indices.length === 0) return;
+        // items :: [MacroObject]
+        const items = indices.map(i => tagTable[i]);
+        Trash.push(items.map(item => item.saveText).join(SEPARATOR));
+        items.forEach(x => {
+            if(!TaskQueue.isTagEmpty(x.id)) {
+                Notice.set(`#${tagTable.find(t => t.id === x.id).str} is not empty`);
+                return;
+            }
+            removeDom('tag_parent_' + x.id);
+            tagTable.splice(tagTable.findIndex(t => t.id === x.id), 1);
+        });
+    };
+    // updateIndex :: () -> ()
+    const updateIndex = () => {
+        for(let i = 0; i < tagTable.length; i++) {
+            dgebi('tag_parent_' + tagTable[i].id).childNodes[0].childNodes[0].title = i + 1;
+        }
+    };
+
+    return {
+        // Tag.getLength :: () -> IndexNumber
+        getLength: () => tagTable.length,
+        // Tag.insert :: (TagsString, Maybe DateNumber) -> ()
+        insert: (str, now = null) => {
+            const isNowNull = now === null; // isNowNull :: Bool
+            if(isNowNull) {
+                now = Date.now();
+            }
+            // tmp :: [CheckedDomObject]
+            const tmp = str.split(' ').map(x => {
+                // successObj :: Object
+                const successObj = {isErr: false, str: x};
+                const saveStr = `#$tag ${now}#${x}`; // saveStr :: SaveString
+                if(!isNowNull) {
+                    // i :: IndexNumber
+                    const i = tagTable.findIndex(x => x.time >= now);
+                    if(i >= 0 && saveStr === tagTable[i].saveText) {
+                        return successObj;
+                    }
+                }
+                if(tagTable.find(t => t.str === x) !== undefined
+                        || /\//.test(x)
+                        || x === '*') {
+                    return {isErr: true, str: makeErrorDom(x)};
+                }
+                // tagItem :: TagObject
+                const tagItem = {
+                    id: tagCount,
+                    str: x,
+                    time: now,
+                    saveText: saveStr
+                };
+                tagCount++;
+                // newElement :: Element
+                const newElement = document.createElement('div');
+                newElement.innerHTML =
+                        `<details open><summary>#${x} <input id="remove_tag_${tagItem.id}" type="button" value="remove" onclick="parseMain('#remove-tag $${tagItem.id}');"></summary><div style="padding-left: 0px"><ol id="parent_${tagItem.id}"></ol></div></details>`;
+                newElement.setAttribute('id', 'tag_parent_' + tagItem.id);
+                // i :: IndexNumber
+                const i = tagTable.findIndex(x => x.time >= tagItem.time);
+                if(i >= 0) {
+                    // target :: Element
+                    const target = dgebi('tag_parent_' + tagTable[i].id);
+                    target.parentNode.insertBefore(newElement, target);
+                    tagTable.splice(i, 0, tagItem);
+                } else {
+                    dgebi('tag_parent').appendChild(newElement);
+                    tagTable.push(tagItem);
+                }
+                TaskQueue.newTag(tagItem.id);
+                return successObj;
+            });
+            if(tmp.map(x => x.isErr).some(x => x)) {
+                Notice.set('error: tag ' + tmp.map(x => x.str).join(' '));
+            }
+            updateIndex();
+        },
+        // Tag.insertByData :: ParameterString -> ()
+        insertByData: str => {
+            // result :: Maybe [Maybe String]
+            const result = /^(\d+)#(.*)$/.exec(str);
+            Tag.insert(result[2], parseInt(result[1], 10));
+        },
+        // Tag.remove :: ParameterString -> ()
+        remove: str => {
+            if(str === '') return;
+            const idResult = /^\$(\d+)$/.exec(str);
+            if(idResult !== null) {
+                rm([tagTable.findIndex(
+                        x => x.id === parseInt(idResult[1], 10))]);
+                return;
+            }
+            // result :: ParseObject
+            const result = parameterCheck(str, tagTable.length);
+            rm(result.data);
+            if(result.isErr) {
+                Notice.set('error: remove-tag ' + result.str);
+            }
+            updateIndex();
+        },
+        // Tag.findIndex :: Maybe TagString -> Maybe IDNumber
+        findIndex: str => {
+            if(str === undefined) return undefined;
+            // ret :: Maybe IndexNumber
+            const ret = tagTable.findIndex(x => x.str === str);
+            return ret === -1 ? -1 : tagTable[ret].id;
+        },
+        // Tag.showRemoveButton :: IndexNumber -> ()
+        showRemoveButton: index => {
+            dgebi('remove_tag_' + tagTable[index].id).style.display = null;
+        },
+        // Tag.hideRemoveButton :: IndexNumber -> ()
+        hideRemoveButton: index => {
+            dgebi('remove_tag_' + tagTable[index].id).style.display = 'none';
+        },
+        // Tag.save :: () -> [ExecString]
+        save: () => tagTable.map(x => x.saveText)
+    };
+})();
+
 const TaskQueue = (() => {
     const taskQueue = []; // taskQueue :: [TaskObject]
     let idCount = 0; // idCount :: CountNumber
 
-    taskQueue[-1] = {id: 'global', sound: [], soundCount: 0};
+    taskQueue[undefined] = [];
+    taskQueue[undefined][-1] = {id: 'global', sound: [], soundCount: 0};
 
-    // getIndexById :: IDString -> Maybe IndexNumber
-    const getIndexById = id => {
-        for(let i = -1; i < taskQueue.length; i++) { // i :: IndexNumber
-            if(taskQueue[i].id === id) return i;
-        }
-        return undefined;
+    // taskParameterCheck :: ParameterString -> ParseObject
+    const taskParameterCheck = str => {
+        // ret :: [Object]
+        const ret = str.split(' ').map(x => {
+            // makeObj :: [TaskObject] -> Object
+            const makeObj = items => {
+                return {
+                    data: items.map(t1 => {
+                        // tagNo :: Maybe IndexNumber
+                        const tagNo = Tag.findIndex(t1.tag);
+                        return {
+                            index: taskQueue[tagNo]
+                                    .findIndex(t2 => t2.id === t1.id),
+                            id: t1.id,
+                            tagNo: tagNo
+                        };
+                    }),
+                    isErr: false,
+                    str: x
+                };
+            };
+            // invalidResult :: Maybe [Maybe String]
+            const invalidResult = /^(\.|!{1,3})(?:#(.*))?$/.exec(x);
+            if(invalidResult !== null) {
+                // func :: Number -> ()
+                const func = invalidResult[2] === '*'
+                        ? n => {
+                            return makeObj(taskQueue[undefined]
+                                    .concat(taskQueue.flat())
+                                    .filter(t => !t.isValid
+                                        && t.importance <= n));
+                        }
+                        : n => {
+                            return makeObj(taskQueue[
+                                        Tag.findIndex(invalidResult[2])]
+                                    .filter(t => !t.isValid
+                                        && t.importance <= n));
+                        };
+                switch(invalidResult[1]) {
+                    case '.':
+                        return func(0);
+                    case '!':
+                        return func(1);
+                    case '!!':
+                        return func(2);
+                    case '!!!':
+                        return func(3);
+                }
+            }
+            if(x === '*#*') {
+                return makeObj(taskQueue[undefined].concat(taskQueue.flat()));
+            }
+            // errObj :: Object
+            const errObj = {isErr: true, str: makeErrorDom(x)};
+            // decomp :: Maybe [Maybe String]
+            const decomp = /^([^#]*)(?:#(.*))?$/.exec(x);
+            // tagNo :: Maybe IndexNumber
+            const tagNo = Tag.findIndex(decomp[2]);
+            if(tagNo === -1) return errObj;
+            const max = taskQueue[tagNo].length; // max :: IndexNumber
+            if(decomp[1] === '*') {
+                decomp[1] = '1-' + max;
+            }
+            // rangeResult :: Maybe [Maybe String]
+            const rangeResult = /^(\d*)-(\d*)$/.exec(decomp[1]);
+            if(x !== '-' && rangeResult !== null) {
+                // border :: [IndexNumber]
+                const border = rangeResult.slice(1).map(t => parseInt(t, 10));
+                if(border[0] > max || border[1] < 1) return errObj;
+                if(isNaN(border[0]) || border[0] < 1) {
+                    border[0] = 1;
+                }
+                if(isNaN(border[1]) || border[1] > max) {
+                    border[1] = max;
+                }
+                return makeObj([...Array(border[1] - border[0] + 1).keys()]
+                        .map(t => taskQueue[tagNo][t + border[0] - 1]));
+            }
+            // index :: Maybe IndexNumber
+            const index = parseInt(decomp[1], 10) - 1;
+            return index >= 0 && index < max && /^\d+$/.test(decomp[1])
+                    ? {
+                        data: [{
+                            index: index,
+                            id: taskQueue[tagNo][index].id,
+                            tagNo: tagNo
+                        }],
+                        isErr: false,
+                        str: x
+                    }
+                    : errObj;
+        });
+        return {
+            data: [...new Set(ret.map(x => x.data))].flat(),
+            isErr: ret.some(x => x.isErr),
+            str: ret.map(x => x.str).join(' ')
+        };
     };
-    // makeSaveText :: TaskObject -> SaveString
-    const makeSaveText = obj => obj.when + obj.display + obj.saveText;
-    // display :: ([IDString], FlagString) -> ()
+    // getTagIndex :: IDString -> Maybe Object
+    const getTagIndex = id => {
+        if(id === 'global') return {
+            index: -1,
+            id: id,
+            tagNo: undefined
+        };
+        // item :: TaskElement
+        const item = taskQueue[undefined].concat(taskQueue.flat())
+                                         .find(x => x.id === id);
+        if(item === undefined) return undefined;
+        // tagNo :: Maybe IndexNumber
+        const tagNo = item.tag === undefined
+                ? undefined
+                : Tag.findIndex(item.tag);
+        return {
+            index: taskQueue[tagNo].findIndex(x => x.id === id),
+            id: id,
+            tagNo: tagNo
+        };
+    };
+    // display :: ([IDObject], FlagString) -> ()
     const display = (ids, flag) => {
         if(ids.length === 0) return;
         // func :: FlagString -> FlagString
-        const func = flag === '-alarm' ? (x => 'a')
+        const func = flag === '-alarm'
+                ? (x => 'a')
                 : flag === '-timer' ? (x => 't') : (x => x === 'a' ? 't' : 'a');
-        ids.forEach(id => {
-            const i = taskQueue.findIndex(x => x.id === id); // i :: IndexNumber
-            taskQueue[i].display = func(taskQueue[i].display);
+        ids.forEach(x => {
+            taskQueue[x.tagNo][x.index].display
+                    = func(taskQueue[x.tagNo][x.index].display);
         });
     };
-    // rm :: [IDString] -> ()
-    const rm = ids => {
+    // rm :: ([IDObject], Maybe Bool) -> ()
+    const rm = (ids, isNeedTrashPush = true) => {
+        ids = ids.filter(x => x !== undefined);
+        if(ids.length === 0) return;
         // items :: [TaskObject]
-        const items = ids.map(id => taskQueue.find(x => x.id === id))
-                         .filter(x => x !== undefined);
-        if(items.length === 0) return;
-        Trash.push(items.map(item => '#' + makeSaveText(item)).join(SEPARATOR));
-        ids.forEach(id => {
-            TaskQueue.stopSound('$' + id);
-            removeDom('item_' + id);
-            const i = taskQueue.findIndex(x => x.id === id); // i :: IndexNumber
-            if(!taskQueue[i].isValid && taskQueue[i].importance > 1) {
+        const items = ids.map(x => taskQueue[x.tagNo][x.index]);
+        if(isNeedTrashPush) {
+            Trash.push(items.map(item => '#' + item.makeSaveText())
+                            .join(SEPARATOR));
+        }
+        ids.forEach(x => {
+            TaskQueue.stopSound('$' + x.id);
+            removeDom('item_' + x.id);
+            // i :: IndexNumber
+            const i = taskQueue[x.tagNo].findIndex(t => t.id === x.id);
+            if(!taskQueue[x.tagNo][i].isValid
+                    && taskQueue[x.tagNo][i].importance > 1) {
                 BackgroundAlert.off();
             }
-            taskQueue.splice(i, 1);
+            taskQueue[x.tagNo].splice(i, 1);
         });
+        for(let i = 0; i < Tag.getLength(); i++) { // i :: IndexNumber
+            if(taskQueue[i].length === 0) Tag.showRemoveButton(i);
+        }
     };
     // stop :: [IDString] -> ()
     const stop = ids => {
         if(ids.length === 0) return;
-        ids.forEach(id => {
-            removeDom('stopButton_' + id);
-            const index = getIndexById(id); // index :: Maybe IndexNumber
-            taskQueue[index].sound.forEach(x => x.pause());
-            taskQueue[index].sound = [];
+        ids.forEach(x => {
+            removeDom('stopButton_' + x.id);
+            taskQueue[x.tagNo][x.index].sound.forEach(t => t.pause());
+            taskQueue[x.tagNo][x.index].sound = [];
         });
     };
 
@@ -1066,44 +1384,50 @@ const TaskQueue = (() => {
         // TaskQueue.setDisplay :: (ParameterString, FlagString) -> ()
         setDisplay: (str, flag) => {
             if(str === '') {
-                display(taskQueue.map(x => x.id), flag);
-                return;
+                str = '*#*';
             }
-            // strs :: [DOMString]
-            const strs = parameterCheck(str, taskQueue.length);
-            display([...new Set(strs.filter(x => /^\d/.test(x))
-                   .map(i => taskQueue[parseInt(i, 10) - 1].id))], flag);
-            if(strs.some(x => !/^\d/.test(x))) {
-                Notice.set(`error: switch${flag} ${strs.join(' ')}`);
+            const result = taskParameterCheck(str); // result :: ParseObject
+            display(result.data, flag);
+            if(result.isErr) {
+                Notice.set(`error: switch${flag} ${result.str}`);
             }
         },
         // TaskQueue.setSound :: (Sound, IDString) -> IDNumber
         setSound: (sound, id) => {
-            const index = getIndexById(id); // index :: Maybe IndexNumber
-            const count = taskQueue[index].soundCount; // count :: IDNumber
+            const x = getTagIndex(id); // x :: Maybe Object
+            // count :: IDNumber
+            const count = taskQueue[x.tagNo][x.index].soundCount;
             sound.soundId = count;
-            taskQueue[index].sound.push(sound);
-            taskQueue[index].soundCount++;
+            taskQueue[x.tagNo][x.index].sound.push(sound);
+            taskQueue[x.tagNo][x.index].soundCount++;
             return count;
         },
         // TaskQueue.setVolume :: VolumeNumber -> ()
         setVolume: volume => {
-            for(let i = -1; i < taskQueue.length; i++) { // i :: IndexNumber
-                const sound = taskQueue[i].sound; // sound :: Maybe Sound
-                if(sound === undefined) continue;
-                sound.forEach(x => x.volume = volume);
-            }
+            // func :: TaskObject -> ()
+            const func = x => {
+                const sound = x.sound; // sound :: Maybe Sound
+                if(sound === undefined) return;
+                sound.forEach(t => t.volume = volume);
+            };
+            taskQueue[undefined].forEach(x => func(x));
+            taskQueue.forEach(x1 => x1.forEach(x2 => func(x2)));
         },
         // TaskQueue.isPlay :: IDString -> Bool
         isPlay: id => {
-            const ret = taskQueue[getIndexById(id)]; // ret :: Maybe TaskObject
-            return ret !== undefined && ret.sound.length > 0;
+            const x = getTagIndex(id); // x :: Maybe Object
+            const t = taskQueue[x.tagNo][x.index]; // t :: Maybe TaskObject
+            return t !== undefined && t.sound.length > 0;
         },
         // TaskQueue.insert :: (TaskObject, FlagString) -> ()
         insert: (taskItem, flag) => {
-            const id = idCount; // id :: IDNumber
+            if(taskItem.tag !== undefined && Tag.findIndex(taskItem.tag) < 0) {
+                Tag.insert(taskItem.tag);
+            }
+            const id = taskItem.id = String(idCount); // id :: IDString
             idCount++;
-            taskItem.id = String(id);
+            // index :: Maybe IndexNumber
+            const index = Tag.findIndex(taskItem.tag);
             taskItem.sound = [];
             taskItem.soundCount = 0;
             // newElement :: Element
@@ -1112,81 +1436,122 @@ const TaskQueue = (() => {
                     `<input type="button" value="remove" onclick="parseMain('#remove $${id}');"> <span id="text_${id}" title="${taskItem.tipText}">${taskItem.name}</span><span id="time_${id}"></span> `;
             newElement.setAttribute('id', 'item_' + id);
             // i :: IndexNumber
-            const i = taskQueue.findIndex(x => x.deadline > taskItem.deadline);
-            if(flag === 'merge' && i !== 0 && taskItem.saveText === taskQueue[
-                    i > 0 ? i - 1 : taskQueue.length - 1].saveText) return;
+            const i = taskQueue[index]
+                    .findIndex(x => x.deadline > taskItem.deadline);
+            if(flag === 'merge'
+                    && i !== 0
+                    && taskItem.makeSaveText() ===
+                        taskQueue[index][i > 0 ? i - 1 : taskQueue.length - 1]
+                            .makeSaveText()) {
+                return;
+            }
             if(i >= 0) {
                 // target :: Element
-                const target = dgebi('item_' + taskQueue[i].id);
+                const target = dgebi('item_' + taskQueue[index][i].id);
                 target.parentNode.insertBefore(newElement, target);
-                taskQueue.splice(i, 0, taskItem);
+                taskQueue[index].splice(i, 0, taskItem);
             } else {
-                dgebi('parent').appendChild(newElement);
-                taskQueue.push(taskItem);
+                dgebi(`parent${index === undefined ? '' : '_' + index}`)
+                        .appendChild(newElement);
+                taskQueue[index].push(taskItem);
+            }
+            if(index !== undefined) {
+                Tag.hideRemoveButton(index);
             }
             if(!taskItem.isValid) {
-                Display.doStrike(taskItem.id, taskItem.importance);
+                Display.doStrike(id, taskItem.importance);
+            }
+        },
+        // TaskQueue.move :: (ParameterString, Maybe TagString) -> ()
+        move: (str, tag) => {
+            const result = taskParameterCheck(str); // result :: IDObject
+            if(result.data.length === 0) return;
+            // item :: TaskObject
+            const item = result.data.map(x => taskQueue[x.tagNo][x.index]);
+            rm(result.data, false);
+            item.forEach(x => {
+                x.tag = tag;
+                TaskQueue.insert(x, 'global');
+            });
+            if(result.isErr) {
+                Notice.set(`error: move${tag === undefined ? '' : '#' + tag} ${result.str}`);
             }
         },
         // TaskQueue.remove :: ParameterString -> ()
         remove: str => {
-            if(str === '') {
-                rm(taskQueue.filter(x => !x.isValid).map(x => x.id));
-                return;
-            }
             // idResult :: Maybe [Maybe String]
             const idResult = /^\$(\d+)$/.exec(str);
             if(idResult !== null) {
-                rm([idResult[1]]);
+                rm([getTagIndex(idResult[1])]);
                 return;
             }
-            // strs :: [DOMString]
-            const strs = parameterCheck(str, taskQueue.length);
-            rm([...new Set(strs.filter(x => /^\d/.test(x))
-                   .map(i => taskQueue[parseInt(i, 10) - 1].id))]);
-            if(strs.some(x => !/^\d/.test(x))) {
-                Notice.set('error: remove ' + strs.join(' '));
+            const result = taskParameterCheck(str); // result :: IDObject
+            rm(result.data);
+            if(result.isErr) {
+                Notice.set('error: remove ' + result.str);
             }
         },
+        // TaskQueue.newTag :: IndexNumber -> ()
+        newTag: tagIndex => taskQueue[tagIndex] = [],
+        // TaskQueue.isTagEmpty :: IndexNumber -> Bool
+        isTagEmpty: tagIndex => taskQueue[tagIndex].length === 0,
         // TaskQueue.stopSound :: IDString -> ()
         stopSound: str => {
             switch(str) {
                 case '':
                 case '$global':
-                    stop(['global']);
+                    stop([getTagIndex('global')]);
                     return;
                 case '*':
-                    stop(['global', ...taskQueue.map(x => x.id)]);
-                    return;
+                case '*#*':
+                    stop([getTagIndex('global')]);
+                    break;
             }
             // idResult :: Maybe [Maybe String]
             const idResult = /^\$(\d+)$/.exec(str);
             if(idResult !== null) {
-                stop([idResult[1]]);
+                stop([getTagIndex(idResult[1])]);
                 return;
             }
-            stop([...new Set(str.split(' ').filter(x => {
-                const index = parseInt(x, 10); // index :: Maybe IndexNumber
-                return index > 0 && index <= taskQueue.length
-                        && /^\d+$/.test(x);
-            }).map(i => taskQueue[parseInt(i, 10) - 1].id))]);
+            const result = taskParameterCheck(str); // result :: IDObject
+            stop(result.data);
         },
         // TaskQueue.removeSound :: (IDString, IDNumber) -> ()
         removeSound: (id, soundId) => {
-            const index = getIndexById(id); // index :: Maybe IndexNumber
-            if(index === undefined) return;
-            taskQueue[index].sound.splice(taskQueue[index].sound
-                    .findIndex(x => x.soundId === soundId), 1);
+            const obj = getTagIndex(id); // obj :: Maybe IDObject
+            if(obj === undefined) return;
+            taskQueue[obj.tagNo][obj.index].sound
+                    .splice(taskQueue[obj.tagNo][obj.index].sound
+                        .findIndex(x => x.soundId === soundId), 1);
         },
         // TaskQueue.checkDeadline :: (DateNumber, now) -> ()
         checkDeadline: (interval, now) => {
             // i :: IndexNumber
-            for(let i = 0; taskQueue[i] !== undefined
-                    && now - taskQueue[i].deadline >= -interval / 2; i++) {
-                if(taskQueue[i].isValid) {
-                    taskQueue[i].isValid = false;
-                    parseMain(taskQueue[i].exec, taskQueue[i].id);
-                    Display.doStrike(taskQueue[i].id, taskQueue[i].importance);
+            for(let i = 0;
+                    taskQueue[undefined][i] !== undefined
+                        && now - taskQueue[undefined][i].deadline
+                            >= -interval / 2;
+                    i++) {
+                if(taskQueue[undefined][i].isValid) {
+                    taskQueue[undefined][i].isValid = false;
+                    parseMain(taskQueue[undefined][i].exec
+                            , taskQueue[undefined][i].id);
+                    Display.doStrike(taskQueue[undefined][i].id
+                            , taskQueue[undefined][i].importance);
+                }
+            }
+            for(let i = 0; i < Tag.getLength(); i++) { // i :: IndexNumber
+                // j :: IndexNumber
+                for(let j = 0;
+                        taskQueue[i][j] !== undefined
+                            && now - taskQueue[i][j].deadline >= -interval / 2;
+                        j++) {
+                    if(taskQueue[i][j].isValid) {
+                        taskQueue[i][j].isValid = false;
+                        parseMain(taskQueue[i][j].exec, taskQueue[i][j].id);
+                        Display.doStrike(taskQueue[i][j].id
+                                , taskQueue[i][j].importance);
+                    }
                 }
             }
         },
@@ -1204,16 +1569,18 @@ const TaskQueue = (() => {
                 return d > 0 ? `[${d},${ret}]` : `[${ret}]`;
             };
             const now = Date.now(); // now :: DateNumber
-            taskQueue.forEach(x => {
+            taskQueue[undefined].concat(taskQueue.flat()).forEach(x => {
                 // target :: Element
                 dgebi('time_' + x.id).innerText = !x.isValid
                         ? '@' + deadlineStr(x.deadline, now)
-                        : x.display === 'a' ? dlStr(x.deadline, now)
-                        : restStr(x.deadline, now);
+                        : x.display === 'a'
+                            ? dlStr(x.deadline, now)
+                            : restStr(x.deadline, now);
             });
         },
         // TaskQueue.save :: () -> [ExecString]
-        save: () => taskQueue.map(x => makeSaveText(x))
+        save: () => taskQueue[undefined].concat(taskQueue.flat())
+                                        .map(x => x.makeSaveText())
     };
 })();
 
@@ -1241,6 +1608,22 @@ const Legacy = (() => {
                 // regex :: RegExp
                 const regex = /^(\d+)#([^\/]*(?:\/(?:[-\d]|[^\/]*?\*)??(?:\.|!{1,3})?(?:\/.*)?)?)$/;
                 data = data.map(x => x.replace(regex, `$1${display}$2`));
+            }
+            if(isChecked || inputVer < [0, 7, 0]) {
+                isChecked = true;
+                data = data.map(x => {
+                    // rep1 :: Maybe [Maybe String]
+                    const rep1 = /^default (\d+)(.*)$/.exec(x);
+                    if(rep1 !== null) {
+                        return `default ${parseInt(rep1[1], 10) + 1}${rep1[2]}`;
+                    }
+                    // regex :: RegExp
+                    const regex = /^(\d+[at][^\/]*\/)(-|(\d+)|[^\/]*?\*)((?:\.|!{1,3})(?:#[^ \/]*)?(?:\/.*)?)$/;
+                    // rep2 :: Maybe [Maybe String]
+                    const rep2 = regex.exec(x);
+                    if(rep2 === null || rep2[3] === undefined) return x;
+                    return rep2[1] + (parseInt(rep2[3], 10) + 1) + rep2[4];
+                });
             }
             return data;
         },
@@ -1304,7 +1687,7 @@ dgebi('cover').addEventListener('click', () => {
     });
     // formCheck :: (Bool, StringID) -> ()
     const formCheck = (cond, id) => {
-        dgebi(id).className = cond ? 'bg-pink' : 'bg-white';
+        dgebi(id).className = `background-color_${cond ? 'pink' : 'white'}`;
     };
     ['timer_hour', 'timer_minute', 'timer_second'].map(x => {
         dgebi(x).addEventListener('input', event => {
@@ -1327,8 +1710,8 @@ dgebi('cover').addEventListener('click', () => {
     dgebi('gui_text').addEventListener('input', event => {
         formCheck(/;/.test(document.gui_form.gui_text.value), 'gui_text');
     });
-    dgebi('cover').className = 'none';
-    dgebi('body').className += ' of_auto';
+    dgebi('cover').style.display = 'none';
+    dgebi('body').style.overflow = 'auto';
     Sound.init();
     Task.init();
     window.setTimeout(window.setInterval, 200 - Date.now() % 200, (() => {

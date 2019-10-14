@@ -4,11 +4,14 @@ Released under the MIT license
 https://opensource.org/licenses/mit-license.php
 */
 'use strict';
-const VERSION = [0, 7, 0]; // VERSION :: [VersionNumber]
+const VERSION = [0, 8, 0]; // VERSION :: [VersionNumber]
+
+// dgebi :: IDString -> Maybe Element
+const dgebi = id => document.getElementById(id);
 
 // hrefOpen :: IDString -> ()
 const hrefOpen = id => {
-    let target = document.getElementById(id); // target :: Maybe Element
+    let target = dgebi(id); // target :: Maybe Element
     if(target === null) return;
     while(target !== null) {
         if(target.tagName === 'DETAILS') {

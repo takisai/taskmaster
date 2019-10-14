@@ -156,6 +156,23 @@ a:active, .color_red {
     opacity: 0.75;
     z-index: 1;
     background-color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 2em;
+    line-height: 2em;
+}
+
+#cover > span {
+    text-align: center;
+}
+
+#cover > span > span {
+    font-size: 0.75em;
+}
+
+#cover > span > a {
+    font-size: 0.5em;
 }
 
 #notice {

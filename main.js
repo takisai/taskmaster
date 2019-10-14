@@ -8,7 +8,7 @@ const UPDATE_TIME = 200; // UPDATE_TIME :: DateNumber
 const SEPARATOR = '\v'; // SEPARATOR :: String
 const NOTICE_CLEAR_TIME = 5000; // NOTICE_CLEAR_TIME :: DateNumber
 const RECURSION_LIMIT = 5; // RECURSION_LIMIT :: Number
-const VERSION = [0, 7, 0]; // VERSION :: [VersionNumber]
+const VERSION = [0, 8, 0]; // VERSION :: [VersionNumber]
 
 const NUMBER_OF_SOUNDS = 15; // NUMBER_OF_SOUNDS :: Number
 /*  NUMBER_OF_SOUNDSの数だけmp3ファイルを登録して音を鳴らすことができます。
@@ -89,9 +89,10 @@ const parameterCheck = (str, max) => {
                 }
                 : errObj;
     });
+    // nubData :: [IndexNumber]
+    const nubData = [... new Set(ret.map(x => x.data).flat())];
     return {
-        data: [... new Set(ret.map(x => x.data))].flat()
-                                                 .filter(x => x !== undefined),
+        data: nubData.filter(x => x !== undefined),
         isErr: ret.some(x => x.isErr),
         str: ret.map(x => x.str).join(' ')
     };
@@ -142,7 +143,7 @@ const getByGui = () => {
         ret.push(value.map(x => parseInt(x, 10)).join(':'), makeMode('a'));
     }
     if(form.gui_text.value !== '') {
-        if(/;/.test(form.gui_text.value)) {
+        if(/;|->/.test(form.gui_text.value)) {
             error();
             return;
         }
@@ -217,112 +218,118 @@ const parseMain = (() => {
         const spaceSplit = /^([^ ]*)(?: (.*))?$/.exec(text);
         // parameter :: ParameterString
         const parameter = spaceSplit[2] === undefined ? '' : spaceSplit[2];
-        if(callFrom === 'merge') {
-            switch(spaceSplit[1]) {
-                case 'switch':
-                case 'switch-alarm':
-                case 'switch-timer':
-                case 'show-macro':
-                case 'hide-macro':
-                case 'volume':
-                case 'default':
-                case 'show-menu':
-                case 'hide-menu':
-                    return;
-                case '$tag':
-                    Tag.insertByData(parameter);
-                    return;
-                case '$button':
-                    Button.insertByData(parameter);
-                    return;
-                case '->':
-                    Macro.insertByData(parameter);
-                    return;
-            }
-        } else {
-            switch(spaceSplit[1]) {
-                case 'switch':
-                    TaskQueue.setDisplay(parameter, '');
-                    return;
-                case 'switch-alarm':
-                    TaskQueue.setDisplay(parameter, '-alarm');
-                    return;
-                case 'switch-timer':
-                    TaskQueue.setDisplay(parameter, '-timer');
-                    return;
-                case 'remove':
-                    TaskQueue.remove(parameter);
-                    return;
-                case 'tag':
-                    Tag.insert(parameter);
-                    return;
-                case '$tag':
-                    Tag.insertByData(parameter);
-                    return;
-                case 'remove-tag':
-                    Tag.remove(parameter);
-                    return;
-                case 'button':
-                    Button.insert(parameter);
-                    return;
-                case '$button':
-                    Button.insertByData(parameter);
-                    return;
-                case 'remove-button':
-                    Button.remove(parameter);
-                    return;
-                case '->':
-                    Macro.insertByData(parameter);
-                    return;
-                case 'show-macro':
-                    Macro.show();
-                    return;
-                case 'hide-macro':
-                    Macro.hide();
-                    return;
-                case 'remove-macro':
-                    Macro.remove(parameter);
-                    return;
-                case 'sound':
-                    play(parameter, callFrom);
-                    return;
-                case 'stop':
-                    Sound.stop(parameter);
-                    return;
-                case 'volume':
-                    Sound.setVolume(parameter);
-                    return;
-                case 'default':
-                    Task.setDefault(parameter);
-                    return;
-                case 'show-menu':
-                    Display.showMenu();
-                    return;
-                case 'hide-menu':
-                    Display.hideMenu();
-                    return;
-                case 'save':
-                    Save.toString();
-                    return;
-                case 'load':
-                    Load.fromString();
-                    return;
-                case 'merge':
-                    Load.mergeFromString();
-                    return;
-                case 'undo':
-                    Trash.pop();
-                    return;
-                case 'empty-trash':
-                    Trash.reset();
-                    return;
-                case 'empty-history':
-                    History.reset();
-                    return;
-                case 'help':
-                    window.open('help.html', '_blank');
-                    return;
-            }
+        switch(callFrom) {
+            case 'merge':
+                switch(spaceSplit[1]) {
+                    case 'switch':
+                    case 'switch-alarm':
+                    case 'switch-timer':
+                    case 'show-macro':
+                    case 'hide-macro':
+                    case 'volume':
+                    case 'default':
+                    case 'show-menu':
+                    case 'hide-menu':
+                        return;
+                    case '$tag':
+                        Tag.insertByData(parameter);
+                        return;
+                    case '$button':
+                        Button.insertByData(parameter);
+                        return;
+                    case '->':
+                        Macro.insertByData(parameter);
+                        return;
+                }
+                break;
+            case 'priv':
+                switch(spaceSplit[1]) {
+                    case '$button':
+                        Button.insertByData(parameter);
+                        return;
+                    case '$tag':
+                        Tag.insertByData(parameter);
+                        return;
+                    case '->':
+                        Macro.insertByData(parameter);
+                        return;
+                }
+            default:
+                switch(spaceSplit[1]) {
+                    case 'switch':
+                        TaskQueue.setDisplay(parameter, '');
+                        return;
+                    case 'switch-alarm':
+                        TaskQueue.setDisplay(parameter, '-alarm');
+                        return;
+                    case 'switch-timer':
+                        TaskQueue.setDisplay(parameter, '-timer');
+                        return;
+                    case 'remove':
+                        TaskQueue.remove(parameter, callFrom);
+                        return;
+                    case 'tag':
+                        Tag.insert(parameter);
+                        return;
+                    case 'remove-tag':
+                        Tag.remove(parameter, callFrom);
+                        return;
+                    case 'button':
+                        Button.insert(parameter);
+                        return
+                    case 'remove-button':
+                        Button.remove(parameter);
+                        return;
+                    case 'show-macro':
+                        Macro.show();
+                        return;
+                    case 'hide-macro':
+                        Macro.hide();
+                        return;
+                    case 'remove-macro':
+                        Macro.remove(parameter, callFrom);
+                        return;
+                    case 'sound':
+                        play(parameter, callFrom);
+                        return;
+                    case 'stop':
+                        Sound.stop(parameter, callFrom);
+                        return;
+                    case 'volume':
+                        Sound.setVolume(parameter);
+                        return;
+                    case 'default':
+                        Task.setDefault(parameter);
+                        return;
+                    case 'show-menu':
+                        Display.showMenu();
+                        return;
+                    case 'hide-menu':
+                        Display.hideMenu();
+                        return;
+                    case 'save':
+                        Save.toString();
+                        return;
+                    case 'load':
+                        Load.fromString();
+                        return;
+                    case 'merge':
+                        Load.mergeFromString();
+                        return;
+                    case 'undo':
+                        Trash.pop();
+                        return;
+                    case 'empty-trash':
+                        Trash.reset();
+                        return;
+                    case 'empty-history':
+                        History.reset();
+                        return;
+                    case 'help':
+                        window.open('help.html', '_blank');
+                        return;
+                }
+                break;
         }
         // moveResult :: Maybe [Maybe String]
         const moveResult = /^move(?:#(.*))?$/.exec(spaceSplit[1]);
@@ -330,7 +337,8 @@ const parseMain = (() => {
             TaskQueue.move(parameter, moveResult[1]);
             return;
         }
-        const taskItem = Task.parse(text); // taskItem :: Maybe TaskObject
+        // taskItem :: Maybe TaskObject
+        const taskItem = Task.parse(text, callFrom);
         if(taskItem === null) {
             if(text === '') return;
             Notice.set('error: ' + makeErrorDom(text));
@@ -380,14 +388,14 @@ const BackgroundAlert = (() => {
     let semaphore = 0; // semaphore :: CountNumber
 
     return {
-        // BackgroundAlert.on :: () -> ()
-        on: () => {
+        // BackgroundAlert.up :: () -> ()
+        up: () => {
             semaphore++;
             dgebi('body').className = 'background-color_pink';
             dgebi('header').className = 'background-color_pink';
         },
-        // BackgroundAlert.off :: () -> ()
-        off: () => {
+        // BackgroundAlert.down :: () -> ()
+        down: () => {
             semaphore--;
             if(semaphore > 0) return;
             dgebi('body').className = 'background-color_white';
@@ -471,7 +479,7 @@ const Trash = (() => {
                 Notice.set('trash is empty');
                 return;
             }
-            items.pop().split(SEPARATOR).forEach(x => parseMain(x));
+            items.pop().split(SEPARATOR).forEach(x => parseMain(x, 'priv'));
         },
         // Trash.reset :: () -> ()
         reset: () => items.length = 0
@@ -525,12 +533,381 @@ const Sound = (() => {
             }, {once: true});
             if(isPlay) return;
             dgebi('item_' + id).innerHTML +=
-                    `<input id="stopButton_${id}" type="button" value="stop" onclick="parseMain('#stop $${id}');">`;
+                    `<input id="stopButton_${id}" type="button" value="stop" onclick="parseMain('#stop $${id}', 'priv');">`;
         },
-        // Sound.stop :: ParameterString -> ()
-        stop: id => TaskQueue.stopSound(id),
+        // Sound.stop :: (ParameterString, FlagString) -> ()
+        stop: (id, callFrom) => TaskQueue.stopSound(id, callFrom),
         // Sound.save :: () -> [ExecString]
         save: () => ['volume ' + volume]
+    };
+})();
+
+const Base64 = (() => {
+    // KEY :: Base64String
+    const KEY = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+
+    return {
+        // Base64.encode :: SaveString -> Base64String
+        encode: str => {
+            str = encodeURIComponent(str);
+            const ret = []; // ret :: Base64Number
+            for(let i = 0; i < str.length; i += 3) { // i :: IndexNumber
+                // c :: [Maybe UnicodeNumber]
+                const c = [0, 1, 2].map(x => str.charCodeAt(i + x));
+                ret.push(c[0] >> 2);
+                const t1 = (c[0] & 3) << 4; // t1 :: UnicodeNumber
+                if(isNaN(c[1])) {
+                    ret.push(t1, 64, 64);
+                } else {
+                    ret.push(t1 | (c[1] >> 4))
+                    const t2 = (c[1] & 15) << 2; // t2 :: UnicodeNumber
+                    if(isNaN(c[2])) {
+                        ret.push(t2, 64);
+                    } else {
+                        ret.push(t2 | (c[2] >> 6), c[2] & 63);
+                    }
+                }
+            }
+            return ret.map(x => KEY[x]).join('');
+        },
+        // Base64.decode :: Base64String -> SaveString
+        decode: str => {
+            str = str.replace(/[^A-Za-z\d+/=]/g, '');
+            const tmp = []; // tmp :: [UnicodeNumber]
+            for(let i = 0; i < str.length; i += 4) { // i :: IndexNumber
+                // c :: [Base64Number]
+                const c = [0, 1, 2, 3].map(x => KEY.indexOf(str.charAt(i + x)));
+                tmp.push((c[0] << 2) | (c[1] >> 4));
+                if(c[2] < 64) {
+                    tmp.push(((c[1] & 15) << 4) | (c[2] >> 2));
+                    if(c[3] < 64) {
+                        tmp.push(((c[2] & 3) << 6) | c[3]);
+                    }
+                }
+            }
+            // ret :: String
+            const ret = tmp.map(x => String.fromCharCode(x)).join('');
+            return decodeURIComponent(ret);
+        }
+    }
+})();
+
+const Save = (() => {
+    // makeData :: () -> SaveString
+    const makeData = () => {
+        // obj :: [Object]
+        const obj = [
+            Legacy,
+            Tag,
+            TaskQueue,
+            Button,
+            Display,
+            Sound,
+            Task,
+            Macro
+        ];
+        return obj.map(x => x.save()).flat().join(SEPARATOR);
+    };
+
+    return  {
+        // Save.exec :: () -> ()
+        exec: () => window.localStorage.setItem('data', makeData()),
+        // Save.toString :: () -> ()
+        toString: () => {
+            window.prompt('セーブデータ:', Base64.encode(makeData()));
+        }
+    };
+})();
+
+const Load = (() => {
+    // parse :: (SaveString, FlagString) -> ()
+    const parse = (data, flag) => {
+        const rest = data.split(SEPARATOR); // rest :: SaveString
+        const version = rest.shift(); // version :: String
+        if(Legacy.isPast(version)) {
+            Legacy.convert(rest, version).forEach(x => parseMain(x, flag));
+            Notice.set('new version ' + VERSION.join('.'));
+        } else {
+            rest.forEach(x => parseMain(x, flag));
+        }
+    };
+
+    return {
+        // Load.exec :: () -> ()
+        exec: () => {
+            // data :: Maybe SaveString
+            const data = window.localStorage.getItem('data');
+            if(data === null) {
+                dgebi('menu_details').open = true;
+                dgebi('document_details').open = true;
+                return;
+            }
+            parse(data, 'priv');
+        },
+        // Load.fromString :: () -> ()
+        fromString: () => {
+            // text :: Maybe Base64String
+            const text = window.prompt('読み込むデータを入れてください:', '');
+            if(text === '' || text === null) return;
+            parseMain('#remove-macro *');
+            parseMain('remove *#*;remove-tag *;remove-button *');
+            parseMain('default 1a.;volume 100;show-menu;hide-macro');
+            parseMain('empty-trash;empty-history');
+            parse(Base64.decode(text), 'priv');
+            Notice.set('loaded');
+        },
+        // Load.mergeFromString :: () -> ()
+        mergeFromString: () => {
+            // text :: Maybe Base64String
+            const text = window.prompt('追加するデータを入れてください:', '');
+            if(text === '' || text === null) return;
+            parse(Base64.decode(text), 'merge');
+            Notice.set('merged');
+        }
+    };
+})();
+
+const Button = (() => {
+    let buttonCount = 0; // buttonCount :: CountNumber
+    const buttons = []; // buttons :: [ButtonObject]
+
+    // rm :: [IndexNumber] -> ()
+    const rm = indices => {
+        indices = indices.filter(x => x !== undefined);
+        if(indices.length === 0) return;
+        // items :: [ButtonObject]
+        const items = indices.map(i => buttons[i]);
+        Trash.push(items.map(item => item.saveText).join(SEPARATOR));
+        items.map(x => x.id).forEach(id => {
+            removeDom('button_' + id);
+            buttons.splice(buttons.findIndex(x => x.id === id), 1);
+        });
+    };
+    // updateIndex :: () -> ()
+    const updateIndex = () => {
+        for(let i = 0; i < buttons.length; i++) { // i :: IndexNumber
+            dgebi('button_' + buttons[i].id).childNodes[0].title = i + 1;
+        }
+    };
+
+    return {
+        // Button.insert :: (ExecString, Maybe DateNumber) -> ()
+        insert: (str, now = null) => {
+            if(str === undefined) return;
+            // execStr :: ExecString
+            const execStr = str.replace(/'/g, '\\\'').replace(/\\/g, '\\\\');
+            if(now === null) {
+                now = Date.now();
+            }
+            // buttonItem :: ButtonObject
+            const buttonItem = {
+                id: buttonCount,
+                str: str,
+                time: now,
+                saveText: `#$button ${now}#${str}`
+            };
+            // newElement :: Element
+            const newElement = document.createElement('span');
+            newElement.innerHTML =
+                    `<input type="button" value="${str}" onclick="parseMain('${execStr}');"> `;
+            newElement.setAttribute('id', 'button_' + buttonItem.id);
+            // i :: IndexNumber
+            const i = buttons.findIndex(x => x.time >= buttonItem.time);
+            if(i >= 0 && buttonItem.saveText === buttons[i].saveText) return;
+            buttonCount++;
+            if(i >= 0) {
+                // target :: Element
+                const target = dgebi('button_' + buttons[i].id);
+                target.parentNode.insertBefore(newElement, target);
+                buttons.splice(i, 0, buttonItem);
+            } else {
+                dgebi('button_parent').appendChild(newElement);
+                buttons.push(buttonItem);
+            }
+            updateIndex();
+        },
+        // Button.insertByData :: ParameterString -> ()
+        insertByData: str => {
+            // result :: Maybe [Maybe String]
+            const result = /^(\d+)#(.+)$/.exec(str);
+            Button.insert(result[2], parseInt(result[1], 10));
+        },
+        // Button.remove :: ParameterString -> ()
+        remove: str => {
+            if(str === '') return;
+            // result :: ParseObject
+            const result = parameterCheck(str, buttons.length);
+            rm(result.data);
+            if(result.isErr) {
+                Notice.set('error: remove-button ' + result.str);
+            }
+            updateIndex();
+        },
+        // Button.save :: () -> [ExecString]
+        save: () => buttons.map(x => x.saveText)
+    };
+})();
+
+const Display = (() => {
+    const ALERT_WAIT_TIME = 1000; // ALERT_WAIT_TIME :: DateNumber
+    const AUTO_REMOVE_TIME = 15000; // AUTO_REMOVE_TIME :: DateNumber
+    let isShowMenu = true; // isShowMenu :: Bool
+
+    return {
+        // Display.show :: () -> ()
+        show: () => TaskQueue.show(),
+        /* Display.doStrike ::
+                (IndexNumber, IDString, ImportanceFlagNumber) -> () */
+        doStrike: (index, id, importance) => {
+            // target :: Element
+            const target = dgebi('text_' + id);
+            target.style.textDecoration = 'line-through';
+            Tag.emphUp(index, importance);
+            switch(importance) {
+                case 3:
+                    window.setTimeout(window.alert, ALERT_WAIT_TIME
+                            , target.innerText);
+                case 2:
+                    target.className = 'background-color_red';
+                    BackgroundAlert.up();
+                    break;
+                case 1:
+                    target.className = 'background-color_yellow';
+                    break;
+                case 0:
+                    window.setTimeout(parseMain, AUTO_REMOVE_TIME
+                            , '#remove $' + id, 'priv');
+                    break;
+            }
+        },
+        // Display.showMenu :: () -> ()
+        showMenu: () => {
+            dgebi('menu').style.display = 'block';
+            isShowMenu = true;
+        },
+        // Display.hideMenu :: () -> ()
+        hideMenu: () => {
+            dgebi('menu').style.display = 'none';
+            isShowMenu = false;
+        },
+        // Display.save :: () -> [ExecString]
+        save: () => [isShowMenu ? 'show-menu' : 'hide-menu']
+    };
+})();
+
+const Macro = (() => {
+    const regex = /^([^;]*?)->(.*)$/; // regex :: RegExp
+    const macros = []; // macros :: [MacroObject]
+    let macroCount = 0; // macroCount :: CountNumber
+    let isListShow = false; // isListShow :: Bool
+
+    // formatter :: ExecString -> DisplayString
+    const formatter = s => s.replace(regex, '$1 -> $2');
+    // rm :: [IndexNumber] -> ()
+    const rm = indices => {
+        indices = indices.filter(x => x !== undefined);
+        if(indices.length === 0) return;
+        // items :: [MacroObject]
+        const items = indices.map(i => macros[i]);
+        Trash.push(items.map(item => item.saveText).join(SEPARATOR));
+        if(!isListShow) {
+            Notice.set('removed: ' + items.map(item => item.str).join(' , '));
+        }
+        items.map(x => x.id).forEach(id => {
+            removeDom('macro_' + id);
+            macros.splice(macros.findIndex(x => x.id === id), 1);
+        });
+    };
+
+    return {
+        // Macro.isInsertSuccess :: (ExecString, Maybe DateNumber) -> Bool
+        isInsertSuccess: (s, now = null) => {
+            const result = regex.exec(s); // result :: Maybe [Maybe String]
+            if(result === null || result[1] === '') return false;
+            const id = macroCount; // id :: IDNumber
+            macroCount++;
+            const isNull = now === null; // isNull :: Bool
+            if(isNull) {
+                now = Date.now();
+            }
+            // macroItem :: MacroObject
+            const macroItem = {
+                key: new RegExp(result[1], 'gu'),
+                str: s,
+                value: result[2],
+                id: id,
+                time: now,
+                saveText: `-> ${now}#${s}`
+            };
+            // newElement :: Element
+            const newElement = document.createElement('li');
+            const formatStr = formatter(s); // formatStr :: DisplayString
+            newElement.innerHTML =
+                    `<input type="button" value="remove" onclick="parseMain('#remove-macro $${id}', 'priv');"> ${formatStr}`;
+            newElement.setAttribute('id', 'macro_' + id);
+            // i :: IndexNumber
+            const i = macros.findIndex(x => x.time >= macroItem.time);
+            if(i >= 0 && macroItem.saveText === macros[i].saveText) return;
+            if(i >= 0) {
+                // target :: Element
+                const target = dgebi('macro_' + macros[i].id);
+                target.parentNode.insertBefore(newElement, target);
+                macros.splice(i, 0, macroItem);
+            } else {
+                dgebi('macro_parent').appendChild(newElement);
+                macros.push(macroItem);
+            }
+            if(!isListShow && isNull) {
+                Notice.set('macro: ' + formatStr);
+            }
+            return true;
+        },
+        // Macro.insertByData :: ParameterString -> ()
+        insertByData: str => {
+            // result :: Maybe [Maybe String]
+            const result = /^(\d+)#(.+)$/.exec(str);
+            Macro.isInsertSuccess(result[2], parseInt(result[1], 10));
+        },
+        // Macro.replace :: ExecString -> ExecString
+        replace: s => {
+            macros.forEach(x => s = s.replace(x.key, x.value));
+            return s;
+        },
+        // Macro.remove :: (ParameterString, FlagString) -> ()
+        remove: (str, callFrom) => {
+            if(str === '') return;
+            if(callFrom === 'priv') {
+                // idResult :: Maybe [Maybe String]
+                const idResult = /^\$(\d+)$/.exec(str);
+                if(idResult !== null) {
+                    const id = parseInt(idResult[1], 10); // id :: IDNumber
+                    rm([macros.findIndex(x => x.id === id)]);
+                    return;
+                }
+            }
+            // result :: ParseObject
+            const result = parameterCheck(str, macros.length);
+            rm(result.data);
+            if(result.isErr) {
+                Notice.set('error: remove-macro ' + result.str);
+            }
+        },
+        // Macro.show :: () -> ()
+        show: () => {
+            dgebi('macros').style.display = 'block';
+            isListShow = true;
+        },
+        // Macro.hide :: () -> ()
+        hide: () => {
+            dgebi('macros').style.display = 'none';
+            isListShow = false;
+        },
+        // Macro.save :: () -> [ExecString]
+        save: () => {
+            // displayInst :: ExecString
+            const displayInst = isListShow ? 'show-macro' : 'hide-macro';
+            return [displayInst, ...macros.map(x => x.saveText)];
+        }
     };
 })();
 
@@ -543,6 +920,8 @@ const Task = (() => {
     const importanceStr = () => ['.', '!', '!!', '!!!'][defaultImportance];
     // importanceToNumber :: ImportanceFlagString -> ImportanceFlagNumber
     const importanceToNumber = str => str === '.' ? 0 : str.length;
+    // format :: () -> FlagString
+    const format = () => defaultSound + defaultDisplay + importanceStr();
     // timer :: (TimerString, DateNumber) -> Maybe DateNumber
     const timer = (s, now) => {
         // regex :: RegExp
@@ -624,14 +1003,18 @@ const Task = (() => {
                     }
                 }
             }
-            Notice.set('default: ' + defaultSound + defaultDisplay
-                    + importanceStr());
+            Notice.set('default: ' + format());
             return;
         },
-        // Task.parse :: ExecString -> Maybe TaskObject
-        parse: s => {
+        // Task.parse :: (ExecString, FlagString) -> Maybe TaskObject
+        parse: (s, callFrom) => {
+            // regHead :: RegString
+            const regHead = callFrom === 'priv'
+                    ? '^(?:(\\d+)([at]))?'
+                    : '^(?:()())?';
             // regex :: RegExp
-            const regex = /^(?:(\d+)([at]))?([^\/]*)((?:\/(?:(-|\d+)|([^\/]*?)\*)??([at])?(\.|!{1,3})?(?:#([^ \/]*))?(?:\/(.*))?)?)$/;
+            const regex = new RegExp(regHead +
+                    '([^\\/]*)((?:\\/(?:(-|\\d+)|([^\\/]*?)\\*)??([at])?(\\.|!{1,3})?(?:#([^ \\/]*))?(?:\\/(.*))?)?)$');
             const result = regex.exec(s); // result :: Maybe [Maybe String]
             const ret = new Object(); // ret :: TaskObject
             const execs = []; // execs :: [ExecString]
@@ -696,9 +1079,15 @@ const Task = (() => {
             }
             ret.exec = execs.join(';');
             ret.makeSaveText = () => {
-                return ret.when + ret.display + ret.tipText
-                        + (ret.tag === undefined ? '' : '#' + ret.tag)
-                        + ret.saveRawName;
+                // tmp :: [String]
+                const tmp = [
+                    ret.when,
+                    ret.display,
+                    ret.tipText,
+                    ret.tag === undefined ? '' : '#' + ret.tag,
+                    ret.saveRawName
+                ];
+                return tmp.join('');
             };
             return ret;
         },
@@ -719,362 +1108,7 @@ const Task = (() => {
         },
         // Task.save :: () -> [ExecString]
         save: () => {
-            return ['default ' + defaultSound + defaultDisplay
-                    + importanceStr()];
-        }
-    };
-})();
-
-const Base64 = (() => {
-    // KEY :: Base64String
-    const KEY = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
-
-    return {
-        // Base64.encode :: SaveString -> Base64String
-        encode: str => {
-            str = encodeURIComponent(str);
-            const ret = []; // ret :: Base64Number
-            for(let i = 0; i < str.length; i += 3) { // i :: IndexNumber
-                // c :: [Maybe UnicodeNumber]
-                const c = [0, 1, 2].map(x => str.charCodeAt(i + x));
-                ret.push(c[0] >> 2);
-                const t1 = (c[0] & 3) << 4; // t1 :: UnicodeNumber
-                if(isNaN(c[1])) {
-                    ret.push(t1, 64, 64);
-                } else {
-                    ret.push(t1 | (c[1] >> 4))
-                    const t2 = (c[1] & 15) << 2; // t2 :: UnicodeNumber
-                    if(isNaN(c[2])) {
-                        ret.push(t2, 64);
-                    } else {
-                        ret.push(t2 | (c[2] >> 6), c[2] & 63);
-                    }
-                }
-            }
-            return ret.map(x => KEY[x]).join('');
-        },
-        // Base64.decode :: Base64String -> SaveString
-        decode: str => {
-            str = str.replace(/[^A-Za-z\d+/=]/g, '');
-            const tmp = []; // tmp :: [UnicodeNumber]
-            for(let i = 0; i < str.length; i += 4) { // i :: IndexNumber
-                // c :: [Base64Number]
-                const c = [0, 1, 2, 3].map(x => KEY.indexOf(str.charAt(i + x)));
-                tmp.push((c[0] << 2) | (c[1] >> 4));
-                if(c[2] < 64) {
-                    tmp.push(((c[1] & 15) << 4) | (c[2] >> 2));
-                    if(c[3] < 64) {
-                        tmp.push(((c[2] & 3) << 6) | c[3]);
-                    }
-                }
-            }
-            // ret :: String
-            const ret = tmp.map(x => String.fromCharCode(x)).join('');
-            return decodeURIComponent(ret);
-        }
-    }
-})();
-
-const Save = (() => {
-    // makeData :: () -> SaveString
-    const makeData = () => {
-        // obj :: [Object]
-        const obj
-                = [Legacy, Tag, TaskQueue, Button, Display, Sound, Task, Macro];
-        return obj.map(x => x.save()).flat().join(SEPARATOR);
-    };
-
-    return  {
-        // Save.exec :: () -> ()
-        exec: () => window.localStorage.setItem('data', makeData()),
-        // Save.toString :: () -> ()
-        toString: () => {
-            window.prompt('セーブデータ:', Base64.encode(makeData()));
-        }
-    };
-})();
-
-const Load = (() => {
-    // parse :: (SaveString, FlagString) -> ()
-    const parse = (data, flag) => {
-        const rest = data.split(SEPARATOR); // rest :: SaveString
-        const version = rest.shift(); // version :: String
-        if(Legacy.isPast(version)) {
-            Legacy.convert(rest, version).forEach(x => parseMain(x, flag));
-            Notice.set('new version ' + VERSION.join('.'));
-        } else {
-            rest.forEach(x => parseMain(x, flag));
-        }
-    };
-
-    return {
-        // Load.exec :: () -> ()
-        exec: () => {
-            // data :: Maybe SaveString
-            const data = window.localStorage.getItem('data');
-            if(data === null) {
-                dgebi('menu_details').open = true;
-                dgebi('document_details').open = true;
-                return;
-            }
-            parse(data);
-        },
-        // Load.fromString :: () -> ()
-        fromString: () => {
-            // text :: Maybe Base64String
-            const text = window.prompt('読み込むデータを入れてください:', '');
-            if(text === '' || text === null) return;
-            parseMain('##remove-macro *;remove *#*;remove-tag *;\
-                    remove-button *;default 1a.;volume 100;show-menu;\
-                    hide-macro;empty-trash;empty-history');
-            parse(Base64.decode(text), 'global');
-            Notice.set('loaded');
-        },
-        // Load.mergeFromString :: () -> ()
-        mergeFromString: () => {
-            // text :: Maybe Base64String
-            const text = window.prompt('追加するデータを入れてください:', '');
-            if(text === '' || text === null) return;
-            parse(Base64.decode(text), 'merge');
-            Notice.set('merged');
-        }
-    };
-})();
-
-const Button = (() => {
-    let buttonCount = 0; // buttonCount :: CountNumber
-    const buttons = []; // buttons :: [ButtonObject]
-
-    // rm :: [IndexNumber] -> ()
-    const rm = indices => {
-        indices = indices.filter(x => x !== undefined);
-        if(indices.length === 0) return;
-        // items :: [ButtonObject]
-        const items = indices.map(i => buttons[i]);
-        Trash.push(items.map(item => item.saveText).join(SEPARATOR));
-        items.map(x => x.id).forEach(id => {
-            removeDom('button_' + id);
-            buttons.splice(buttons.findIndex(x => x.id === id), 1);
-        });
-    };
-    // updateIndex :: () -> ()
-    const updateIndex = () => {
-        for(let i = 0; i < buttons.length; i++) {
-            dgebi('button_' + buttons[i].id).childNodes[0].title = i + 1;
-        }
-    };
-
-    return {
-        // Button.insert :: (ExecString, Maybe DateNumber) -> ()
-        insert: (str, now = null) => {
-            if(str === undefined) return;
-            // execStr :: ExecString
-            const execStr = str.replace(/'/g, '\\\'').replace(/\\/g, '\\\\');
-            if(now === null) {
-                now = Date.now();
-            }
-            // buttonItem :: ButtonObject
-            const buttonItem = {
-                id: buttonCount,
-                str: str,
-                time: now,
-                saveText: `#$button ${now}#${str}`
-            };
-            // newElement :: Element
-            const newElement = document.createElement('span');
-            newElement.innerHTML =
-                    `<input type="button" value="${str}" onclick="parseMain('${execStr}');"> `;
-            newElement.setAttribute('id', 'button_' + buttonItem.id);
-            // i :: IndexNumber
-            const i = buttons.findIndex(x => x.time >= buttonItem.time);
-            if(i >= 0 && buttonItem.saveText === buttons[i].saveText) return;
-            buttonCount++;
-            if(i >= 0) {
-                // target :: Element
-                const target = dgebi('button_' + buttons[i].id);
-                target.parentNode.insertBefore(newElement, target);
-                buttons.splice(i, 0, buttonItem);
-            } else {
-                dgebi('button_parent').appendChild(newElement);
-                buttons.push(buttonItem);
-            }
-            updateIndex();
-        },
-        // Button.insertByData :: ParameterString -> ()
-        insertByData: str => {
-            // result :: Maybe [Maybe String]
-            const result = /^(\d+)#(.+)$/.exec(str);
-            Button.insert(result[2], parseInt(result[1], 10));
-        },
-        // Button.remove :: ParameterString -> ()
-        remove: str => {
-            if(str === '') return;
-            // result :: ParseObject
-            const result = parameterCheck(str, buttons.length);
-            rm(result.data);
-            if(result.isErr) {
-                Notice.set('error: remove-button ' + result.str);
-            }
-            updateIndex();
-        },
-        // Button.save :: () -> [ExecString]
-        save: () => buttons.map(x => x.saveText)
-    };
-})();
-
-const Display = (() => {
-    const ALERT_WAIT_TIME = 1000; // ALERT_WAIT_TIME :: DateNumber
-    const AUTO_REMOVE_TIME = 15000; // AUTO_REMOVE_TIME :: DateNumber
-    let isShowMenu = true; // isShowMenu :: Bool
-
-    return {
-        // Display.show :: () -> ()
-        show: () => TaskQueue.show(),
-        // Display.doStrike :: (IDString, ImportanceFlagNumber) -> ()
-        doStrike: (id, importance) => {
-            // target :: Element
-            const target = dgebi('text_' + id);
-            target.style.textDecoration = 'line-through';
-            switch(importance) {
-                case 3:
-                    window.setTimeout(window.alert, ALERT_WAIT_TIME
-                            , target.innerText);
-                case 2:
-                    target.className = 'background-color_red';
-                    BackgroundAlert.on();
-                    break;
-                case 1:
-                    target.className = 'background-color_yellow';
-                    break;
-                case 0:
-                    window.setTimeout(parseMain, AUTO_REMOVE_TIME
-                            , '#remove $' + id);
-                    break;
-            }
-        },
-        // Display.showMenu :: () -> ()
-        showMenu: () => {
-            dgebi('menu').style.display = 'block';
-            isShowMenu = true;
-        },
-        // Display.hideMenu :: () -> ()
-        hideMenu: () => {
-            dgebi('menu').style.display = 'none';
-            isShowMenu = false;
-        },
-        // Display.save :: () -> [ExecString]
-        save: () => [isShowMenu ? 'show-menu' : 'hide-menu']
-    };
-})();
-
-const Macro = (() => {
-    const regex = /^([^;]*?)->(.*)$/; // regex :: RegExp
-    const macros = []; // macros :: [MacroObject]
-    let macroCount = 0; // macroCount :: CountNumber
-    let isListShow = false; // isListShow :: Bool
-
-    // formatter :: ExecString -> DisplayString
-    const formatter = s => s.replace(regex, '$1 -> $2');
-    // rm :: [IndexNumber] -> ()
-    const rm = indices => {
-        indices = indices.filter(x => x !== undefined);
-        if(indices.length === 0) return;
-        // items :: [MacroObject]
-        const items = indices.map(i => macros[i]);
-        Trash.push(items.map(item => item.saveText).join(SEPARATOR));
-        if(!isListShow) {
-            Notice.set('removed: ' + items.map(item => item.str).join(' , '));
-        }
-        items.map(x => x.id).forEach(id => {
-            removeDom('macro_' + id);
-            macros.splice(macros.findIndex(x => x.id === id), 1);
-        });
-    };
-
-    return {
-        // Macro.isInsertSuccess :: (ExecString, Maybe DateNumber) -> Bool
-        isInsertSuccess: (s, now = null) => {
-            const result = regex.exec(s); // result :: Maybe [Maybe String]
-            if(result === null || result[1] === '') return false;
-            const id = macroCount; // id :: IDNumber
-            macroCount++;
-            const isNull = now === null; // isNull :: Bool
-            if(isNull) {
-                now = Date.now();
-            }
-            // macroItem :: MacroObject
-            const macroItem = {
-                key: new RegExp(result[1], 'gu'),
-                str: s,
-                value: result[2],
-                id: id,
-                time: now,
-                saveText: `-> ${now}#${s}`
-            };
-            // newElement :: Element
-            const newElement = document.createElement('li');
-            const formatStr = formatter(s); // formatStr :: DisplayString
-            newElement.innerHTML =
-                    `<input type="button" value="remove" onclick="parseMain('#remove-macro $${id}');"> ${formatStr}`;
-            newElement.setAttribute('id', 'macro_' + id);
-            // i :: IndexNumber
-            const i = macros.findIndex(x => x.time >= macroItem.time);
-            if(i >= 0 && macroItem.saveText === macros[i].saveText) return;
-            if(i >= 0) {
-                // target :: Element
-                const target = dgebi('macro_' + macros[i].id);
-                target.parentNode.insertBefore(newElement, target);
-                macros.splice(i, 0, macroItem);
-            } else {
-                dgebi('macro_parent').appendChild(newElement);
-                macros.push(macroItem);
-            }
-            if(!isListShow && isNull) {
-                Notice.set('macro: ' + formatStr);
-            }
-            return true;
-        },
-        // Macro.insertByData :: ParameterString -> ()
-        insertByData: str => {
-            // result :: Maybe [Maybe String]
-            const result = /^(\d+)#(.+)$/.exec(str);
-            Macro.isInsertSuccess(result[2], parseInt(result[1], 10));
-        },
-        // Macro.replace :: ExecString -> ExecString
-        replace: s => {
-            macros.forEach(x => s = s.replace(x.key, x.value));
-            return s;
-        },
-        // Macro.remove :: ParameterString -> ()
-        remove: str => {
-            if(str === '') return;
-            // idResult :: Maybe [Maybe String]
-            const idResult = /^\$(\d+)$/.exec(str);
-            if(idResult !== null) {
-                rm([macros.findIndex(x => x.id === parseInt(idResult[1], 10))]);
-                return;
-            }
-            // result :: ParseObject
-            const result = parameterCheck(str, macros.length);
-            rm(result.data);
-            if(result.isErr) {
-                Notice.set('error: remove-macro ' + result.str);
-            }
-        },
-        // Macro.show :: () -> ()
-        show: () => {
-            dgebi('macros').style.display = 'block';
-            isListShow = true;
-        },
-        // Macro.hide :: () -> ()
-        hide: () => {
-            dgebi('macros').style.display = 'none';
-            isListShow = false;
-        },
-        // Macro.save :: () -> [ExecString]
-        save: () => {
-            return [isListShow ? 'show-macro' : 'hide-macro'
-                    , ...macros.map(x => x.saveText)];
+            return ['default ' + format()];
         }
     };
 })();
@@ -1083,6 +1117,11 @@ const Tag = (() => {
     let tagCount = 0; // tagCount :: CountNumber
     const tagTable = []; // tagTable :: [TagObject]
 
+    // getIndexById :: Maybe IDNumber -> Maybe IndexNumber
+    const getIndexById = id => {
+        if(id === undefined) return undefined;
+        return tagTable.findIndex(x => x.id === id);
+    }
     // rm :: [IndexNumber] -> ()
     const rm = indices => {
         indices = indices.filter(x => x !== undefined);
@@ -1092,17 +1131,17 @@ const Tag = (() => {
         Trash.push(items.map(item => item.saveText).join(SEPARATOR));
         items.forEach(x => {
             if(!TaskQueue.isTagEmpty(x.id)) {
-                Notice.set(`#${tagTable.find(t => t.id === x.id).str} is not empty`);
+                Notice.set(`#${getIndexById(x.id).str} is not empty`);
                 return;
             }
             removeDom('tag_parent_' + x.id);
-            tagTable.splice(tagTable.findIndex(t => t.id === x.id), 1);
+            tagTable.splice(getIndexById(x.id), 1);
         });
     };
     // updateIndex :: () -> ()
     const updateIndex = () => {
-        for(let i = 0; i < tagTable.length; i++) {
-            dgebi('tag_parent_' + tagTable[i].id).childNodes[0].childNodes[0].title = i + 1;
+        for(let i = 0; i < tagTable.length; i++) { // i :: IndexNumber
+            dgebi('tag_name_' + tagTable[i].id).title = i + 1;
         }
     };
 
@@ -1127,9 +1166,9 @@ const Tag = (() => {
                         return successObj;
                     }
                 }
-                if(tagTable.find(t => t.str === x) !== undefined
-                        || /\//.test(x)
-                        || x === '*') {
+                // isExist :: Bool
+                const isExist = tagTable.find(t => t.str === x) !== undefined;
+                if(isExist || /\//.test(x) || x === '*') {
                     return {isErr: true, str: makeErrorDom(x)};
                 }
                 // tagItem :: TagObject
@@ -1137,13 +1176,15 @@ const Tag = (() => {
                     id: tagCount,
                     str: x,
                     time: now,
+                    numYellow: 0,
+                    numRed: 0,
                     saveText: saveStr
                 };
                 tagCount++;
                 // newElement :: Element
                 const newElement = document.createElement('div');
                 newElement.innerHTML =
-                        `<details open><summary>#${x} <input id="remove_tag_${tagItem.id}" type="button" value="remove" onclick="parseMain('#remove-tag $${tagItem.id}');"></summary><div style="padding-left: 0px"><ol id="parent_${tagItem.id}"></ol></div></details>`;
+                        `<details open><summary><span id="tag_name_${tagItem.id}">#${x}</span> <input id="remove_tag_${tagItem.id}" type="button" value="remove" onclick="parseMain('#remove-tag $${tagItem.id}', 'priv');"></summary><div style="padding-left: 0px"><ol id="parent_${tagItem.id}"></ol></div></details>`;
                 newElement.setAttribute('id', 'tag_parent_' + tagItem.id);
                 // i :: IndexNumber
                 const i = tagTable.findIndex(x => x.time >= tagItem.time);
@@ -1170,14 +1211,16 @@ const Tag = (() => {
             const result = /^(\d+)#(.*)$/.exec(str);
             Tag.insert(result[2], parseInt(result[1], 10));
         },
-        // Tag.remove :: ParameterString -> ()
-        remove: str => {
+        // Tag.remove :: (ParameterString, FlagString) -> ()
+        remove: (str, callFrom) => {
             if(str === '') return;
-            const idResult = /^\$(\d+)$/.exec(str);
-            if(idResult !== null) {
-                rm([tagTable.findIndex(
-                        x => x.id === parseInt(idResult[1], 10))]);
-                return;
+            if(callFrom === 'priv') {
+                // idResult :: Maybe [Maybe String]
+                const idResult = /^\$(\d+)$/.exec(str);
+                if(idResult !== null) {
+                    rm([getIndexById(parseInt(idResult[1], 10))]);
+                    return;
+                }
             }
             // result :: ParseObject
             const result = parameterCheck(str, tagTable.length);
@@ -1194,13 +1237,59 @@ const Tag = (() => {
             const ret = tagTable.findIndex(x => x.str === str);
             return ret === -1 ? -1 : tagTable[ret].id;
         },
-        // Tag.showRemoveButton :: IndexNumber -> ()
-        showRemoveButton: index => {
-            dgebi('remove_tag_' + tagTable[index].id).style.display = null;
+        // Tag.showRemoveButton :: IDNumber -> ()
+        showRemoveButton: id => {
+            if(getIndexById(id) === -1) return;
+            dgebi('remove_tag_' + id).style.display = null;
         },
-        // Tag.hideRemoveButton :: IndexNumber -> ()
-        hideRemoveButton: index => {
-            dgebi('remove_tag_' + tagTable[index].id).style.display = 'none';
+        // Tag.hideRemoveButton :: IDNumber -> ()
+        hideRemoveButton: id => {
+            dgebi('remove_tag_' + id).style.display = 'none';
+        },
+        // Tag.emphUp :: (Maybe IDNumber, ImportanceFlagNumber) -> ()
+        emphUp: (id, importance) => {
+            if(id === undefined) return;
+            const index = getIndexById(id); // index :: Maybe IndexNumber
+            switch(importance) {
+                case 1:
+                    tagTable[index].numYellow++;
+                    break;
+                case 2:
+                case 3:
+                    tagTable[index].numRed++;
+                    break;
+                default:
+                    return;
+            }
+            const nameId = 'tag_name_' + id; // nameId :: IDString
+            if(tagTable[index].numRed > 0) {
+                dgebi(nameId).className = 'background-color_red';
+            } else if(tagTable[index].numYellow > 0) {
+                dgebi(nameId).className = 'background-color_yellow';
+            }
+        },
+        // Tag.emphDown :: (Maybe IDNumber, ImportanceFlagNumber) -> ()
+        emphDown: (id, importance) => {
+            if(id === undefined) return;
+            const index = getIndexById(id); // index :: Maybe IndexNumber
+            switch(importance) {
+                case 1:
+                    tagTable[index].numYellow--;
+                    break;
+                case 2:
+                case 3:
+                    tagTable[index].numRed--;
+                    break;
+                default:
+                    return;
+            }
+            if(tagTable[index].numRed > 0) return;
+            const nameId = 'tag_name_' + id; // nameId :: IDString
+            if(tagTable[index].numYellow > 0) {
+                dgebi(nameId).className = 'background-color_yellow';
+            } else {
+                dgebi(nameId).className = '';
+            }
         },
         // Tag.save :: () -> [ExecString]
         save: () => tagTable.map(x => x.saveText)
@@ -1214,6 +1303,8 @@ const TaskQueue = (() => {
     taskQueue[undefined] = [];
     taskQueue[undefined][-1] = {id: 'global', sound: [], soundCount: 0};
 
+    // getAllObj :: () -> [TaskObject]
+    const getAllObj = () => [taskQueue[undefined], ...taskQueue].flat();
     // taskParameterCheck :: ParameterString -> ParseObject
     const taskParameterCheck = str => {
         // ret :: [Object]
@@ -1224,9 +1315,10 @@ const TaskQueue = (() => {
                     data: items.map(t1 => {
                         // tagNo :: Maybe IndexNumber
                         const tagNo = Tag.findIndex(t1.tag);
+                        // target :: [TaskObject]
+                        const target = taskQueue[tagNo];
                         return {
-                            index: taskQueue[tagNo]
-                                    .findIndex(t2 => t2.id === t1.id),
+                            index: target.findIndex(t2 => t2.id === t1.id),
                             id: t1.id,
                             tagNo: tagNo
                         };
@@ -1238,34 +1330,21 @@ const TaskQueue = (() => {
             // invalidResult :: Maybe [Maybe String]
             const invalidResult = /^(\.|!{1,3})(?:#(.*))?$/.exec(x);
             if(invalidResult !== null) {
+                // filt :: TaskObject -> Bool
+                const filt = t => !t.isValid && t.importance <= n;
                 // func :: Number -> ()
                 const func = invalidResult[2] === '*'
-                        ? n => {
-                            return makeObj(taskQueue[undefined]
-                                    .concat(taskQueue.flat())
-                                    .filter(t => !t.isValid
-                                        && t.importance <= n));
-                        }
+                        ? n => makeObj(getAllObj().filter(filt))
                         : n => {
-                            return makeObj(taskQueue[
-                                        Tag.findIndex(invalidResult[2])]
-                                    .filter(t => !t.isValid
-                                        && t.importance <= n));
+                            // index :: Maybe IndexNumber
+                            const index = Tag.findIndex(invalidResult[2]);
+                            return makeObj(taskQueue[index].filter(filt));
                         };
-                switch(invalidResult[1]) {
-                    case '.':
-                        return func(0);
-                    case '!':
-                        return func(1);
-                    case '!!':
-                        return func(2);
-                    case '!!!':
-                        return func(3);
-                }
+                return func(invalidResult[1] === '.'
+                        ? 0
+                        : invalidResult[1].length);
             }
-            if(x === '*#*') {
-                return makeObj(taskQueue[undefined].concat(taskQueue.flat()));
-            }
+            if(x === '*#*') return makeObj(getAllObj());
             // errObj :: Object
             const errObj = {isErr: true, str: makeErrorDom(x)};
             // decomp :: Maybe [Maybe String]
@@ -1289,8 +1368,11 @@ const TaskQueue = (() => {
                 if(isNaN(border[1]) || border[1] > max) {
                     border[1] = max;
                 }
-                return makeObj([...Array(border[1] - border[0] + 1).keys()]
-                        .map(t => taskQueue[tagNo][t + border[0] - 1]));
+                // newArr :: [Index]
+                const newArr = [...Array(border[1] - border[0] + 1).keys()];
+                // mapping :: Index -> TaskObject
+                const mapping = t => taskQueue[tagNo][t + border[0] - 1];
+                return makeObj(newArr.map(mapping));
             }
             // index :: Maybe IndexNumber
             const index = parseInt(decomp[1], 10) - 1;
@@ -1306,27 +1388,26 @@ const TaskQueue = (() => {
                     }
                     : errObj;
         });
+        const nubData = []; // nubData :: [Object]
+        [...ret.map(x => x.data).flat()].forEach(x => {
+            if(nubData.some(t => {
+                return ['index', 'id', 'tagNo'].every(tt => x[tt] === t[tt]);
+            })) return;
+            nubData.push(x);
+        });
         return {
-            data: [...new Set(ret.map(x => x.data))].flat(),
+            data: nubData,
             isErr: ret.some(x => x.isErr),
             str: ret.map(x => x.str).join(' ')
         };
     };
     // getTagIndex :: IDString -> Maybe Object
     const getTagIndex = id => {
-        if(id === 'global') return {
-            index: -1,
-            id: id,
-            tagNo: undefined
-        };
+        if(id === 'global') return {index: -1, id: 'global', tagNo: undefined};
         // item :: TaskElement
-        const item = taskQueue[undefined].concat(taskQueue.flat())
-                                         .find(x => x.id === id);
+        const item = getAllObj().find(x => x.id === id);
         if(item === undefined) return undefined;
-        // tagNo :: Maybe IndexNumber
-        const tagNo = item.tag === undefined
-                ? undefined
-                : Tag.findIndex(item.tag);
+        const tagNo = Tag.findIndex(item.tag); // tagNo :: Maybe IndexNumber
         return {
             index: taskQueue[tagNo].findIndex(x => x.id === id),
             id: id,
@@ -1341,11 +1422,12 @@ const TaskQueue = (() => {
                 ? (x => 'a')
                 : flag === '-timer' ? (x => 't') : (x => x === 'a' ? 't' : 'a');
         ids.forEach(x => {
-            taskQueue[x.tagNo][x.index].display
-                    = func(taskQueue[x.tagNo][x.index].display);
+            // result :: FlagString
+            const result = func(taskQueue[x.tagNo][x.index].display);
+            taskQueue[x.tagNo][x.index].display = result;
         });
     };
-    // rm :: ([IDObject], Maybe Bool) -> ()
+    // rm :: ([IDObject], Bool) -> ()
     const rm = (ids, isNeedTrashPush = true) => {
         ids = ids.filter(x => x !== undefined);
         if(ids.length === 0) return;
@@ -1356,17 +1438,18 @@ const TaskQueue = (() => {
                             .join(SEPARATOR));
         }
         ids.forEach(x => {
-            TaskQueue.stopSound('$' + x.id);
+            TaskQueue.stopSound('$' + x.id, 'priv');
             removeDom('item_' + x.id);
             // i :: IndexNumber
             const i = taskQueue[x.tagNo].findIndex(t => t.id === x.id);
-            if(!taskQueue[x.tagNo][i].isValid
-                    && taskQueue[x.tagNo][i].importance > 1) {
-                BackgroundAlert.off();
+            const target = taskQueue[x.tagNo][i]; // target :: TaskObject
+            if(!target.isValid && target.importance > 1) {
+                BackgroundAlert.down();
             }
+            Tag.emphDown(x.tagNo, target.importance);
             taskQueue[x.tagNo].splice(i, 1);
         });
-        for(let i = 0; i < Tag.getLength(); i++) { // i :: IndexNumber
+        for(let i = 0; i < taskQueue.length; i++) { // i :: IndexNumber
             if(taskQueue[i].length === 0) Tag.showRemoveButton(i);
         }
     };
@@ -1404,14 +1487,11 @@ const TaskQueue = (() => {
         },
         // TaskQueue.setVolume :: VolumeNumber -> ()
         setVolume: volume => {
-            // func :: TaskObject -> ()
-            const func = x => {
+            getAllObj().forEach(x => {
                 const sound = x.sound; // sound :: Maybe Sound
                 if(sound === undefined) return;
                 sound.forEach(t => t.volume = volume);
-            };
-            taskQueue[undefined].forEach(x => func(x));
-            taskQueue.forEach(x1 => x1.forEach(x2 => func(x2)));
+            });
         },
         // TaskQueue.isPlay :: IDString -> Bool
         isPlay: id => {
@@ -1433,17 +1513,18 @@ const TaskQueue = (() => {
             // newElement :: Element
             const newElement = document.createElement('li');
             newElement.innerHTML =
-                    `<input type="button" value="remove" onclick="parseMain('#remove $${id}');"> <span id="text_${id}" title="${taskItem.tipText}">${taskItem.name}</span><span id="time_${id}"></span> `;
+                    `<input type="button" value="remove" onclick="parseMain('#remove $${id}', 'priv');"> <span id="text_${id}" title="${taskItem.tipText}">${taskItem.name}</span><span id="time_${id}"></span> `;
             newElement.setAttribute('id', 'item_' + id);
+            // searchRule :: TaskObject -> Bool
+            const searchRule = x => x.deadline > taskItem.deadline;
             // i :: IndexNumber
-            const i = taskQueue[index]
-                    .findIndex(x => x.deadline > taskItem.deadline);
-            if(flag === 'merge'
-                    && i !== 0
-                    && taskItem.makeSaveText() ===
-                        taskQueue[index][i > 0 ? i - 1 : taskQueue.length - 1]
-                            .makeSaveText()) {
-                return;
+            const i = taskQueue[index].findIndex(searchRule);
+            if(flag === 'merge' && i !== 0) {
+                // targetIndex :: IndexNumber
+                const targetIndex = i > 0 ? i - 1 : taskQueue[index].length - 1;
+                // target :: TaskObject
+                const target = taskQueue[index][targetIndex];
+                if(taskItem.makeSaveText() === target.makeSaveText()) return;
             }
             if(i >= 0) {
                 // target :: Element
@@ -1451,15 +1532,16 @@ const TaskQueue = (() => {
                 target.parentNode.insertBefore(newElement, target);
                 taskQueue[index].splice(i, 0, taskItem);
             } else {
-                dgebi(`parent${index === undefined ? '' : '_' + index}`)
-                        .appendChild(newElement);
+                // idOpt :: String
+                const idOpt = index === undefined ? '' : '_' + index;
+                dgebi('parent' + idOpt).appendChild(newElement);
                 taskQueue[index].push(taskItem);
             }
             if(index !== undefined) {
                 Tag.hideRemoveButton(index);
             }
             if(!taskItem.isValid) {
-                Display.doStrike(id, taskItem.importance);
+                Display.doStrike(index, id, taskItem.importance);
             }
         },
         // TaskQueue.move :: (ParameterString, Maybe TagString) -> ()
@@ -1474,16 +1556,20 @@ const TaskQueue = (() => {
                 TaskQueue.insert(x, 'global');
             });
             if(result.isErr) {
-                Notice.set(`error: move${tag === undefined ? '' : '#' + tag} ${result.str}`);
+                // tagName :: String
+                const tagName = tag === undefined ? '' : '#' + tag;
+                Notice.set(`error: move${tagName} ${result.str}`);
             }
         },
-        // TaskQueue.remove :: ParameterString -> ()
-        remove: str => {
-            // idResult :: Maybe [Maybe String]
-            const idResult = /^\$(\d+)$/.exec(str);
-            if(idResult !== null) {
-                rm([getTagIndex(idResult[1])]);
-                return;
+        // TaskQueue.remove :: (ParameterString, FlagString) -> ()
+        remove: (str, callFrom) => {
+            if(callFrom === 'priv') {
+                // idResult :: Maybe [Maybe String]
+                const idResult = /^\$(\d+)$/.exec(str);
+                if(idResult !== null) {
+                    rm([getTagIndex(idResult[1])]);
+                    return;
+                }
             }
             const result = taskParameterCheck(str); // result :: IDObject
             rm(result.data);
@@ -1495,23 +1581,28 @@ const TaskQueue = (() => {
         newTag: tagIndex => taskQueue[tagIndex] = [],
         // TaskQueue.isTagEmpty :: IndexNumber -> Bool
         isTagEmpty: tagIndex => taskQueue[tagIndex].length === 0,
-        // TaskQueue.stopSound :: IDString -> ()
-        stopSound: str => {
+        // TaskQueue.stopSound :: (IDString, FlagString) -> ()
+        stopSound: (str, callFrom) => {
+            if(callFrom === 'priv') {
+                if(str === '$global') {
+                    stop([getTagIndex('global')]);
+                    return;
+                }
+                // idResult :: Maybe [Maybe String]
+                const idResult = /^\$(\d+)$/.exec(str);
+                if(idResult !== null) {
+                    stop([getTagIndex(idResult[1])]);
+                    return;
+                }
+            }
             switch(str) {
                 case '':
-                case '$global':
                     stop([getTagIndex('global')]);
                     return;
                 case '*':
                 case '*#*':
                     stop([getTagIndex('global')]);
                     break;
-            }
-            // idResult :: Maybe [Maybe String]
-            const idResult = /^\$(\d+)$/.exec(str);
-            if(idResult !== null) {
-                stop([getTagIndex(idResult[1])]);
-                return;
             }
             const result = taskParameterCheck(str); // result :: IDObject
             stop(result.data);
@@ -1520,40 +1611,29 @@ const TaskQueue = (() => {
         removeSound: (id, soundId) => {
             const obj = getTagIndex(id); // obj :: Maybe IDObject
             if(obj === undefined) return;
-            taskQueue[obj.tagNo][obj.index].sound
-                    .splice(taskQueue[obj.tagNo][obj.index].sound
-                        .findIndex(x => x.soundId === soundId), 1);
+            // targetSoundObj :: [Audio]
+            const targetSoundObj = taskQueue[obj.tagNo][obj.index].sound;
+            // target :: IndexNumber
+            const target = targetSoundObj.findIndex(x => x.soundId === soundId);
+            taskQueue[obj.tagNo][obj.index].sound.splice(target, 1);
         },
         // TaskQueue.checkDeadline :: (DateNumber, now) -> ()
         checkDeadline: (interval, now) => {
-            // i :: IndexNumber
-            for(let i = 0;
-                    taskQueue[undefined][i] !== undefined
-                        && now - taskQueue[undefined][i].deadline
-                            >= -interval / 2;
-                    i++) {
-                if(taskQueue[undefined][i].isValid) {
-                    taskQueue[undefined][i].isValid = false;
-                    parseMain(taskQueue[undefined][i].exec
-                            , taskQueue[undefined][i].id);
-                    Display.doStrike(taskQueue[undefined][i].id
-                            , taskQueue[undefined][i].importance);
-                }
-            }
-            for(let i = 0; i < Tag.getLength(); i++) { // i :: IndexNumber
-                // j :: IndexNumber
-                for(let j = 0;
-                        taskQueue[i][j] !== undefined
-                            && now - taskQueue[i][j].deadline >= -interval / 2;
-                        j++) {
-                    if(taskQueue[i][j].isValid) {
+            // isLoop :: (Maybe IndexNumber, IndexNumber) -> Bool
+            const isLoop = (i, j) => {
+                if(taskQueue[i][j] === undefined) return false;
+                return now - taskQueue[i][j].deadline >= -interval / 2;
+            };
+            [undefined, ...Array(Tag.getLength()).keys()].forEach(i => {
+                for(let j = 0; isLoop(i, j); j++) { // j :: IndexNumber
+                    const target = taskQueue[i][j]; // target :: TaskObject
+                    if(target.isValid) {
                         taskQueue[i][j].isValid = false;
-                        parseMain(taskQueue[i][j].exec, taskQueue[i][j].id);
-                        Display.doStrike(taskQueue[i][j].id
-                                , taskQueue[i][j].importance);
+                        parseMain(target.exec, target.id);
+                        Display.doStrike(i, target.id, target.importance);
                     }
                 }
-            }
+            });
         },
         // TaskQueue.show :: () -> ()
         show: () => {
@@ -1563,13 +1643,16 @@ const TaskQueue = (() => {
             const restStr = (deadline, now) => {
                 const r = Math.ceil((deadline - now) / 1000); // r :: DateNumber
                 const d = Math.floor(r / 86400); // d :: Number
+                // arr :: [Number]
+                const arr = [(r % 86400) / 3600, (r % 3600) / 60, r % 60];
+                // zeroPadding :: Numer -> String
+                const zeroPadding = x => ('0' + Math.floor(x)).slice(-2);
                 // ret :: DisplayString
-                const ret = [(r % 86400) / 3600, (r % 3600) / 60, r % 60]
-                        .map(x => ('0' + Math.floor(x)).slice(-2)).join(':');
+                const ret = arr.map(zeroPadding).join(':');
                 return d > 0 ? `[${d},${ret}]` : `[${ret}]`;
             };
             const now = Date.now(); // now :: DateNumber
-            taskQueue[undefined].concat(taskQueue.flat()).forEach(x => {
+            getAllObj().forEach(x => {
                 // target :: Element
                 dgebi('time_' + x.id).innerText = !x.isValid
                         ? '@' + deadlineStr(x.deadline, now)
@@ -1579,8 +1662,7 @@ const TaskQueue = (() => {
             });
         },
         // TaskQueue.save :: () -> [ExecString]
-        save: () => taskQueue[undefined].concat(taskQueue.flat())
-                                        .map(x => x.makeSaveText())
+        save: () => getAllObj().map(x => x.makeSaveText())
     };
 })();
 
@@ -1600,15 +1682,6 @@ const Legacy = (() => {
             // inputVer :: [VersionNumber]
             const inputVer = parseVersion(version);
             let isChecked = false; // isChecked :: Bool
-            if(isChecked || inputVer < [0, 3, 0]) {
-                isChecked = true;
-                // display :: Bool
-                const display = data.filter(x => /^switch .*$/.test(x))[0]
-                        === 'switch alarm' ? 'a' : 't';
-                // regex :: RegExp
-                const regex = /^(\d+)#([^\/]*(?:\/(?:[-\d]|[^\/]*?\*)??(?:\.|!{1,3})?(?:\/.*)?)?)$/;
-                data = data.map(x => x.replace(regex, `$1${display}$2`));
-            }
             if(isChecked || inputVer < [0, 7, 0]) {
                 isChecked = true;
                 data = data.map(x => {
@@ -1671,21 +1744,21 @@ dgebi('cover').addEventListener('click', () => {
             return;
         }
         if(document.activeElement.id === 'text_cui_form') {
+            // target :: ExecString
+            const target = document.cui_form.input.value;
             switch(event.key) {
                 case 'ArrowUp':
-                    document.cui_form.input.value =
-                            History.up(document.cui_form.input.value);
+                    document.cui_form.input.value = History.up(target);
                     event.preventDefault();
                     break;
                 case 'ArrowDown':
-                    document.cui_form.input.value =
-                            History.down(document.cui_form.input.value);
+                    document.cui_form.input.value = History.down(target);
                     event.preventDefault();
                     break;
             }
         }
     });
-    // formCheck :: (Bool, StringID) -> ()
+    // formCheck :: (Bool, IDString) -> ()
     const formCheck = (cond, id) => {
         dgebi(id).className = `background-color_${cond ? 'pink' : 'white'}`;
     };
@@ -1708,7 +1781,7 @@ dgebi('cover').addEventListener('click', () => {
         });
     });
     dgebi('gui_text').addEventListener('input', event => {
-        formCheck(/;/.test(document.gui_form.gui_text.value), 'gui_text');
+        formCheck(/;|->/.test(document.gui_form.gui_text.value), 'gui_text');
     });
     dgebi('cover').style.display = 'none';
     dgebi('body').style.overflow = 'auto';

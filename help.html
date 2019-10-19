@@ -22,7 +22,7 @@ https://opensource.org/licenses/mit-license.php
                         <details><summary>1.1 諸情報</summary>
                             <div>
                                 <ul>
-                                    <li>最新版: Version 0.8.0 | 2019-10-14</li>
+                                    <li>最新版: Version 0.9.0 | 2019-10-19</li>
                                     <li>製作者: takisai</li>
                                     <li>動作確認環境: Chrome・Firefox</li>
                                 </ul>
@@ -33,6 +33,20 @@ https://opensource.org/licenses/mit-license.php
                         <details><summary>1.2 更新履歴</summary>
                             <div>
                                 <ul>
+                                    <li>
+                                        Version 0.9.0 | 2019-10-19
+                                        <ul>
+                                            <li>enterボタンの追加</li>
+                                            <li><kbd>remove-tag</kbd>コマンドの機能追加</li>
+                                            <li>等幅フォントの大きさを調整</li>
+                                            <li>タグ間の広さを調整</li>
+                                            <li>入力に含まれる空白を減らしすぎないよう修正</li>
+                                            <li>ボタン・マクロ・タグの表示順番に関するバグを修正</li>
+                                            <li><kbd>remove-tag</kbd>コマンドの表示のバグを修正</li>
+                                            <li>help文章を修正</li>
+                                            <li>アクセス時の背景バグの再修正</li>
+                                        </ul>
+                                    </li>
                                     <li>
                                         Version 0.8.0 | 2019-10-14
                                         <ul>
@@ -200,7 +214,7 @@ https://opensource.org/licenses/mit-license.php
                     <div class="h3">
                         <details><summary>1.5 問い合わせ</summary>
                             <div>
-                                <p>感想・質問・要望などは<a href="https://marshmallow-qa.com/takisai" title="takisaiにマシュマロを投げる | マシュマロ" target="_blank">こちら</a>へお願いします。<!--質問のうち有用なものについては<a href="#answer">よくある質問</a>に掲載します。--></p>
+                                <p>感想・要望などは<a href="https://marshmallow-qa.com/takisai" title="takisaiにマシュマロを投げる | マシュマロ" target="_blank">こちら</a>へお願いします。</p>
                             </div>
                         </details>
                     </div>
@@ -368,6 +382,8 @@ https://opensource.org/licenses/mit-license.php
                                             <li><kbd>&lt;重要度&gt;[#&lt;タグ文字列&gt;|#*]</kbd></li>
                                         </ol>
                                     ※<kbd>&lt;リマインダー番号&gt;</kbd>は全てリマインダーリストの一番左の番号</dd>
+                                    <dt><kbd>&lt;重要度&gt;</kbd>・<kbd>&lt;タグ文字列&gt;</kbd></dt>
+                                    <dd><a href="#task_mode">2.2.2</a>のものと同じ</dd>
                                 </dl>
                                 <h5>説明</h5>
                                 <p>パラメーターで選択したリマインダーを削除します。パラメーターで指定する数字は、リマインダーリスト一番左にある番号です。</p>
@@ -407,6 +423,8 @@ https://opensource.org/licenses/mit-license.php
                                             <h5>構文</h5>
                                             <kbd>move[#&lt;タグ文字列&gt;] &lt;パラメーター&gt;[ &lt;パラメーター&gt; &lt;パラメーター&gt; ...]</kbd>
                                             <dl>
+                                                <dt><kbd>#&lt;タグ文字列&gt;</kbd></dt>
+                                                <dd><a href="#task_mode">2.2.2</a>の<kbd>#&lt;タグ文字列&gt;</kbd>で指定した文字列</dd>
                                                 <dt><kbd>&lt;パラメーター&gt;</kbd></dt>
                                                 <dd><a href="#task_remove">2.4</a>のパラメーターと同じ</dd>
                                             </dl>
@@ -429,15 +447,15 @@ https://opensource.org/licenses/mit-license.php
                                             <kbd>remove-tag &lt;パラメーター&gt;[ &lt;パラメーター&gt; &lt;パラメーター&gt; ...]</kbd>
                                             <dl>
                                                 <dt><kbd>&lt;パラメーター&gt;</kbd></dt>
-                                                <dd><a href="#task_remove">2.4</a>のパラメーターと同じ。ただしタグ文字列は無く、数字はタグ番号</dd>
+                                                <dd><a href="#task_remove">2.4</a>のパラメーターからタグ文字列を除いたものか、<a href="#task_mode">2.2.2</a>の<kbd>#&lt;タグ文字列&gt;</kbd>。ただし、パラメーターの数字はタグ番号</dd>
                                             </dl>
                                             <h5>説明</h5>
-                                            <p>パラメーターで選択したタグを削除します。タグ番号は、そのタグを上から数えた数字に対応します。ただし、まだリマインダーが1つでも登録されているタグは消すことができません。また、タグの横のremoveボタンを押すことでも同様の動作になります。</p>
+                                            <p>パラメーターで選択したタグを削除します。タグ番号は、そのタグを上から数えた数字に対応します。また、タグ名の先頭に<kbd>#</kbd>を付けることでもタグを指定できます。ただし、リマインダーが1つでも登録されているタグは消すことができません。また、タグの横のremoveボタンを押すことでも同様の動作になります。</p>
                                             <p>間違って消してしまったタグは、<a href="#undo">2.11</a>の<kbd>undo</kbd>コマンドで元に戻すことができます。</p>
                                             <h5>例</h5>
                                             <dl>
-                                                <dt><kbd>remove-tag 1</kbd></dt>
-                                                <dd>一番上のタグを削除します。</dd>
+                                                <dt><kbd>remove-tag 1 #checked</kbd></dt>
+                                                <dd>一番上のタグとcheckedタグを削除します。</dd>
                                                 <dt><kbd>remove-tag *</kbd></dt>
                                                 <dd>全てのタグを削除します。</dd>
                                             </dl>
@@ -452,6 +470,10 @@ https://opensource.org/licenses/mit-license.php
                             <div>
                                 <h5>構文</h5>
                                 <kbd>default [&lt;音番号&gt;][&lt;表示方法&gt;|s][&lt;重要度&gt;]</kbd>
+                                <dl>
+                                    <dt><kbd>&lt;音番号&gt;</kbd>・<kbd>&lt;表示方法&gt;</kbd>・<kbd>&lt;重要度&gt;</kbd></dt>
+                                    <dd><a href="#task_mode">2.2.2</a>のものと同じ</dd>
+                                </dl>
                                 <h5>説明</h5>
                                 <p><a href="#task_mode">2.2.2</a>の通知/表示設定で指定を省略したときの既定値を変更します。指定はどれも<a href="#task_mode">2.2.2</a>と同じ方法で記述します。省略した部分の既定値はそのままになります。</p>
                                 <p>表示方法に<kbd>s</kbd>を指定すると、現在の表示設定がアラーム式ならタイマー式に、タイマー式ならアラーム式に切り替えることができます。</p>
@@ -670,8 +692,14 @@ https://opensource.org/licenses/mit-license.php
                                 <h5>構文</h5>
                                 <kbd>&lt;時間設定&gt;/&lt;コマンド文字列&gt;*[&lt;表示方法&gt;][&lt;重要度&gt;][#&lt;タグ文字列&gt;][/&lt;リマインダー名&gt;]</kbd>
                                 <dl>
+                                    <dt><kbd>&lt;時間設定&gt;</kbd></dt>
+                                    <dd><a href="#task_time">2.2.1</a>や<a href="#task_cycle">2.2.4</a>の文字列</dd>
                                     <dt><kbd>&lt;コマンド文字列&gt;</kbd></dt>
                                     <dd><kbd>;</kbd>や<kbd>/</kbd>・<kbd>-&gt;</kbd>が入っていない文字列</dd>
+                                    <dt><kbd>&lt;表示方法&gt;</kbd>・<kbd>&lt;重要度&gt;</kbd>・<kbd>&lt;タグ文字列&gt;</kbd></dt>
+                                    <dd><a href="#task_mode">2.2.2</a>のものと同じ</dd>
+                                    <dt><kbd>&lt;リマインダー名&gt;</kbd></dt>
+                                    <dd><a href="#task_name">2.2.3</a>の文字列</dd>
                                 </dl>
                                 <h5>説明</h5>
                                 <p>リマインダーで指定した時刻に、設定したコマンドを実行します。構文は、<a href="#task">2.2</a>の<kbd>&lt;音番号&gt;</kbd>を<kbd>&lt;コマンド文字列&gt;*</kbd>に置き換えたものです。</p>
@@ -791,7 +819,21 @@ https://opensource.org/licenses/mit-license.php
                                     </details>
                                 </div>
                                 <div class="h4">
-                                    <details><summary>3.5.2 削除履歴をリセットする | <code>empty-trash</code>コマンド</summary>
+                                    <details><summary>3.5.2 タグの追加 | <code>tag</code>コマンド</summary>
+                                        <div>
+                                            <h5>構文</h5>
+                                            <kbd>tag &lt;タグ文字列&gt;[ &lt;タグ文字列&gt; &lt;タグ文字列&gt; ...]</kbd>
+                                            <dl>
+                                                <dt><kbd>&lt;タグ文字列&gt;</kbd></dt>
+                                                <dd><a href="#task_mode">2.2.2</a>のものと同じ</dd>
+                                            </dl>
+                                            <h5>説明</h5>
+                                            <p>新しいタグを追加します。リマインダーの追加や<kbd>move</kbd>コマンドで新しいタグは自動で登録されるため、通常このコマンドは使う必要はありません。</p>
+                                        </div>
+                                    </details>
+                                </div>
+                                <div class="h4">
+                                    <details><summary>3.5.3 削除履歴をリセットする | <code>empty-trash</code>コマンド</summary>
                                         <div>
                                             <h5>構文</h5>
                                             <kbd>empty-trash</kbd>
@@ -801,7 +843,7 @@ https://opensource.org/licenses/mit-license.php
                                     </details>
                                 </div>
                                 <div class="h4">
-                                    <details><summary>3.5.3 menuの表示/非表示 | <code>show-menu</code>/<code>hide-menu</code>コマンド</summary>
+                                    <details><summary>3.5.4 menuの表示/非表示 | <code>show-menu</code>/<code>hide-menu</code>コマンド</summary>
                                         <div>
                                             <h5>構文</h5>
                                             <kbd>show-menu</kbd>、<kbd>hide-menu</kbd>
@@ -811,7 +853,7 @@ https://opensource.org/licenses/mit-license.php
                                     </details>
                                 </div>
                                 <div class="h4">
-                                    <details><summary>3.5.4 入力履歴をリセットする | <code>empty-history</code>コマンド</summary>
+                                    <details><summary>3.5.5 入力履歴をリセットする | <code>empty-history</code>コマンド</summary>
                                         <div>
                                             <h5>構文</h5>
                                             <kbd>empty-history</kbd>
@@ -826,13 +868,6 @@ https://opensource.org/licenses/mit-license.php
                 </div>
             </details>
         </div>
-        <!--<div class="h2" id="answer">
-            <details open><summary>4 よくある質問</summary>
-                <div>
-                    <p><a href="https://marshmallow-qa.com/takisai" title="takisaiにマシュマロを投げる | マシュマロ" target="_blank">こちら</a>で受け取った質問の回答のうち、いくつかをこちらにも掲載します。</p>
-                </div>
-            </details>
-        </div>-->
     </body>
     <script src="help.js"></script>
 </html>

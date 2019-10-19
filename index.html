@@ -12,13 +12,13 @@ https://opensource.org/licenses/mit-license.php
         <link rel="stylesheet" href="style.css">
         <link rel="icon" href="favicon.ico">
     </head>
-    <body id="body">
-        <div id="header" class="background-color_white">
+    <body id="body" class="background-color_white">
+        <div id="header">
             <div id="clock">
                 --:--:--
             </div>
             <form name="cui_form" onsubmit="getText();return false;">
-                <input type="text" name="input" id="text_cui_form" autocomplete="off"></input> <span id="item_global"></span><span id="notice"></span>
+                <input type="text" name="input" id="text_cui_form" autocomplete="off"><input id="cui_submit" type="button" value="enter" onclick="getText()"> <span id="item_global"></span><span id="notice"></span>
             </form>
             <div id="button_parent"></div>
         </div>
@@ -86,7 +86,7 @@ https://opensource.org/licenses/mit-license.php
                         <div>
                             <p>Task Masterは、WEB上で利用できるリマインダーツールです。</p>
                                 <ul>
-                                    <li>最新版: Version 0.8.0 | 2019-10-14</li>
+                                    <li>最新版: Version 0.9.0 | 2019-10-19</li>
                                     <li>製作者: takisai</li>
                                     <li>動作確認環境: Chrome・Firefox</li>
                                 </ul>

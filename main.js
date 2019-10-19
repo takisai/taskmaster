@@ -8,7 +8,7 @@ const UPDATE_TIME = 200; // UPDATE_TIME :: DateNumber
 const SEPARATOR = '\v'; // SEPARATOR :: String
 const NOTICE_CLEAR_TIME = 5000; // NOTICE_CLEAR_TIME :: DateNumber
 const RECURSION_LIMIT = 5; // RECURSION_LIMIT :: Number
-const VERSION = [0, 8, 0]; // VERSION :: [VersionNumber]
+const VERSION = [0, 9, 0]; // VERSION :: [VersionNumber]
 
 const NUMBER_OF_SOUNDS = 15; // NUMBER_OF_SOUNDS :: Number
 /*  NUMBER_OF_SOUNDSの数だけmp3ファイルを登録して音を鳴らすことができます。
@@ -89,7 +89,7 @@ const parameterCheck = (str, max) => {
                 }
                 : errObj;
     });
-    // nubData :: [IndexNumber]
+    // nubData :: [Maybe IndexNumber]
     const nubData = [... new Set(ret.map(x => x.data).flat())];
     return {
         data: nubData.filter(x => x !== undefined),
@@ -102,6 +102,7 @@ const parameterCheck = (str, max) => {
 const getText = () => {
     const input = document.cui_form.input.value; // input :: ExecString
     document.cui_form.input.value = '';
+    submitButtonControl();
     History.push(input);
     parseMain(input);
 };
@@ -190,9 +191,7 @@ const parseMain = (() => {
 
     // main :: (ExecString, FlagString) -> ()
     const main = (text, callFrom) => {
-        text = text.replace(/^\s+/, '')
-                   .replace(/\s+$/, '')
-                   .replace(/\s+|　/g, ' ');
+        text = text.replace(/\s+|　/g, ' ');
         const isHeadHash = /^#/.test(text); // isHeadHash :: Bool
         const isHeadArrow = /^->/.test(text); // isHeadArrow :: Bool
         const isRawMode = isHeadHash || isHeadArrow; // isRawMode :: Bool
@@ -200,6 +199,7 @@ const parseMain = (() => {
             text = text.slice(1);
         }
         if(Macro.isInsertSuccess(text)) return;
+        text = text.replace(/^\s+/, '').replace(/\s+$/, '');
         if(!isRawMode) {
             text = Macro.replace(text);
             text = evaluate(text);
@@ -384,6 +384,12 @@ const showTimerGUI = () => {
     dgebi('gui_other_setting').style.display = 'block';
 };
 
+const submitButtonControl = () => {
+    dgebi('cui_submit').style.display = document.cui_form.input.value === ''
+            ? 'none'
+            : 'inline';
+};
+
 const BackgroundAlert = (() => {
     let semaphore = 0; // semaphore :: CountNumber
 
@@ -392,14 +398,14 @@ const BackgroundAlert = (() => {
         up: () => {
             semaphore++;
             dgebi('body').className = 'background-color_pink';
-            dgebi('header').className = 'background-color_pink';
         },
         // BackgroundAlert.down :: () -> ()
         down: () => {
-            semaphore--;
-            if(semaphore > 0) return;
+            if(semaphore > 0) {
+                semaphore--;
+                if(semaphore > 0) return;
+            }
             dgebi('body').className = 'background-color_white';
-            dgebi('header').className = 'background-color_white';
         }
     };
 })();
@@ -696,25 +702,30 @@ const Button = (() => {
             if(str === undefined) return;
             // execStr :: ExecString
             const execStr = str.replace(/'/g, '\\\'').replace(/\\/g, '\\\\');
-            if(now === null) {
-                now = Date.now();
-            }
             // buttonItem :: ButtonObject
             const buttonItem = {
                 id: buttonCount,
                 str: str,
-                time: now,
                 saveText: `#$button ${now}#${str}`
             };
+            if(now === null) {
+                buttonItem.time = Date.now();
+            } else {
+                // isEq :: MacroObject -> Bool
+                const isEq = x => {
+                    return x.saveText === buttonItem.saveText && x.time === now;
+                };
+                if(buttons.findIndex(isEq) >= 0) return;
+                buttonItem.time = now;
+            }
+            buttonCount++;
             // newElement :: Element
             const newElement = document.createElement('span');
             newElement.innerHTML =
                     `<input type="button" value="${str}" onclick="parseMain('${execStr}');"> `;
             newElement.setAttribute('id', 'button_' + buttonItem.id);
             // i :: IndexNumber
-            const i = buttons.findIndex(x => x.time >= buttonItem.time);
-            if(i >= 0 && buttonItem.saveText === buttons[i].saveText) return;
-            buttonCount++;
+            const i = buttons.findIndex(x => x.time > buttonItem.time);
             if(i >= 0) {
                 // target :: Element
                 const target = dgebi('button_' + buttons[i].id);
@@ -839,6 +850,13 @@ const Macro = (() => {
                 time: now,
                 saveText: `-> ${now}#${s}`
             };
+            if(!isNull) {
+                // isEq :: MacroObject -> Bool
+                const isEq = x => {
+                    return x.saveText === macroItem.saveText && x.time === now;
+                };
+                if(macros.findIndex(isEq) >= 0) return;
+            }
             // newElement :: Element
             const newElement = document.createElement('li');
             const formatStr = formatter(s); // formatStr :: DisplayString
@@ -846,8 +864,7 @@ const Macro = (() => {
                     `<input type="button" value="remove" onclick="parseMain('#remove-macro $${id}', 'priv');"> ${formatStr}`;
             newElement.setAttribute('id', 'macro_' + id);
             // i :: IndexNumber
-            const i = macros.findIndex(x => x.time >= macroItem.time);
-            if(i >= 0 && macroItem.saveText === macros[i].saveText) return;
+            const i = macros.findIndex(x => x.time > macroItem.time);
             if(i >= 0) {
                 // target :: Element
                 const target = dgebi('macro_' + macros[i].id);
@@ -1121,21 +1138,50 @@ const Tag = (() => {
     const getIndexById = id => {
         if(id === undefined) return undefined;
         return tagTable.findIndex(x => x.id === id);
-    }
-    // rm :: [IndexNumber] -> ()
-    const rm = indices => {
-        indices = indices.filter(x => x !== undefined);
-        if(indices.length === 0) return;
-        // items :: [MacroObject]
-        const items = indices.map(i => tagTable[i]);
+    };
+    // tagParameterCheck :: ParameterString -> ParseObject
+    const tagParameterCheck = str => {
+        // ret :: [Object]
+        const ret = str.split(' ').map(x => {
+            const result = /^#(.*)$/.exec(x); // result :: Maybe [Maybe String]
+            if(result !== null) {
+                // index :: Maybe IndexNumber
+                const index = tagTable.findIndex(t => t.str === result[1]);
+                const isErr = index === -1; // isErr :: Bool
+                return {
+                    data: isErr ? undefined : index,
+                    isErr: isErr,
+                    str: isErr ? makeErrorDom(x) : x
+                };
+            }
+            return parameterCheck(x, tagTable.length);
+        });
+        // nubData :: [Maybe IndexNumber]
+        const nubData = [... new Set(ret.map(x => x.data).flat())];
+        // indexData :: [IndexNumber]
+        const indexData = nubData.filter(x => x !== undefined);
+        return {
+            data: indexData.map(x => {
+                return {index: x, id: tagTable[x].id}
+            }),
+            isErr: ret.some(x => x.isErr),
+            str: ret.map(x => x.str).join(' ')
+        };
+    };
+    // rm :: [IDObject] -> ()
+    const rm = obj => {
+        if(obj.length === 0) return;
+        // items :: [TagObject]
+        const items = obj.map(x => tagTable[x.index]);
         Trash.push(items.map(item => item.saveText).join(SEPARATOR));
-        items.forEach(x => {
+        obj.forEach(x => {
+            const index = getIndexById(x.id); // index :: IndexNumber
             if(!TaskQueue.isTagEmpty(x.id)) {
-                Notice.set(`#${getIndexById(x.id).str} is not empty`);
+                Notice.set(`#${tagTable[index].str} is not empty`);
                 return;
             }
             removeDom('tag_parent_' + x.id);
-            tagTable.splice(getIndexById(x.id), 1);
+            tagTable.splice(index, 1);
         });
     };
     // updateIndex :: () -> ()
@@ -1160,9 +1206,7 @@ const Tag = (() => {
                 const successObj = {isErr: false, str: x};
                 const saveStr = `#$tag ${now}#${x}`; // saveStr :: SaveString
                 if(!isNowNull) {
-                    // i :: IndexNumber
-                    const i = tagTable.findIndex(x => x.time >= now);
-                    if(i >= 0 && saveStr === tagTable[i].saveText) {
+                    if(tagTable.findIndex(x => x.saveText === saveStr) >= 0) {
                         return successObj;
                     }
                 }
@@ -1187,7 +1231,7 @@ const Tag = (() => {
                         `<details open><summary><span id="tag_name_${tagItem.id}">#${x}</span> <input id="remove_tag_${tagItem.id}" type="button" value="remove" onclick="parseMain('#remove-tag $${tagItem.id}', 'priv');"></summary><div style="padding-left: 0px"><ol id="parent_${tagItem.id}"></ol></div></details>`;
                 newElement.setAttribute('id', 'tag_parent_' + tagItem.id);
                 // i :: IndexNumber
-                const i = tagTable.findIndex(x => x.time >= tagItem.time);
+                const i = tagTable.findIndex(x => x.time > tagItem.time);
                 if(i >= 0) {
                     // target :: Element
                     const target = dgebi('tag_parent_' + tagTable[i].id);
@@ -1218,12 +1262,14 @@ const Tag = (() => {
                 // idResult :: Maybe [Maybe String]
                 const idResult = /^\$(\d+)$/.exec(str);
                 if(idResult !== null) {
-                    rm([getIndexById(parseInt(idResult[1], 10))]);
+                    // index :: IndexNumber
+                    const index = getIndexById(parseInt(idResult[1], 10));
+                    rm([{index: index, id: tagTable[index].id}]);
                     return;
                 }
             }
             // result :: ParseObject
-            const result = parameterCheck(str, tagTable.length);
+            const result = tagParameterCheck(str);
             rm(result.data);
             if(result.isErr) {
                 Notice.set('error: remove-tag ' + result.str);
@@ -1396,7 +1442,7 @@ const TaskQueue = (() => {
             nubData.push(x);
         });
         return {
-            data: nubData,
+            data: nubData.filter(x => x !== undefined),
             isErr: ret.some(x => x.isErr),
             str: ret.map(x => x.str).join(' ')
         };
@@ -1718,6 +1764,7 @@ dgebi('cover').addEventListener('click', () => {
         }
         document.cui_form.input.focus();
     });
+    dgebi('text_cui_form').addEventListener('input', submitButtonControl);
     dgebi('range_volume').addEventListener('input', () => {
         parseMain('#volume ' + dgebi('range_volume').value)
     });
@@ -1762,7 +1809,7 @@ dgebi('cover').addEventListener('click', () => {
     const formCheck = (cond, id) => {
         dgebi(id).className = `background-color_${cond ? 'pink' : 'white'}`;
     };
-    ['timer_hour', 'timer_minute', 'timer_second'].map(x => {
+    ['timer_hour', 'timer_minute', 'timer_second'].forEach(x => {
         dgebi(x).addEventListener('input', event => {
             // value :: String
             const value = document.gui_form[event.target.id].value;
@@ -1771,7 +1818,7 @@ dgebi('cover').addEventListener('click', () => {
             formCheck(isValid, event.target.id);
         });
     });
-    ['alarm_hour', 'alarm_minute', 'alarm_second'].map(x => {
+    ['alarm_hour', 'alarm_minute', 'alarm_second'].forEach(x => {
         dgebi(x).addEventListener('input', event => {
             // value :: String
             const value = document.gui_form[event.target.id].value;

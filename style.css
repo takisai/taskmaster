@@ -25,6 +25,11 @@ kbd {
     background-color: #f1f1f1;
     padding: 0.1em 0.4em;
     font-size: 0.9em;
+    font-family: monospace, monospace;
+}
+
+code {
+    font-family: monospace, monospace;
 }
 
 h5 {
@@ -129,12 +134,13 @@ a:active, .color_red {
     position: sticky;
     top: 0;
     padding: 8px 0px;
+    background-color: inherit;
 }
 
 #clock {
     font-size: 2em;
     margin: 0px 0px 8px 0px;
-    font-family: monospace, sans-serif;
+    font-family: monospace, monospace;
 }
 
 #button_parent {
@@ -143,6 +149,14 @@ a:active, .color_red {
 
 #div_volume {
     margin: 0px 0px 8px 0px;
+}
+
+#tag_parent {
+    margin: 0px;
+}
+
+#tag_parent > div {
+    margin: 8px 0px;
 }
 
 #cover {
@@ -188,7 +202,7 @@ a:active, .color_red {
     width: 5em;
 }
 
-#macros, #timer_setting, #alarm_setting {
+#cui_submit, #macros, #timer_setting, #alarm_setting {
     display: none;
 }
 

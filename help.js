@@ -4,7 +4,7 @@ Released under the MIT license
 https://opensource.org/licenses/mit-license.php
 */
 'use strict';
-const VERSION = [0, 9, 0]; // VERSION :: [VersionNumber]
+const VERSION = [0, 9, 1]; // VERSION :: [VersionNumber]
 
 // dgebi :: IDString -> Maybe Element
 const dgebi = id => document.getElementById(id);

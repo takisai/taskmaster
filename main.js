@@ -8,7 +8,7 @@ const UPDATE_TIME = 200; // UPDATE_TIME :: DateNumber
 const SEPARATOR = '\v'; // SEPARATOR :: String
 const NOTICE_CLEAR_TIME = 5000; // NOTICE_CLEAR_TIME :: DateNumber
 const RECURSION_LIMIT = 5; // RECURSION_LIMIT :: Number
-const VERSION = [0, 9, 0]; // VERSION :: [VersionNumber]
+const VERSION = [0, 9, 1]; // VERSION :: [VersionNumber]
 
 const NUMBER_OF_SOUNDS = 15; // NUMBER_OF_SOUNDS :: Number
 /*  NUMBER_OF_SOUNDSの数だけmp3ファイルを登録して音を鳴らすことができます。
@@ -1194,8 +1194,8 @@ const Tag = (() => {
     return {
         // Tag.getLength :: () -> IndexNumber
         getLength: () => tagTable.length,
-        // Tag.insert :: (TagsString, Maybe DateNumber) -> ()
-        insert: (str, now = null) => {
+        // Tag.insert :: (TagsString, Maybe DateNumber, Bool) -> ()
+        insert: (str, now = null, isOpen = true) => {
             const isNowNull = now === null; // isNowNull :: Bool
             if(isNowNull) {
                 now = Date.now();
@@ -1204,7 +1204,6 @@ const Tag = (() => {
             const tmp = str.split(' ').map(x => {
                 // successObj :: Object
                 const successObj = {isErr: false, str: x};
-                const saveStr = `#$tag ${now}#${x}`; // saveStr :: SaveString
                 if(!isNowNull) {
                     if(tagTable.findIndex(x => x.saveText === saveStr) >= 0) {
                         return successObj;
@@ -1220,15 +1219,16 @@ const Tag = (() => {
                     id: tagCount,
                     str: x,
                     time: now,
+                    isOpen: isOpen,
                     numYellow: 0,
                     numRed: 0,
-                    saveText: saveStr
+                    saveText: () => `#$tag ${tagItem.time}${tagItem.isOpen ? '#' : '$'}${tagItem.str}`
                 };
                 tagCount++;
                 // newElement :: Element
                 const newElement = document.createElement('div');
                 newElement.innerHTML =
-                        `<details open><summary><span id="tag_name_${tagItem.id}">#${x}</span> <input id="remove_tag_${tagItem.id}" type="button" value="remove" onclick="parseMain('#remove-tag $${tagItem.id}', 'priv');"></summary><div style="padding-left: 0px"><ol id="parent_${tagItem.id}"></ol></div></details>`;
+                        `<details${tagItem.isOpen ? ' open' : ''}><summary><span id="tag_name_${tagItem.id}">#${x}</span> <input id="remove_tag_${tagItem.id}" type="button" value="remove" onclick="parseMain('#remove-tag $${tagItem.id}', 'priv');"></summary><div style="padding-left: 0px"><ol id="parent_${tagItem.id}"></ol></div></details>`;
                 newElement.setAttribute('id', 'tag_parent_' + tagItem.id);
                 // i :: IndexNumber
                 const i = tagTable.findIndex(x => x.time > tagItem.time);
@@ -1242,6 +1242,12 @@ const Tag = (() => {
                     tagTable.push(tagItem);
                 }
                 TaskQueue.newTag(tagItem.id);
+                // detailsDom :: Element
+                const detailsDom = newElement.childNodes[0];
+                detailsDom.addEventListener('toggle', e => {
+                    tagTable[getIndexById(tagItem.id)].isOpen = detailsDom.open;
+                    Save.exec();
+                });
                 return successObj;
             });
             if(tmp.map(x => x.isErr).some(x => x)) {
@@ -1252,8 +1258,8 @@ const Tag = (() => {
         // Tag.insertByData :: ParameterString -> ()
         insertByData: str => {
             // result :: Maybe [Maybe String]
-            const result = /^(\d+)#(.*)$/.exec(str);
-            Tag.insert(result[2], parseInt(result[1], 10));
+            const result = /^(\d+)(#|\$)(.*)$/.exec(str);
+            Tag.insert(result[3], parseInt(result[1], 10), result[2] === '#');
         },
         // Tag.remove :: (ParameterString, FlagString) -> ()
         remove: (str, callFrom) => {
@@ -1338,7 +1344,7 @@ const Tag = (() => {
             }
         },
         // Tag.save :: () -> [ExecString]
-        save: () => tagTable.map(x => x.saveText)
+        save: () => tagTable.map(x => x.saveText())
     };
 })();
 
@@ -1670,7 +1676,9 @@ const TaskQueue = (() => {
                 if(taskQueue[i][j] === undefined) return false;
                 return now - taskQueue[i][j].deadline >= -interval / 2;
             };
-            [undefined, ...Array(Tag.getLength()).keys()].forEach(i => {
+            // indices :: [Maybe IndexNumber]
+            const indices = taskQueue.map((t, i) => i);
+            [undefined, ...indices.filter(t => t !== undefined)].forEach(i => {
                 for(let j = 0; isLoop(i, j); j++) { // j :: IndexNumber
                     const target = taskQueue[i][j]; // target :: TaskObject
                     if(target.isValid) {
@@ -1757,16 +1765,14 @@ dgebi('cover').addEventListener('click', () => {
         if(str.length > 0 && str !== '\n') return;
         let target = event.target; // target :: Maybe Element
         while(target !== null) {
-            if(target.id === 'menu') {
-                return;
-            }
+            if(target.id === 'menu') return;
             target = target.parentNode;
         }
         document.cui_form.input.focus();
     });
     dgebi('text_cui_form').addEventListener('input', submitButtonControl);
     dgebi('range_volume').addEventListener('input', () => {
-        parseMain('#volume ' + dgebi('range_volume').value)
+        parseMain('#volume ' + dgebi('range_volume').value);
     });
     window.addEventListener('keydown', event => {
         if(event.ctrlKey) {

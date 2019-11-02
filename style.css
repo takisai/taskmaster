@@ -10,10 +10,6 @@ body {
     padding: 0px 8px;
 }
 
-details {
-    display: inline;
-}
-
 h1 {
     display: block;
     font-size: 2em;
@@ -52,10 +48,6 @@ select {
     height: 1.7em;
 }
 
-details > div {
-    padding-left: 1em;
-}
-
 input[type=range], select {
     vertical-align: middle;
 }
@@ -69,6 +61,30 @@ form[name=gui_form] {
     margin-top: 8px;
     margin-bottom: 0px;
     padding-bottom: 8px;
+}
+
+span[open], span[closed] {
+    background-repeat: no-repeat;
+    background-position: left center;
+    background-size: 1em;
+    padding-left: 1em;
+    cursor: pointer;
+}
+
+span[open] {
+    background-image: url('image/open.svg');
+}
+
+span[closed] {
+    background-image: url('image/closed.svg');
+}
+
+span[open] + *, span[closed] + * {
+    padding-left: 1em;
+}
+
+span[closed] + * {
+    display: none;
 }
 
 .background-color_red {
@@ -92,7 +108,7 @@ form[name=gui_form] {
     margin: 1.245em 0px;
 }
 
-.h2 > details > summary {
+.h2 > span {
     font-size: 1.5em;
     font-weight: bold;
 }
@@ -102,7 +118,7 @@ form[name=gui_form] {
     margin: 1.17em 0px;
 }
 
-.h3 > details > summary {
+.h3 > span {
     font-size: 1.17em;
     font-weight: bold;
 }
@@ -112,7 +128,7 @@ form[name=gui_form] {
     margin: 1.33em 0px;
 }
 
-.h4 > details > summary {
+.h4 > span {
     font-weight: bold;
 }
 

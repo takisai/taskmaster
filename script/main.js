@@ -44,7 +44,7 @@ const removeDom = id => {
     return true;
 };
 
-// makeErrorDom :: String -> DomString
+// makeErrorDom :: String -> DOMString
 const makeErrorDom = str => `<span class="color_red">${str}</span>`;
 
 // parameterCheck :: (ParameterString, IndexNumber) -> ParseObject
@@ -129,9 +129,9 @@ const getByGui = () => {
         const unit = ['h', 'm', 's']; // unit :: [String]
         // value :: [String]
         const value = timeUnit.map(x => form['timer_' + x].value);
-        let main = '' // main :: String
         if(!isValid(x => isNaN(Number(x)), value)) return;
-        [0, 1, 2].map(i => main += Number(value[i]) + unit[i]);
+        // main :: String
+        const main = [0, 1, 2].map(i => Number(value[i]) + unit[i]).join('');
         ret.push(main, makeMode('t'));
     } else { // form.task_type.value === 'alarm'
         // value :: [String]
@@ -187,7 +187,7 @@ const parseMain = (() => {
 
     // main :: (ExecString, FlagString) -> ()
     const main = (text, callFrom) => {
-        text = text.replace(/\s+|　/g, ' ');
+        text = text.replace(/\s+/g, ' ');
         const isHeadHash = /^#/.test(text); // isHeadHash :: Bool
         const isHeadArrow = /^->/.test(text); // isHeadArrow :: Bool
         const isRawMode = isHeadHash || isHeadArrow; // isRawMode :: Bool
@@ -195,7 +195,7 @@ const parseMain = (() => {
             text = text.slice(1);
         }
         if(Macro.isInsertSuccess(text)) return;
-        text = text.replace(/^\s+/, '').replace(/\s+$/, '');
+        text = text.trim();
         if(!isRawMode) {
             text = Macro.replace(text);
             text = evaluate(text);
@@ -546,7 +546,8 @@ const Sound = (() => {
 
 const Base64 = (() => {
     // KEY :: Base64String
-    const KEY = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+    const KEY =
+            'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
 
     return {
         // Base64.encode :: SaveString -> Base64String
@@ -702,7 +703,6 @@ const Button = (() => {
             const buttonItem = {
                 id: buttonCount,
                 str: str,
-                saveText: `#$button ${now}#${str}`
             };
             if(now === null) {
                 buttonItem.time = Date.now();
@@ -715,6 +715,7 @@ const Button = (() => {
                 buttonItem.time = now;
             }
             buttonCount++;
+            buttonItem.saveText = `#$button ${buttonItem.time}#${str}`;
             // newElement :: Element
             const newElement = document.createElement('span');
             newElement.innerHTML =
@@ -1082,7 +1083,6 @@ const Task = (() => {
                 ret.tipText += importanceStr();
             }
             ret.tag = result[9];
-            // ret.saveText += result[9] === undefined ? '' : '#' + result[9];
             if(result[10] !== undefined) {
                 ret.name = result[10];
                 ret.saveRawName = '/' + result[10];
@@ -1201,7 +1201,9 @@ const Tag = (() => {
                 // successObj :: Object
                 const successObj = {isErr: false, str: x};
                 if(!isNowNull) {
-                    if(tagTable.findIndex(x => x.saveText === saveStr) >= 0) {
+                    // isEq :: TagObject -> Bool
+                    const isEq = t => t.time === now && t.str === x;
+                    if(tagTable.findIndex(isEq) >= 0) {
                         return successObj;
                     }
                 }
@@ -1243,6 +1245,7 @@ const Tag = (() => {
                 detailsDom.addEventListener('click', e => {
                     // isOpen :: Bool
                     const isOpen = detailsDom.hasAttribute('open');
+                    if(tagTable[getIndexById(tagItem.id)] === undefined) return;
                     tagTable[getIndexById(tagItem.id)].isOpen = isOpen;
                     Save.exec();
                 });
@@ -1440,9 +1443,11 @@ const TaskQueue = (() => {
         });
         const nubData = []; // nubData :: [Object]
         [...ret.map(x => x.data).flat()].forEach(x => {
-            if(nubData.some(t => {
+            // isEq :: [Object] -> Bool
+            const isEq = t => {
                 return ['index', 'id', 'tagNo'].every(tt => x[tt] === t[tt]);
-            })) return;
+            };
+            if(nubData.some(isEq)) return;
             nubData.push(x);
         });
         return {

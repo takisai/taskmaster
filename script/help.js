@@ -5,6 +5,8 @@ https://opensource.org/licenses/mit-license.php
 */
 'use strict';
 
+const SEPARATOR = '|'; // SEPARATOR :: String
+
 // hrefOpen :: IDString -> ()
 const hrefOpen = id => {
     let target = dgebi(id); // target :: Maybe Element
@@ -18,32 +20,40 @@ const hrefOpen = id => {
     }
     window.location.href = '#' + id;
 };
-const aElements = document.getElementsByTagName('a'); // aElements :: [Element]
-for(let i = 0; i < aElements.length; i++) { // i :: IndexNumber
-    const link = aElements[i].getAttribute('href'); // link :: LinkString
-    if(!/^#/.test(link)) continue;
-    aElements[i].setAttribute('onclick', `hrefOpen('${link.slice(1)}')`);
-    aElements[i].setAttribute('href', 'javascript:void(0)');
+
+{
+    // aElements :: [Element]
+    const aElements = document.getElementsByTagName('a');
+    for(let i = 0; i < aElements.length; i++) { // i :: IndexNumber
+        const link = aElements[i].getAttribute('href'); // link :: LinkString
+        if(!/^#/.test(link)) continue;
+        aElements[i].setAttribute('onclick', `hrefOpen('${link.slice(1)}')`);
+        aElements[i].setAttribute('href', 'javascript:void(0)');
+    }
 }
 
-const separator = '|'; // separator :: String
 dsElements.forEach(x => x.addEventListener('click', () => {
     let ret = [VERSION.join('.')];
     dsElements.forEach(t => ret.push(t.hasAttribute('open')));
-    window.localStorage.setItem('help', ret.join(separator));
+    window.localStorage.setItem('help', ret.join(SEPARATOR));
 }));
 
-// data :: [LoadString]
-const data = window.localStorage.getItem('help').split(separator);
-// version :: [VersionNumber]
-const version = data.shift().split('\.').map(x => parseInt(x, 10));
-if(!(version < VERSION || version > VERSION)) {
-    for(let i = 0; i < dsElements.length; i++) { // i :: IndexNumber
-        const hasOpen = dsElements[i].hasAttribute('open'); // hasOpen :: Bool
-        // hasClosed :: Bool
-        const hasClosed = dsElements[i].hasAttribute('closed');
-        if(data[i] === 'true' && hasClosed || data[i] === 'false' && hasOpen) {
-            detailsToggle(dsElements[i]);
+{
+    // data :: [LoadString]
+    const data = window.localStorage.getItem('help').split(SEPARATOR);
+    // version :: [VersionNumber]
+    const version = data.shift().split('\.').map(x => parseInt(x, 10));
+    if(!(version < VERSION || version > VERSION)) {
+        for(let i = 0; i < dsElements.length; i++) { // i :: IndexNumber
+            // hasOpen :: Bool
+            const hasOpen = dsElements[i].hasAttribute('open');
+            // hasClosed :: Bool
+            const hasClosed = dsElements[i].hasAttribute('closed');
+            const isTrue = data[i] === 'true'; // isTrue :: Bool
+            const isFalse = data[i] === 'false'; // isFalse :: Bool
+            if(isTrue && hasClosed || isFalse && hasOpen) {
+                detailsToggle(dsElements[i]);
+            }
         }
     }
 }

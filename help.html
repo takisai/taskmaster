@@ -11,16 +11,7 @@ https://opensource.org/licenses/mit-license.php
         <meta name="viewport" content="width=device-width,initial-scale=1">
         <link rel="stylesheet" href="style.css">
         <link rel="icon" href="favicon.ico">
-        <script>
-            // userAgent :: String
-            const userAgent = window.navigator.userAgent.toLowerCase();
-            // isTrident :: Bool
-            const isTrident = userAgent.indexOf('trident') !== -1;
-            const isMsie = userAgent.indexOf('msie') !== -1; // isMsie :: Bool
-            if(isTrident || isMsie) {
-                window.alert('Task MasterはInternet Explorer非対応です');
-            }
-        </script>
+        <script src="script/ie.js"></script>
     </head>
     <body id="document">
         <h1>Task Master Help</h1>
@@ -36,173 +27,7 @@ https://opensource.org/licenses/mit-license.php
                 </div>
                 <div class="h3">
                     <span closed>1.2 更新履歴</span>
-                    <div>
-                        <ul>
-                            <li>
-                                Version 0.9.2 | 2019-11-03
-                                <ul>
-                                    <li>開閉可能なアイテムの表示を変更</li>
-                                    <li>IEが非対応なことを明記</li>
-                                </ul>
-                            </li>
-                            <li>
-                                Version 0.9.1 | 2019-10-27
-                                <ul>
-                                    <li>タグを設定したリマインダーの動作が正しくなるよう修正</li>
-                                    <li>タグの開閉状態を保存する機能を追加</li>
-                                    <li>helpを微修正</li>
-                                </ul>
-                            </li>
-                            <li>
-                                Version 0.9.0 | 2019-10-19
-                                <ul>
-                                    <li>enterボタンの追加</li>
-                                    <li><kbd>remove-tag</kbd>コマンドの機能追加</li>
-                                    <li>等幅フォントの大きさを調整</li>
-                                    <li>タグ間の広さを調整</li>
-                                    <li>入力に含まれる空白を減らしすぎないよう修正</li>
-                                    <li>ボタン・マクロ・タグの表示順番に関するバグを修正</li>
-                                    <li><kbd>remove-tag</kbd>コマンドの表示のバグを修正</li>
-                                    <li>help文章を修正</li>
-                                    <li>アクセス時の背景バグの再修正</li>
-                                </ul>
-                            </li>
-                            <li>
-                                Version 0.8.0 | 2019-10-14
-                                <ul>
-                                    <li>アイコンの追加</li>
-                                    <li>タイトル画面の追加</li>
-                                    <li>タグのあるリマインダーが動作したときの動作を追加</li>
-                                    <li>パラメーターのバグを修正</li>
-                                    <li>タグの削除に関するバグを修正</li>
-                                    <li>GUIによる入力のチェックがより厳しくなるよう修正</li>
-                                </ul>
-                            </li>
-                            <li>
-                                Version 0.7.0 | 2019-10-12
-                                <ul>
-                                    <li><kbd>tag</kbd>、<kbd>remove-tag</kbd>、<kbd>move</kbd>の追加</li>
-                                    <li><kbd>remove</kbd>の仕様変更</li>
-                                    <li>音番号の変更</li>
-                                    <li>入力に含まれる空白を減らすよう変更</li>
-                                    <li>パラメーターの範囲チェック不具合を修正</li>
-                                    <li>ボタンにマウスオーバーするとボタン番号がtipで出るように修正</li>
-                                    <li>helpの文章を大幅に修正</li>
-                                    <li>アクセス時の背景バグの再修正</li>
-                                </ul>
-                            </li>
-                            <li>
-                                Version 0.6.0 | 2019-09-10
-                                <ul>
-                                    <li><kbd>merge</kbd>の追加</li>
-                                    <li>音を変更</li>
-                                    <li>背景が赤いときにページを読み込むときに発生するバグを修正</li>
-                                    <li>ヘルプの内容を追加</li>
-                                </ul>
-                            </li>
-                            <li>
-                                Version 0.5.1 | 2019-09-01
-                                <ul>
-                                    <li>ヘルプの内容を追加</li>
-                                    <li>ヘルプページの開閉状態を保存するように変更</li>
-                                </ul>
-                            </li>
-                            <li>
-                                Version 0.5.0 | 2019-08-25
-                                <ul>
-                                    <li><kbd>remove</kbd>などのコマンドで範囲指定ができるように変更</li>
-                                </ul>
-                            </li>
-                            <li>
-                                Version 0.4.3 | 2019-08-22
-                                <ul>
-                                    <li>ボタンを押しても入力欄にフォーカスが当たるように変更</li>
-                                    <li>volumeバーの上の空間が小さくなるよう修正</li>
-                                    <li>推薦環境を動作確認環境に言い換え</li>
-                                    <li>ソースコードにコメントを追加</li>
-                                </ul>
-                            </li>
-                            <li>
-                                Version 0.4.2 | 2019-08-19
-                                <ul>
-                                    <li>背景が赤くなるときヘッダーの色が変わらない不具合を修正</li>
-                                </ul>
-                            </li>
-                            <li>
-                                Version 0.4.1 | 2019-08-18
-                                <ul>
-                                    <li>音番号を10以降も指定できるように変更</li>
-                                    <li>historyの挙動を修正</li>
-                                    <li>タイマーの表示を修正</li>
-                                    <li>ヘルプの文章を修正</li>
-                                </ul>
-                            </li>
-                            <li>
-                                Version 0.4.0 | 2019-08-12
-                                <ul>
-                                    <li><kbd>default s</kbd>の追加</li>
-                                    <li>新しいバージョンになったときに通知する機能を追加</li>
-                                    <li>時刻・テキスト入力欄・ボタンが画面上部に固定されるように変更</li>
-                                    <li>アイテムの表示順を変更</li>
-                                    <li>メニューの表示崩れを修正</li>
-                                    <li>shiftキーを押してもショートカットが動作する不具合を修正</li>
-                                </ul>
-                            </li>
-                            <li>
-                                Version 0.3.3 | 2019-08-09
-                                <ul>
-                                    <li><kbd>+</kbd>でつないだリマインダーの時刻表示が1秒前後ずれる不具合を修正</li>
-                                    <li>リマインダー設定の入力チェックを追加</li>
-                                    <li>リマインダー設定の既定値を<kbd>default</kbd>の値に変更</li>
-                                    <li><kbd>default</kbd>の仕様変更</li>
-                                </ul>
-                            </li>
-                            <li>
-                                Version 0.3.2 | 2019-08-06
-                                <ul>
-                                    <li>以前の履歴が候補として表示されるのを非表示に</li>
-                                    <li><kbd>+</kbd>でつないだリマインダーの時刻表示が1秒早く見える不具合を修正</li>
-                                    <li>リマインダー設定のスタイルを微修正</li>
-                                    <li>ヘルプのアンカーが正しく働くようにスクリプトを導入</li>
-                                </ul>
-                            </li>
-                            <li>
-                                Version 0.3.1 | 2019-08-04
-                                <ul>
-                                    <li><kbd>load</kbd>コマンドの不具合を修正</li>
-                                    <li>ヘルプのリンク切れを修正</li>
-                                </ul>
-                            </li>
-                            <li>
-                                Version 0.3.0 | 2019-08-03
-                                <ul>
-                                    <li><kbd>switch</kbd>の変更</li>
-                                    <li><kbd>switch-alarm</kbd>/<kbd>switch-timer</kbd>の追加</li>
-                                    <li>コマンドのエラーをより正確に出すように修正</li>
-                                </ul>
-                            </li>
-                            <li>
-                                Version 0.2.0 | 2019-08-02
-                                <ul>
-                                    <li><kbd>help</kbd>の追加</li>
-                                    <li>リマインダー動作時にコマンドを実行する書式を変更</li>
-                                    <li>アラーム指定のmilliseconds単位のズレを修正</li>
-                                    <li>リマインダー指定で不正な入力をした場合の動作を修正</li>
-                                    <li><kbd>remove</kbd>で消したリマインダーが<kbd>undo</kbd>で復元できない不具合を修正</li>
-                                    <li>上キーで入力位置が始めになる不具合を修正</li>
-                                    <li>スマホでの表示幅を既定値から変更</li>
-                                    <li>時計のフォントの不具合を修正</li>
-                                    <li>autocompleteで以前の入力が出ないよう修正</li>
-                                </ul>
-                            </li>
-                            <li>
-                                Version 0.1.0 | 2019-08-01
-                                <ul>
-                                    <li>β版</li>
-                                </ul>
-                            </li>
-                        </ul>
-                    </div>
+                    <div id="history_info"></div>
                 </div>
                 <div class="h3">
                     <span closed>1.3 ヘルプの読み方</span>
@@ -845,5 +670,6 @@ https://opensource.org/licenses/mit-license.php
         </div>
     </body>
     <script src="script/common.js"></script>
+    <script src="script/history.js"></script>
     <script src="script/help.js"></script>
 </html>

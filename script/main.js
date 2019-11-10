@@ -1498,10 +1498,12 @@ const TaskQueue = (() => {
             // i :: IndexNumber
             const i = taskQueue[x.tagNo].findIndex(t => t.id === x.id);
             const target = taskQueue[x.tagNo][i]; // target :: TaskObject
-            if(!target.isValid && target.importance > 1) {
-                BackgroundAlert.down();
+            if(!target.isValid) {
+                Tag.emphDown(x.tagNo, target.importance);
+                if(target.importance > 1) {
+                    BackgroundAlert.down();
+                }
             }
-            Tag.emphDown(x.tagNo, target.importance);
             taskQueue[x.tagNo].splice(i, 1);
         });
         for(let i = 0; i < taskQueue.length; i++) { // i :: IndexNumber

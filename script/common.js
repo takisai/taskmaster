@@ -4,7 +4,7 @@ Released under the MIT license
 https://opensource.org/licenses/mit-license.php
 */
 'use strict';
-const VERSION = [0, 9, 3]; // VERSION :: [VersionNumber]
+const VERSION = [0, 9, 4]; // VERSION :: [VersionNumber]
 
 // dgebi :: IDString -> Maybe Element
 const dgebi = id => document.getElementById(id);
@@ -34,7 +34,7 @@ const detailsToggle = target => {
     if(target.hasAttribute('open')) {
         target.removeAttribute('open');
         target.setAttribute('closed', '');
-    } else {
+    } else { // target.hasAttribute('closed')
         target.removeAttribute('closed');
         target.setAttribute('open', '');
     }
@@ -59,4 +59,4 @@ const dsElements = (() => {
 dsElements.forEach(x => x.setAttribute('onclick', 'detailsToggle(this)'));
 
 dgebi('common_info').innerHTML =
-        `<ul><li>最新版: Version ${VERSION.join('.')} | 2019-11-04</li><li>製作者: takisai</li><li>動作確認環境: Google Chrome・Mozilla Firefox・Microsoft Edge 各最新版</li></ul>`;
+        `<ul><li>最新版: Version ${VERSION.join('.')} | 2019-11-10</li><li>製作者: takisai</li><li>動作確認ブラウザ: Google Chrome・Mozilla Firefox・Microsoft Edge 各最新版</li></ul>`;

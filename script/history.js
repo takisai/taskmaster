@@ -9,6 +9,15 @@ https://opensource.org/licenses/mit-license.php
     // data :: [HistoryInfoObject]
     const data = [
         {
+            version: [0, 9, 4],
+            date: '2019-11-10',
+            info: [
+                'タグ名部分のアラートが消える不具合を修正',
+                '注意事項を追加',
+                'helpの文章を微修正'
+            ]
+        },
+        {
             version: [0, 9, 3],
             date: '2019-11-04',
             info: [

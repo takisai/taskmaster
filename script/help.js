@@ -21,7 +21,7 @@ const hrefOpen = id => {
     window.location.href = '#' + id;
 };
 
-{
+do {
     // aElements :: [Element]
     const aElements = document.getElementsByTagName('a');
     for(let i = 0; i < aElements.length; i++) { // i :: IndexNumber
@@ -30,7 +30,7 @@ const hrefOpen = id => {
         aElements[i].setAttribute('onclick', `hrefOpen('${link.slice(1)}')`);
         aElements[i].setAttribute('href', 'javascript:void(0)');
     }
-}
+} while(false);
 
 dsElements.forEach(x => x.addEventListener('click', () => {
     let ret = [VERSION.join('.')];
@@ -38,16 +38,16 @@ dsElements.forEach(x => x.addEventListener('click', () => {
     window.localStorage.setItem('help', ret.join(SEPARATOR));
 }));
 
-{
+do {
     // data :: [LoadString]
     const data = window.localStorage.getItem('help').split(SEPARATOR);
+    if(data === undefined) break;
     // version :: [VersionNumber]
-    const version = data.shift().split('\.').map(x => parseInt(x, 10));
+    const version = data.shift().split('\.').map(x => parseInt10(x));
     if(!(version < VERSION || version > VERSION)) {
         for(let i = 0; i < dsElements.length; i++) { // i :: IndexNumber
-            // hasOpen :: Bool
+            // hasOpen :: Bool;  hasClosed :: Bool
             const hasOpen = dsElements[i].hasAttribute('open');
-            // hasClosed :: Bool
             const hasClosed = dsElements[i].hasAttribute('closed');
             const isTrue = data[i] === 'true'; // isTrue :: Bool
             const isFalse = data[i] === 'false'; // isFalse :: Bool
@@ -56,4 +56,4 @@ dsElements.forEach(x => x.addEventListener('click', () => {
             }
         }
     }
-}
+} while(false);

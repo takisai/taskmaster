@@ -5,9 +5,18 @@ https://opensource.org/licenses/mit-license.php
 */
 'use strict';
 
-{
+do {
     // data :: [HistoryInfoObject]
     const data = [
+        {
+            version: [0, 9, 5],
+            date: '2019-11-16',
+            info: [
+                '<kbd>remove</kbd>コマンドの不具合を修正',
+                '<kbd>move</kbd>コマンドの不具合を修正',
+                'helpページでエラーが出ないよう修正'
+            ]
+        },
         {
             version: [0, 9, 4],
             date: '2019-11-10',
@@ -210,7 +219,11 @@ https://opensource.org/licenses/mit-license.php
 
     // htmls :: [DOMString]
     const htmls = data.map(x => {
-        return `Version ${x.version.join('.')} | ${x.date}<ul><li>${x.info.join('</li><li>')}</li></ul>`;
+        // info :: DOMString
+        const info = `<ul>${x.info.map(t => `<li>${t}</li>`).join('')}</ul>`;
+        return `Version ${x.version.join('.')} | ${x.date}${info}`;
     });
-    dgebi('history_info').innerHTML = `<ul><li>${htmls.join('</li><li>')}</li></ul>`;
-}
+    // innerHtml :: DOMString
+    const innerHtml = `<ul>${htmls.map(t => `<li>${t}</li>`).join('')}</ul>`;
+    dgebi('history_info').innerHTML = innerHtml;
+} while(false);

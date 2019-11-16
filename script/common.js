@@ -4,10 +4,12 @@ Released under the MIT license
 https://opensource.org/licenses/mit-license.php
 */
 'use strict';
-const VERSION = [0, 9, 4]; // VERSION :: [VersionNumber]
+const VERSION = [0, 9, 5]; // VERSION :: [VersionNumber]
 
 // dgebi :: IDString -> Maybe Element
 const dgebi = id => document.getElementById(id);
+// parseInt10 :: String -> Maybe Number
+const parseInt10 = str => parseInt(str, 10);
 
 // *** polyfill ***
 if (!Array.prototype.flat) {
@@ -46,8 +48,8 @@ const dsElements = (() => {
     const spanElements = document.getElementsByTagName('span');
     const ret = []; // ret :: [Elements]
     for(let i = 0; i < spanElements.length; i++) { // i :: IndexNumber
-        const isOpen = spanElements[i].hasAttribute('open'); // isOpen :: Bool
-        // isClosed :: Bool
+        // isOpen :: Bool;  isClosed :: Bool
+        const isOpen = spanElements[i].hasAttribute('open');
         const isClosed = spanElements[i].hasAttribute('closed');
         if(isOpen || isClosed) {
             ret.push(spanElements[i]);
@@ -58,5 +60,14 @@ const dsElements = (() => {
 
 dsElements.forEach(x => x.setAttribute('onclick', 'detailsToggle(this)'));
 
-dgebi('common_info').innerHTML =
-        `<ul><li>最新版: Version ${VERSION.join('.')} | 2019-11-10</li><li>製作者: takisai</li><li>動作確認ブラウザ: Google Chrome・Mozilla Firefox・Microsoft Edge 各最新版</li></ul>`;
+do {
+    // data :: [String]
+    const data = [
+        `最新版: Version ${VERSION.join('.')} | 2019-11-16`,
+        '製作者: takisai',
+        '動作確認ブラウザ: Google Chrome・Mozilla Firefox・Microsoft Edge 各最新版'
+    ];
+    // html :: DOMString
+    const html = `<ul>${data.map(x => `<li>${x}</li>`).join('')}</ul>`;
+    dgebi('common_info').innerHTML = html;
+} while(false);

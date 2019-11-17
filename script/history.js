@@ -9,6 +9,17 @@ do {
     // data :: [HistoryInfoObject]
     const data = [
         {
+            version: [0, 10, 0],
+            date: '2019-11-17',
+            info: [
+                '<kbd>mute</kbd>コマンドの追加',
+                '<kbd>toggle-tag</kbd>コマンドなどの追加',
+                '<kbd>save</kbd>コマンドの仕様変更',
+                'リマインダーリストの時刻表示を押すことで<kbd>switch</kbd>コマンドを呼び出すよう修正',
+                'タグの削除時のバグを修正'
+            ]
+        },
+        {
             version: [0, 9, 5],
             date: '2019-11-16',
             info: [

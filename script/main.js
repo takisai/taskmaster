@@ -195,13 +195,13 @@ const parseMain = (() => {
             default:
                 switch(spaceSplit[1]) {
                     case 'switch':
-                        TaskQueue.setDisplay(parameter, '');
+                        TaskQueue.setDisplay(parameter, '', callFrom);
                         return;
                     case 'switch-alarm':
-                        TaskQueue.setDisplay(parameter, '-alarm');
+                        TaskQueue.setDisplay(parameter, '-alarm', callFrom);
                         return;
                     case 'switch-timer':
-                        TaskQueue.setDisplay(parameter, '-timer');
+                        TaskQueue.setDisplay(parameter, '-timer', callFrom);
                         return;
                     case 'remove':
                         TaskQueue.remove(parameter, callFrom);
@@ -210,7 +210,16 @@ const parseMain = (() => {
                         Tag.insert(parameter);
                         return;
                     case 'remove-tag':
-                        Tag.remove(parameter, callFrom);
+                        Tag.remove(parameter);
+                        return;
+                    case 'open-tag':
+                        Tag.toggle(parameter, 'open');
+                        return;
+                    case 'close-tag':
+                        Tag.toggle(parameter, 'close');
+                        return;
+                    case 'toggle-tag':
+                        Tag.toggle(parameter, 'toggle');
                         return;
                     case 'button':
                         Button.insert(parameter);
@@ -235,6 +244,15 @@ const parseMain = (() => {
                         return;
                     case 'volume':
                         Sound.setVolume(parameter);
+                        return;
+                    case 'mute-on':
+                        Sound.setMute('on');
+                        return;
+                    case 'mute-off':
+                        Sound.setMute('off');
+                        return;
+                    case 'mute':
+                        Sound.setMute('');
                         return;
                     case 'default':
                         Task.setDefault(parameter);
@@ -490,7 +508,7 @@ const Trash = (() => {
 
 const Sound = (() => {
     const sounds = []; // sounds :: Map URLString Audio
-    let volume = 100; // volume :: VolumeNumber
+    let volume = 100, mute = 1; // volume :: VolumeNumber;  mute :: BoolNumber
 
     return {
         // Sound.setVolume :: ParameterString -> ()
@@ -501,9 +519,33 @@ const Sound = (() => {
                 return;
             }
             volume = n;
-            TaskQueue.setVolume(volume / 100);
+            TaskQueue.setVolume(volume / 100 * mute);
             dgebi('range_volume').value = volume;
             dgebi('volume').innerText = volume;
+        },
+        // Sound.setMute :: FlagString -> ()
+        setMute: flag => {
+            switch(flag) {
+                case 'on':
+                    mute = 0;
+                    break;
+                case 'off':
+                    mute = 1;
+                    break;
+                case '':
+                    mute = 1 - mute;
+                    break;
+            }
+            if(mute === 0) {
+                dgebi('range_volume').setAttribute('disabled', '');
+                dgebi('volume_name').style.textDecoration = 'line-through';
+                dgebi('volume').style.textDecoration = 'line-through';
+            } else { // mute === 1
+                dgebi('range_volume').removeAttribute('disabled');
+                dgebi('volume_name').style.textDecoration = '';
+                dgebi('volume').style.textDecoration = '';
+            }
+            TaskQueue.setVolume(volume / 100 * mute);
         },
         // Sound.init :: () ~-> ()
         init: () => {
@@ -522,7 +564,7 @@ const Sound = (() => {
             }
             const sound = new Audio(); // sound :: Audio
             sound.src = sounds[url].src;
-            sound.volume = volume / 100;
+            sound.volume = volume / 100 * mute;
             sound.currentTime = 0;
             sound.play();
             const isPlay = TaskQueue.isPlay(id); // isPlay :: Bool
@@ -540,7 +582,7 @@ const Sound = (() => {
         // Sound.stop :: (ParameterString, FlagString) -> ()
         stop: (id, callFrom) => TaskQueue.stopSound(id, callFrom),
         // Sound.save :: () -> [ExecString]
-        save: () => ['volume ' + volume]
+        save: () => [`volume ${volume}${mute === 1 ? '' : ';mute'}`]
     };
 })();
 
@@ -617,7 +659,12 @@ const Save = (() => {
         exec: () => window.localStorage.setItem('data', makeData()),
         // Save.toString :: () -> ()
         toString: () => {
-            window.prompt('セーブデータ:', Base64.encode(makeData()));
+            const tmp = document.cui_form.input.value; // tmp :: String
+            document.cui_form.input.value = Base64.encode(makeData());
+            dgebi('text_cui_form').select();
+            document.execCommand('copy');
+            document.cui_form.input.value = tmp;
+            Notice.set('copied to clipboard');
         }
     };
 })();
@@ -766,6 +813,7 @@ const Display = (() => {
             const target = dgebi('text_' + id);
             target.style.textDecoration = 'line-through';
             Tag.emphUp(index, importance);
+            dgebi('time_' + id).removeAttribute('onclick');
             switch(importance) {
                 case 3:
                     window.setTimeout(window.alert, ALERT_WAIT_TIME
@@ -1164,7 +1212,7 @@ const Tag = (() => {
         if(obj.length === 0) return;
         // items :: [TagObject]
         const items = obj.map(x => tagTable[x.index]);
-        Trash.push(items.map(item => item.saveText).join(SEPARATOR));
+        Trash.push(items.map(item => item.saveText()).join(SEPARATOR));
         obj.forEach(x => {
             const index = getIndexById(x.id); // index :: IndexNumber
             if(!TaskQueue.isTagEmpty(x.id)) {
@@ -1175,6 +1223,37 @@ const Tag = (() => {
             tagTable.splice(index, 1);
         });
     };
+    // toggle :: ([IDObject], FlagString) -> ()
+    const toggle = (obj, flag) => {
+        if(obj.length === 0) return;
+        // func :: IDObject -> ()
+        const func = (() => {
+            switch(flag) {
+                case 'open':
+                    return x => {
+                        tagTable[x.index].isOpen = true;
+                        // target :: Element
+                        const target = dgebi('tag_parent_' + x.id).children[0];
+                        target.removeAttribute('closed');
+                        target.setAttribute('open', '');
+                    };
+                case 'close':
+                    return x => {
+                        tagTable[x.index].isOpen = false;
+                        // target :: Element
+                        const target = dgebi('tag_parent_' + x.id).children[0];
+                        target.removeAttribute('open');
+                        target.setAttribute('closed', '');
+                    };
+                case 'toggle':
+                    return x => {
+                        tagTable[x.index].isOpen = !tagTable[x.index].isOpen;
+                        detailsToggle(dgebi('tag_parent_' + x.id).children[0]);
+                    };
+            }
+        })();
+        obj.forEach(func);
+    };
     // updateIndex :: () -> ()
     const updateIndex = () => {
         Util.updateIndex('tag_name_', tagTable.map(x => x.id), x => x);
@@ -1183,8 +1262,8 @@ const Tag = (() => {
     return {
         // Tag.getLength :: () -> IndexNumber
         getLength: () => tagTable.length,
-        // Tag.insert :: (TagsString, Maybe DateNumber, Bool) -> ()
-        insert: (str, now = null, isOpen = true) => {
+        // Tag.insert :: (TagsString, Maybe DateNumber) -> ()
+        insert: (str, now = null) => {
             const isNowNull = now === null; // isNowNull :: Bool
             if(isNowNull) {
                 now = Date.now();
@@ -1210,16 +1289,16 @@ const Tag = (() => {
                     id: tagCount,
                     str: x,
                     time: now,
-                    isOpen: isOpen,
+                    isOpen: false,
                     numYellow: 0,
                     numRed: 0,
-                    saveText: () => `#$tag ${tagItem.time}${tagItem.isOpen ? '#' : '$'}${tagItem.str}`
+                    saveText: () => `#$tag ${tagItem.time}#${x}${tagItem.isOpen ? ';#toggle-tag #' + tagItem.str : ''}`
                 };
                 tagCount++;
                 // newElement :: Element
                 const newElement = document.createElement('div');
                 newElement.innerHTML =
-                        `<span ${tagItem.isOpen ? 'open' : 'closed'} onclick="detailsToggle(this)"><span id="tag_name_${tagItem.id}">#${x}</span> <input id="remove_tag_${tagItem.id}" type="button" value="remove" onclick="parseMain('#remove-tag $${tagItem.id}', 'priv');"></span><div style="padding-left: 0px"><ol id="parent_${tagItem.id}"></ol></div>`;
+                        `<span closed><span id="tag_name_${tagItem.id}" onclick="parseMain('#toggle-tag #${x}');">#${x}</span> <input id="remove_tag_${tagItem.id}" type="button" value="remove" onclick="parseMain('#remove-tag #${x}');"></span><div style="padding-left: 0px"><ol id="parent_${tagItem.id}"></ol></div>`;
                 newElement.setAttribute('id', 'tag_parent_' + tagItem.id);
                 // i :: IndexNumber
                 const i = tagTable.findIndex(x => x.time > tagItem.time);
@@ -1233,15 +1312,6 @@ const Tag = (() => {
                     tagTable.push(tagItem);
                 }
                 TaskQueue.newTag(tagItem.id);
-                // detailsDom :: Element
-                const detailsDom = newElement.children[0];
-                detailsDom.addEventListener('click', e => {
-                    // isOpen :: Bool
-                    const isOpen = detailsDom.hasAttribute('open');
-                    if(tagTable[getIndexById(tagItem.id)] === undefined) return;
-                    tagTable[getIndexById(tagItem.id)].isOpen = isOpen;
-                    Save.exec();
-                });
                 return successObj;
             });
             if(tmp.map(x => x.isErr).some(x => x)) {
@@ -1253,21 +1323,11 @@ const Tag = (() => {
         insertByData: str => {
             // result :: Maybe [Maybe String]
             const result = /^(\d+)(#|\$)(.*)$/.exec(str);
-            Tag.insert(result[3], parseInt10(result[1]), result[2] === '#');
+            Tag.insert(result[3], parseInt10(result[1]));
         },
-        // Tag.remove :: (ParameterString, FlagString) -> ()
-        remove: (str, callFrom) => {
+        // Tag.remove :: ParameterString -> ()
+        remove: str => {
             if(str === '') return;
-            if(callFrom === 'priv') {
-                // idResult :: Maybe [Maybe String]
-                const idResult = /^\$(\d+)$/.exec(str);
-                if(idResult !== null) {
-                    // index :: IndexNumber
-                    const index = getIndexById(parseInt10(idResult[1]));
-                    rm([{index: index, id: tagTable[index].id}]);
-                    return;
-                }
-            }
             // result :: ParseObject
             const result = parameterCheck(str);
             rm(result.data);
@@ -1335,6 +1395,16 @@ const Tag = (() => {
                 dgebi(nameId).className = 'background-color_yellow';
             } else {
                 dgebi(nameId).className = '';
+            }
+        },
+        // Tag.toggle :: (ParameterString, FlagString) -> ()
+        toggle: (str, flag) => {
+            if(str === '') return;
+            // result :: ParseObject
+            const result = parameterCheck(str);
+            toggle(result.data, flag);
+            if(result.isErr) {
+                Notice.set(`error: ${flag}-tag ${result.str}`);
             }
         },
         // Tag.isValidName :: TagString -> Bool
@@ -1529,10 +1599,19 @@ const TaskQueue = (() => {
     };
 
     return {
-        // TaskQueue.setDisplay :: (ParameterString, FlagString) -> ()
-        setDisplay: (str, flag) => {
+        /* TaskQueue.setDisplay ::
+                (ParameterString, FlagString, FlagString) -> () */
+        setDisplay: (str, flag, callFrom) => {
             if(str === '') {
                 str = '*#*';
+            }
+            if(callFrom === 'priv') {
+                // idResult :: Maybe [Maybe String]
+                const idResult = /^\$(\d+)$/.exec(str);
+                if(idResult !== null) {
+                    display([getTagIndex(idResult[1])], flag);
+                    return;
+                }
             }
             const result = parameterCheck(str); // result :: ParseObject
             display(result.data, flag);
@@ -1578,7 +1657,7 @@ const TaskQueue = (() => {
             // newElement :: Element
             const newElement = document.createElement('li');
             newElement.innerHTML =
-                    `<input type="button" value="remove" onclick="parseMain('#remove $${id}', 'priv');"> <span id="text_${id}" title="${taskItem.tipText}">${taskItem.name}</span><span id="time_${id}"></span> `;
+                    `<input type="button" value="remove" onclick="parseMain('#remove $${id}', 'priv');"> <span id="text_${id}" title="${taskItem.tipText}">${taskItem.name}</span><span id="time_${id}" onclick="parseMain('#switch $${id}', 'priv')"></span> `;
             newElement.setAttribute('id', 'item_' + id);
             // searchRule :: TaskObject -> Bool
             const searchRule = x => x.deadline > taskItem.deadline;

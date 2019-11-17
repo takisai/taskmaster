@@ -52,6 +52,10 @@ input[type=range], select {
     vertical-align: middle;
 }
 
+input[type=range][disabled] {
+    opacity: 0.5;
+}
+
 form[name=gui_form], #macros {
     margin: 8px 0px;
 }
@@ -63,12 +67,15 @@ form[name=gui_form] {
     padding-bottom: 8px;
 }
 
+span[onclick] {
+    cursor: pointer;
+}
+
 span[open], span[closed] {
     background-repeat: no-repeat;
     background-position: left center;
     background-size: 1em;
     padding-left: 1em;
-    cursor: pointer;
 }
 
 span[open] {

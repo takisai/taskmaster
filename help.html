@@ -331,6 +331,7 @@ https://opensource.org/licenses/mit-license.php
                             <li><kbd>switch-timer</kbd>は選択したリマインダーを[02:13:04]のようなタイマー式に変更します。</li>
                             <li><kbd>switch</kbd>は選択したリマインダーをタイマー式ならアラーム式に、アラーム式ならタイマー式に切り替えます。</li>
                         </ul>
+                        <p>また、リマインダーの後ろの表示を押すことでも表示方式を切り替えることができます。</p>
                         <h5>例</h5>
                         <dl>
                             <dt><kbd>switch-timer 1 1#checked 1#todo</kbd></dt>
@@ -361,21 +362,42 @@ https://opensource.org/licenses/mit-license.php
                     </div>
                 </div>
                 <div class="h3">
-                    <span closed>2.9 音量を操作する | <code>volume</code>コマンド</span>
+                    <span closed>2.9 音量を操作する | <code>volume</code>・<code>mute</code>コマンド</span>
                     <div>
-                        <h5>構文</h5>
-                        <kbd>volume &lt;数値&gt;</kbd>
-                        <dl>
-                            <dt><kbd>&lt;数値&gt;</kbd></dt>
-                            <dd>0から100の数値</dd>
-                        </dl>
-                        <h5>説明</h5>
-                        <p>Task Masterの音量を数値で操作します。0がミュートで、数値が大きくなるほど音が大きくなります。また、volumeバーで操作することでも音量を操作することができます。</p>
-                        <h5>例</h5>
-                        <dl>
-                            <dt><kbd>volume 0</kbd></dt>
-                            <dd>音量を0に設定します。音は出なくなります。</dd>
-                        </dl>
+                        <p><kbd>volume</kbd>コマンドで音量の大小を、<kbd>mute</kbd>コマンドでミュートの有無を変更できます。</p>
+                        <div class="h4">
+                            <span closed>2.9.1 音量を操作する | <code>volume</code>コマンド</span>
+                            <div>
+                                <h5>構文</h5>
+                                <kbd>volume &lt;数値&gt;</kbd>
+                                <dl>
+                                    <dt><kbd>&lt;数値&gt;</kbd></dt>
+                                    <dd>0から100の数値</dd>
+                                </dl>
+                                <h5>説明</h5>
+                                <p>Task Masterの音量を数値で操作します。0が無音で、数値が大きくなるほど音が大きくなります。また、volumeバーで操作することでも音量を操作することができます。</p>
+                                <h5>例</h5>
+                                <dl>
+                                    <dt><kbd>volume 30</kbd></dt>
+                                    <dd>音量を30に設定します。</dd>
+                                </dl>
+                            </div>
+                        </div>
+                        <div class="h4">
+                            <span closed>2.9.2 音量を操作する | <code>mute</code>コマンド</span>
+                            <div>
+                                <h5>構文</h5>
+                                <kbd>mute[-on|-off]</kbd>
+                                <h5>説明</h5>
+                                <p>Task Masterをミュートするか指定します。<kbd>mute-on</kbd>コマンドでミュートになり、<kbd>mute-off</kbd>コマンドでミュートしなくなります。<kbd>mute</kbd>コマンドは、ミュートの設定を現在のものとは逆にします。</p>
+                                <p>また、volumeバーの左のvolumeの文字を押すことでもミュートのオンオフが操作できます。ミュートしている間は、volumeバーでの音量操作はできません。</p>
+                                <h5>例</h5>
+                                <dl>
+                                    <dt><kbd>mute</kbd></dt>
+                                    <dd>ミュートになっている場合はミュートを外し、そうでない場合はミュートします。</dd>
+                                </dl>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="h3" id="button">
@@ -458,12 +480,12 @@ https://opensource.org/licenses/mit-license.php
                                 <h5>構文</h5>
                                 <kbd>save</kbd>
                                 <h5>説明</h5>
-                                <p>Task Masterに保存されているデータをセーブデータとして表示します。ただし、次の情報は含まれません。</p>
+                                <p>Task Masterに保存されているデータをクリップボードにコピーします。ただし、次の情報は含まれません。</p>
                                 <ul>
                                     <li>削除したリマインダー・タグ・ボタン・マクロ</li>
                                     <li>入力履歴</li>
                                 </ul>
-                                <p>また、Ctrl+Sでも同様にセーブデータを表示させることができます。</p>
+                                <p>また、Ctrl+Sでも同様にセーブデータをコピーすることができます。</p>
                             </div>
                         </div>
                         <div class="h4">
@@ -638,7 +660,22 @@ https://opensource.org/licenses/mit-license.php
                             </div>
                         </div>
                         <div class="h4">
-                            <span closed>3.5.3 削除履歴をリセットする | <code>empty-trash</code>コマンド</span>
+                            <span closed>3.5.3 タグの開閉操作 | <code>open-tag</code>・<code>close-tag</code>・<code>toggle-tag</code>コマンド</span>
+                            <div>
+                                <h5>構文</h5>
+                                <kbd>&lt;コマンド&gt; &lt;パラメーター&gt;[ &lt;パラメーター&gt; &lt;パラメーター&gt; ...]</kbd>
+                                <dl>
+                                    <dt><kbd>&lt;コマンド&gt;</kbd></dt>
+                                    <dd><kbd>open-tag</kbd>・<kbd>close-tag</kbd>・<kbd>toggle-tag</kbd>のいずれか</dd>
+                                    <dt><kbd>&lt;パラメーター&gt;</kbd></dt>
+                                    <dd><a href="#task_remove">2.4</a>のパラメーターからタグ文字列を除いたものか、<a href="#task_mode">2.2.2</a>の<kbd>#&lt;タグ文字列&gt;</kbd>。ただし、パラメーターの数字はタグ番号</dd>
+                                </dl>
+                                <h5>説明</h5>
+                                <p>パラメーターで選択したタグの開閉状態を変更します。<kbd>open-tag</kbd>コマンドは開いた状態に、<kbd>close-tag</kbd>コマンドは閉じた状態に、<kbd>toggle-tag</kbd>コマンドは開閉状態を切り替えます。</p>
+                            </div>
+                        </div>
+                        <div class="h4">
+                            <span closed>3.5.4 削除履歴をリセットする | <code>empty-trash</code>コマンド</span>
                             <div>
                                 <h5>構文</h5>
                                 <kbd>empty-trash</kbd>
@@ -647,7 +684,7 @@ https://opensource.org/licenses/mit-license.php
                             </div>
                         </div>
                         <div class="h4">
-                            <span closed>3.5.4 menuの表示/非表示 | <code>show-menu</code>/<code>hide-menu</code>コマンド</span>
+                            <span closed>3.5.5 menuの表示/非表示 | <code>show-menu</code>/<code>hide-menu</code>コマンド</span>
                             <div>
                                 <h5>構文</h5>
                                 <kbd>show-menu</kbd>、<kbd>hide-menu</kbd>
@@ -656,7 +693,7 @@ https://opensource.org/licenses/mit-license.php
                             </div>
                         </div>
                         <div class="h4">
-                            <span closed>3.5.5 入力履歴をリセットする | <code>empty-history</code>コマンド</span>
+                            <span closed>3.5.6 入力履歴をリセットする | <code>empty-history</code>コマンド</span>
                             <div>
                                 <h5>構文</h5>
                                 <kbd>empty-history</kbd>

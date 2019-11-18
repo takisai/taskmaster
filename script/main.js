@@ -325,8 +325,9 @@ const parseMain = (() => {
 // showAlarmGUI :: () -> ()
 const showAlarmGUI = () => {
     dgebi('label_radio_alarm').style.display = null;
+    dgebi('label_radio_alarm').className = '';
     dgebi('alarm_setting').style.display = 'block';
-    dgebi('label_radio_timer').className = 'color_gray';
+    dgebi('label_radio_timer').className = 'strike';
     dgebi('timer_setting').style.display = 'none';
     dgebi('gui_other_setting').style.display = 'block';
 };
@@ -334,8 +335,9 @@ const showAlarmGUI = () => {
 // showTimerGUI :: () -> ()
 const showTimerGUI = () => {
     dgebi('label_radio_timer').style.display = null;
+    dgebi('label_radio_timer').className = '';
     dgebi('timer_setting').style.display = 'block';
-    dgebi('label_radio_alarm').className = 'color_gray';
+    dgebi('label_radio_alarm').className = 'strike';
     dgebi('alarm_setting').style.display = 'none';
     dgebi('gui_other_setting').style.display = 'block';
 };
@@ -538,12 +540,12 @@ const Sound = (() => {
             }
             if(mute === 0) {
                 dgebi('range_volume').setAttribute('disabled', '');
-                dgebi('volume_name').style.textDecoration = 'line-through';
-                dgebi('volume').style.textDecoration = 'line-through';
+                dgebi('volume_name').className = 'strike';
+                dgebi('volume').className = 'strike';
             } else { // mute === 1
                 dgebi('range_volume').removeAttribute('disabled');
-                dgebi('volume_name').style.textDecoration = '';
-                dgebi('volume').style.textDecoration = '';
+                dgebi('volume_name').className = '';
+                dgebi('volume').className = '';
             }
             TaskQueue.setVolume(volume / 100 * mute);
         },
@@ -811,7 +813,6 @@ const Display = (() => {
         doStrike: (index, id, importance) => {
             // target :: Element
             const target = dgebi('text_' + id);
-            target.style.textDecoration = 'line-through';
             Tag.emphUp(index, importance);
             dgebi('time_' + id).removeAttribute('onclick');
             switch(importance) {
@@ -826,6 +827,7 @@ const Display = (() => {
                     target.className = 'background-color_yellow';
                     break;
                 case 0:
+                    target.style.textDecoration = 'line-through';
                     window.setTimeout(parseMain, AUTO_REMOVE_TIME
                             , '#remove $' + id, 'priv');
                     break;
@@ -1822,16 +1824,24 @@ const Legacy = (() => {
         const result = /^ver (\d+)\.(\d+)\.(\d+)$/.exec(version);
         return [result[1], result[2], result[3]].map(x => parseInt10(x));
     };
+    // lessThan :: ([VersionNumber], [VersionNumber]) -> Bool
+    const lessThan = (a, b) => {
+        for(let i = 0; i < 3; i++) { // i :: IndexNumber
+            if(a[i] < b[i]) return true;
+            else if(a[i] > b[i]) return false;
+        }
+        return false;
+    };
 
     return {
         // Legacy.isPast :: VersionString -> Bool
-        isPast: version => parseVersion(version) < VERSION,
+        isPast: version => lessThan(parseVersion(version), VERSION),
         // Legacy.convert :: ([ExecString], VersionString) -> [ExecString]
         convert: (data, version) => {
             // inputVer :: [VersionNumber]
             const inputVer = parseVersion(version);
             let isChecked = false; // isChecked :: Bool
-            if(isChecked || inputVer < [0, 7, 0]) {
+            if(isChecked || lessThan(inputVer, [0, 7, 0])) {
                 isChecked = true;
                 data = data.map(x => {
                     // rep1 :: Maybe [Maybe String]

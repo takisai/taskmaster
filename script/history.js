@@ -9,6 +9,16 @@ do {
     // data :: [HistoryInfoObject]
     const data = [
         {
+            version: [0, 10, 2],
+            date: '2019-11-24',
+            info: [
+                '設定時刻後のリマインダーの表示を変更',
+                '<kbd>merge</kbd>コマンドのバグを修正',
+                '文字選択時に影が出ないよう修正',
+                '色味を修正'
+            ]
+        },
+        {
             version: [0, 10, 1],
             date: '2019-11-18',
             info: [

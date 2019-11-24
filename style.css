@@ -8,11 +8,14 @@ https://opensource.org/licenses/mit-license.php
     --red: #ff4b00;
     --yellow: #fff100;
     --blue: #005aff;
+    --darkblue: #004bd7;
     --pink: #ff8082;
     --lightpink: #ffcabf;
     --lightyellow: #ffff80;
-    --gray: #84919e;
+    --white: white;
+    --gray: #6f798d;
 }
+
 body {
     box-sizing: border-box;
     width: 100%;
@@ -28,7 +31,7 @@ h1 {
 }
 
 kbd {
-    background-color: #f1f1f1;
+    background-color: #f0f1f1;
     padding: 0.1em 0.4em;
     font-size: 0.9em;
     font-family: monospace, monospace;
@@ -120,8 +123,14 @@ span[closed] + * {
             var(--lightyellow) -1px 1px, var(--lightyellow) 0 1px;
 }
 
+::selection {
+    color: var(--white);
+    background-color: var(--darkblue);
+    text-shadow: none;
+}
+
 .background-color_white {
-    background-color: white;
+    background-color: var(--white);
 }
 
 .background-color_pink {
@@ -211,7 +220,7 @@ a:active, .color_red {
     height: 100%;
     opacity: 0.75;
     z-index: 1;
-    background-color: white;
+    background-color: var(--white);
     display: flex;
     justify-content: center;
     align-items: center;

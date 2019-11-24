@@ -746,20 +746,22 @@ const Button = (() => {
             if(str === undefined) return;
             // execStr :: ExecString
             const execStr = str.replace(/'/g, '\\\'').replace(/\\/g, '\\\\');
+            const isNull = now === null; // isNull :: Bool
             // buttonItem :: ButtonObject
-            const buttonItem = {id: buttonCount, str: str};
-            if(now === null) {
-                buttonItem.time = Date.now();
-            } else {
+            const buttonItem = {
+                id: buttonCount,
+                str: str,
+                time: isNull ? Date.now() : now
+            };
+            buttonCount++;
+            buttonItem.saveText = `#$button ${buttonItem.time}#${str}`;
+            if(!isNull) {
                 // isEq :: MacroObject -> Bool
                 const isEq = x => {
                     return x.saveText === buttonItem.saveText && x.time === now;
                 };
                 if(buttons.findIndex(isEq) >= 0) return;
-                buttonItem.time = now;
             }
-            buttonCount++;
-            buttonItem.saveText = `#$button ${buttonItem.time}#${str}`;
             // newElement :: Element
             const newElement = document.createElement('span');
             newElement.innerHTML =
@@ -813,6 +815,7 @@ const Display = (() => {
         doStrike: (index, id, importance) => {
             // target :: Element
             const target = dgebi('text_' + id);
+            target.innerText += '!'.repeat(importance);
             Tag.emphUp(index, importance);
             dgebi('time_' + id).removeAttribute('onclick');
             switch(importance) {

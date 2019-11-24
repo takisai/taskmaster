@@ -4,7 +4,7 @@ Released under the MIT license
 https://opensource.org/licenses/mit-license.php
 */
 'use strict';
-const VERSION = [0, 10, 1]; // VERSION :: [VersionNumber]
+const VERSION = [0, 10, 2]; // VERSION :: [VersionNumber]
 
 // dgebi :: IDString -> Maybe Element
 const dgebi = id => document.getElementById(id);
@@ -63,7 +63,7 @@ dsElements.forEach(x => x.setAttribute('onclick', 'detailsToggle(this)'));
 do {
     // data :: [String]
     const data = [
-        `最新版: Version ${VERSION.join('.')} | 2019-11-18`,
+        `最新版: Version ${VERSION.join('.')} | 2019-11-24`,
         '製作者: takisai',
         '動作確認ブラウザ: Google Chrome・Mozilla Firefox・Microsoft Edge 各最新版'
     ];

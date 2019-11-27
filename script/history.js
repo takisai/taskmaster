@@ -9,6 +9,14 @@ do {
     // data :: [HistoryInfoObject]
     const data = [
         {
+            version: [0, 10, 3],
+            date: '2019-11-26',
+            info: [
+                'ショートカットキーの不具合を修正',
+                '<kbd>merge</kbd>コマンドのバグを修正'
+            ]
+        },
+        {
             version: [0, 10, 2],
             date: '2019-11-24',
             info: [

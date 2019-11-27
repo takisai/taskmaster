@@ -1069,9 +1069,9 @@ const Task = (() => {
         // Task.parse :: (ExecString, FlagString) -> Maybe TaskObject
         parse: (s, callFrom) => {
             // regHead :: RegString
-            const regHead = callFrom === 'priv'
-                    ? '^(?:(\\d+)([at]))?'
-                    : '^(?:()())?';
+            const regHead = callFrom === 'global'
+                    ? '^(?:()())?'
+                    : '^(?:(\\d+)([at]))?';
             // regex :: RegExp
             const regex = new RegExp(regHead +
                     '([^\\/]*)((?:\\/(?:(-|\\d+)|([^\\/]*?)\\*)??([at])?(\\.|!{1,3})?(?:#([^ \\/]*))?(?:\\/(.*))?)?)$');
@@ -1886,20 +1886,23 @@ dgebi('cover').addEventListener('click', () => {
         if(event.ctrlKey) {
             switch(event.key) {
                 case 'O':
-                    parseMain('#merge');
-                    event.preventDefault();
-                    break;
                 case 'o':
-                    parseMain('#load');
+                    parseMain(event.shiftKey ? '#merge' : '#load');
                     event.preventDefault();
                     break;
+                case 'S':
                 case 's':
-                    parseMain('#save');
-                    event.preventDefault();
+                    if(!event.shiftKey) {
+                        parseMain('#save');
+                        event.preventDefault();
+                    }
                     break;
+                case 'Z':
                 case 'z':
-                    parseMain('#undo');
-                    event.preventDefault();
+                    if(!event.shiftKey) {
+                        parseMain('#undo');
+                        event.preventDefault();
+                    }
                     break;
             }
             return;

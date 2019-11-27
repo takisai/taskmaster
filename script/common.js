@@ -63,7 +63,7 @@ dsElements.forEach(x => x.setAttribute('onclick', 'detailsToggle(this)'));
 do {
     // data :: [String]
     const data = [
-        `最新版: Version ${VERSION.join('.')} | 2019-11-24`,
+        `最新版: Version ${VERSION.join('.')} | 2019-11-28`,
         '製作者: takisai',
         '動作確認ブラウザ: Google Chrome・Mozilla Firefox・Microsoft Edge 各最新版'
     ];

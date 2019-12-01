@@ -1306,7 +1306,7 @@ const Tag = (() => {
         insertByData: str => {
             // result :: Maybe [Maybe String]
             const result = /^(\d+)#(.*)$/.exec(str);
-            Tag.insert(result[3], parseInt10(result[1]));
+            Tag.insert(result[2], parseInt10(result[1]));
         },
         // Tag.remove :: String -> ()
         remove: str => {

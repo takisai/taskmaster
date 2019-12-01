@@ -7,7 +7,7 @@ https://opensource.org/licenses/mit-license.php
 
 const SEPARATOR = '|'; // SEPARATOR :: String
 
-// hrefOpen :: IDString -> ()
+// hrefOpen :: String -> ()
 const hrefOpen = id => {
     let target = dgebi(id); // target :: Maybe Element
     if(target === null) return;
@@ -24,8 +24,8 @@ const hrefOpen = id => {
 do {
     // aElements :: [Element]
     const aElements = document.getElementsByTagName('a');
-    for(let i = 0; i < aElements.length; i++) { // i :: IndexNumber
-        const link = aElements[i].getAttribute('href'); // link :: LinkString
+    for(let i = 0; i < aElements.length; i++) { // i :: NaturalNumber
+        const link = aElements[i].getAttribute('href'); // link :: String
         if(!/^#/.test(link)) continue;
         aElements[i].setAttribute('onclick', `hrefOpen('${link.slice(1)}')`);
         aElements[i].setAttribute('href', 'javascript:void(0)');
@@ -33,19 +33,19 @@ do {
 } while(false);
 
 dsElements.forEach(x => x.addEventListener('click', () => {
-    let ret = [VERSION.join('.')];
+    const ret = [VERSION.join('.')]; // ret :: [String]
     dsElements.forEach(t => ret.push(t.hasAttribute('open')));
     window.localStorage.setItem('help', ret.join(SEPARATOR));
 }));
 
 do {
-    // data :: [LoadString]
+    // data :: [String]
     const data = window.localStorage.getItem('help').split(SEPARATOR);
     if(data === undefined) break;
-    // version :: [VersionNumber]
+    // version :: [NaturalNumber]
     const version = data.shift().split('\.').map(x => parseInt10(x));
     if(!(version < VERSION || version > VERSION)) {
-        for(let i = 0; i < dsElements.length; i++) { // i :: IndexNumber
+        for(let i = 0; i < dsElements.length; i++) { // i :: NaturalNumber
             // hasOpen :: Bool;  hasClosed :: Bool
             const hasOpen = dsElements[i].hasAttribute('open');
             const hasClosed = dsElements[i].hasAttribute('closed');

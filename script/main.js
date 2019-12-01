@@ -7,25 +7,25 @@ https://opensource.org/licenses/mit-license.php
 const UPDATE_TIME = 200; // UPDATE_TIME :: DateNumber
 const SEPARATOR = '\v'; // SEPARATOR :: String
 const NOTICE_CLEAR_TIME = 5000; // NOTICE_CLEAR_TIME :: DateNumber
-const RECURSION_LIMIT = 5; // RECURSION_LIMIT :: Number
+const RECURSION_LIMIT = 5; // RECURSION_LIMIT :: NaturalNumber
 
-const NUMBER_OF_SOUNDS = 15; // NUMBER_OF_SOUNDS :: Number
+const NUMBER_OF_SOUNDS = 15; // NUMBER_OF_SOUNDS :: NaturalNumber
 /*  NUMBER_OF_SOUNDSの数だけmp3ファイルを登録して音を鳴らすことができます。
     このファイルと同じフォルダーにあるsoundフォルダー内に、
     "alarm<数値>.mp3"という名前のmp3ファイル用意してください。
     <数値>は0からNUMBER_OF_SOUNDS-1までの数値です。 */
 
-// makeClockStr :: [Number] -> DisplayString
+// makeClockStr :: [Number] -> String
 const makeClockStr = nums => {
-    return nums.map(x => ('0' + Math.floor(x)).slice(-2)).join(':');
+    return nums.map(x => String(Math.floor(x)).padStart(2, '0')).join(':');
 };
 
-// toHms :: Date -> DisplayString
+// toHms :: Date -> String
 const toHms = obj => {
     return makeClockStr([obj.getHours(), obj.getMinutes(), obj.getSeconds()]);
 }
 
-// removeDom :: IDString -> Bool
+// removeDom :: String -> Bool
 const removeDom = id => {
     const target = dgebi(id); // target :: Maybe Element
     if(target === null) return false;
@@ -33,12 +33,12 @@ const removeDom = id => {
     return true;
 };
 
-// makeErrorDom :: String -> DOMString
+// makeErrorDom :: String -> String
 const makeErrorDom = str => `<span class="color_red">${str}</span>`;
 
 // getText :: () -> ()
 const getText = () => {
-    const input = document.cui_form.input.value; // input :: ExecString
+    const input = document.cui_form.input.value; // input :: String
     document.cui_form.input.value = '';
     submitButtonControl();
     History.push(input);
@@ -62,9 +62,9 @@ const getByGui = () => {
         error();
         return false;
     };
-    // makeMode :: FlagString -> String
-    const makeMode = str => {
-        return form.gui_sound.value + str + form.gui_importance.value;
+    // makeMode :: String -> String
+    const makeMode = flag => {
+        return form.gui_sound.value + flag + form.gui_importance.value;
     };
 
     if(form.task_type.value === 'timer') {
@@ -91,18 +91,19 @@ const getByGui = () => {
     parseMain(ret.join('/'));
 };
 
-// parseMain :: (ExecString, FlagString) -> ()
+// parseMain :: (String, String) -> ()
 const parseMain = (() => {
-    let idCount = 0; // idCount :: CountNumber
-    let recursionCount = 0; // recursionCount :: CountNumber
+    let idCount = 0; // idCount :: NaturalNumber
+    let recursionCount = 0; // recursionCount :: NaturalNumber
+    let isHelpCall = false; // isHelpCall :: Bool
 
-    // evaluate :: ExecString -> ExecString
+    // evaluate :: String -> String
     const evaluate = str => {
         // safeEval :: String -> String
         const safeEval = str => {
             try {
                 return Function(`'use strict';return(${str})`)();
-            } catch(e) { // e :: Object
+            } catch(e) {
                 return '';
             }
         };
@@ -117,7 +118,7 @@ const parseMain = (() => {
         }
         return ret.join('');
     };
-    // play :: (ParameterString, FlagString) -> ()
+    // play :: (String, String) -> ()
     const play = (parameter, callFrom) => {
         if(!/^\d+$/.test(parameter)) {
             if(parameter === '-') return;
@@ -127,7 +128,7 @@ const parseMain = (() => {
         Sound.play(`sound/alarm${parameter - 1}.mp3`, callFrom);
     }
 
-    // main :: (ExecString, FlagString) -> ()
+    // main :: (String, String) -> ()
     const main = (text, callFrom) => {
         text = text.replace(/\s+/g, ' ');
         const isHeadHash = /^#/.test(text); // isHeadHash :: Bool
@@ -142,8 +143,9 @@ const parseMain = (() => {
             text = Macro.replace(text);
             text = evaluate(text);
         }
+        if(text === '') return;
         if(!isHeadArrow) {
-            const texts = text.split(';'); // texts :: [ExecString]
+            const texts = text.split(';'); // texts :: [String]
             if(texts.length > 1) {
                 recursionCount++;
                 if(recursionCount > RECURSION_LIMIT) throw 'too much recursion';
@@ -154,7 +156,7 @@ const parseMain = (() => {
         }
         // spaceSplit :: Maybe [Maybe String]
         const spaceSplit = /^([^ ]*)(?: (.*))?$/.exec(text);
-        // parameter :: ParameterString
+        // parameter :: String
         const parameter = spaceSplit[2] === undefined ? '' : spaceSplit[2];
         switch(callFrom) {
             case 'merge':
@@ -282,7 +284,9 @@ const parseMain = (() => {
                         History.reset();
                         return;
                     case 'help':
+                        if(isHelpCall) return;
                         window.open('help.html', '_blank');
+                        isHelpCall = true;
                         return;
                 }
                 break;
@@ -296,7 +300,6 @@ const parseMain = (() => {
         // taskItem :: Maybe TaskObject
         const taskItem = Task.parse(text, callFrom);
         if(taskItem === null) {
-            if(text === '') return;
             Notice.set('error: ' + makeErrorDom(text));
             return;
         }
@@ -306,8 +309,9 @@ const parseMain = (() => {
     return (text, callFrom = 'global') => {
         try {
             Notice.clear();
+            isHelpCall = false;
             main(text, callFrom);
-        } catch(e) { // e :: Object
+        } catch(e) {
             switch(e) {
                 case 'too much recursion':
                     Notice.set('too much recursion');
@@ -351,11 +355,26 @@ const submitButtonControl = () => {
 
 const Util = (() => {
     return {
-        // Util.parameterCheck :: (ParameterString, IndexNumber) -> ParseObject
+        // Util.insert :: ([Object], Object, Element, String, String) -> ()
+        insert: (object, item, element, preId, parentId) => {
+            element.setAttribute('id', `${preId}_${item.id}`);
+            // i :: NaturalNumber
+            const i = object.findIndex(x => x.time > item.time);
+            if(i >= 0) {
+                // target :: Element
+                const target = dgebi(`${preId}_${object[i].id}`);
+                target.parentNode.insertBefore(element, target);
+                object.splice(i, 0, item);
+            } else {
+                dgebi(parentId).appendChild(element);
+                object.push(item);
+            }
+        },
+        // Util.parameterCheck :: (String, NaturalNumber) -> IndexObject
         parameterCheck: (str, max) => {
             // ret :: [Object]
             const ret = str.split(' ').map(x => {
-                // errObj :: ParseObject
+                // errObj :: Object
                 const errObj = {isErr: true, str: makeErrorDom(x)};
                 if(x === '*') {
                     x = '1-' + max;
@@ -363,7 +382,7 @@ const Util = (() => {
                 // rangeResult :: Maybe [Maybe String]
                 const rangeResult = /^(\d*)-(\d*)$/.exec(x);
                 if(x !== '-' && rangeResult !== null) {
-                    // border :: [IndexNumber]
+                    // border :: [NaturalNumber]
                     const border = rangeResult.slice(1).map(t => parseInt10(t));
                     if(border[0] > max || border[1] < 1) return errObj;
                     if(isNaN(border[0]) || border[0] < 1) {
@@ -372,7 +391,7 @@ const Util = (() => {
                     if(isNaN(border[1]) || border[1] > max) {
                         border[1] = max;
                     }
-                    // ret :: [IndexNumber]
+                    // ret :: [NaturalNumber]
                     const ret = [...Array(border[1] - border[0] + 1).keys()];
                     return {
                         data: ret.map(t => t + border[0] - 1),
@@ -380,7 +399,7 @@ const Util = (() => {
                         str: x
                     };
                 }
-                const index = parseInt10(x); // index :: Maybe IndexNumber
+                const index = parseInt10(x); // index :: Maybe NaturalNumber
                 return index > 0 && index <= max && /^\d+$/.test(x)
                         ? {
                             data: [index - 1],
@@ -389,25 +408,24 @@ const Util = (() => {
                         }
                         : errObj;
             });
-            // nubData :: [Maybe IndexNumber]
-            const nubData = [... new Set(ret.map(x => x.data).flat())];
+            // nubData :: [Maybe NaturalNumber]
+            const nubData = [...new Set(ret.map(x => x.data).flat())];
             return {
                 data: nubData.filter(x => x !== undefined),
                 isErr: ret.some(x => x.isErr),
                 str: ret.map(x => x.str).join(' ')
             };
         },
-        // Util.updateIndex :: (IDString, [IDNumber], Element -> Element) -> ()
+        /* Util.updateIndex ::
+                (String, [NaturalNumber], Element -> Element) -> () */
         updateIndex: (str, ids, func) => {
-            for(let i = 0; i < ids.length; i++) { // i :: IndexNumber
-                func(dgebi(str + ids[i])).title = i + 1;
-            }
+            ids.forEach((id, i) => func(dgebi(str + id)).title = i + 1);
         }
     };
 })();
 
 const BackgroundAlert = (() => {
-    let semaphore = 0; // semaphore :: CountNumber
+    let semaphore = 0; // semaphore :: NaturalNumber
 
     return {
         // BackgroundAlert.up :: () -> ()
@@ -427,11 +445,11 @@ const BackgroundAlert = (() => {
 })();
 
 const History = (() => {
-    const strs = []; // strs :: [ExecString]
-    let index = 0, tempStr = ''; // index :: IndexNumber;  tempStr :: ExecString
+    const strs = []; // strs :: [String]
+    let index = 0, tempStr = ''; // index :: NaturalNumber;  tempStr :: String
 
     return {
-        // History.push :: ExecString -> ()
+        // History.push :: String -> ()
         push: str => {
             if(str === '') return;
             strs.push(str);
@@ -440,7 +458,7 @@ const History = (() => {
             }
             index = strs.length;
         },
-        // History.up :: ExecString -> ExecString
+        // History.up :: String -> String
         up: str => {
             if(index === strs.length) {
                 tempStr = str;
@@ -449,7 +467,7 @@ const History = (() => {
             index--;
             return strs[index];
         },
-        // History.down :: ExecString -> ExecString
+        // History.down :: String -> String
         down: str => {
             if(index === strs.length) return str;
             index++;
@@ -466,13 +484,12 @@ const History = (() => {
 })();
 
 const Notice = (() => {
-    let id = undefined; // id :: Maybe IDNumber
+    let id = undefined; // id :: Maybe TimeoutID
 
     return {
-        // Notice.set :: DOMString -> ()
+        // Notice.set :: String -> ()
         set: html => {
-            // target :: Element
-            const target = dgebi('notice');
+            const target = dgebi('notice'); // target :: Element
             if(id !== undefined) {
                 window.clearTimeout(id);
                 target.innerHTML += ' ; ';
@@ -490,10 +507,10 @@ const Notice = (() => {
 })();
 
 const Trash = (() => {
-    const items = []; // items :: [SaveString]
+    const items = []; // items :: [String]
 
     return {
-        // Trash.push :: SaveString -> ()
+        // Trash.push :: String -> ()
         push: item => items.push(item),
         // Trash.pop :: () -> ()
         pop: () => {
@@ -509,13 +526,13 @@ const Trash = (() => {
 })();
 
 const Sound = (() => {
-    const sounds = []; // sounds :: Map URLString Audio
-    let volume = 100, mute = 1; // volume :: VolumeNumber;  mute :: BoolNumber
+    const sounds = []; // sounds :: Map String Audio
+    let volume = 100, mute = 1; // volume :: NaturalNumber;  mute :: BoolNumber
 
     return {
-        // Sound.setVolume :: ParameterString -> ()
+        // Sound.setVolume :: String -> ()
         setVolume: str => {
-            const n = parseInt10(str); // n :: VolumeNumber
+            const n = parseInt10(str); // n :: NaturalNumber
             if(n < 0 || n > 100 || !/^\d+$/.test(str)) {
                 Notice.set('error: volume ' + makeErrorDom(str));
                 return;
@@ -525,7 +542,7 @@ const Sound = (() => {
             dgebi('range_volume').value = volume;
             dgebi('volume').innerText = volume;
         },
-        // Sound.setMute :: FlagString -> ()
+        // Sound.setMute :: String -> ()
         setMute: flag => {
             switch(flag) {
                 case 'on':
@@ -551,14 +568,14 @@ const Sound = (() => {
         },
         // Sound.init :: () ~-> ()
         init: () => {
-            for(let i = 0; i < NUMBER_OF_SOUNDS; i++) { // i :: IndexNumber
-                const url = `sound/alarm${i}.mp3`; // url :: URLString
+            for(let i = 0; i < NUMBER_OF_SOUNDS; i++) { // i :: NaturalNumber
+                const url = `sound/alarm${i}.mp3`; // url :: String
                 sounds[url] = new Audio(url);
                 sounds[url].muted = true;
                 sounds[url].onloadeddata = e => sounds[url].play();
             }
         },
-        // Sound.play :: (URLString, IDString) -> ()
+        // Sound.play :: (String, String) -> ()
         play: (url, id) => {
             if(sounds[url] === undefined || sounds[url].readyState < 2) {
                 console.log('failed to play: ' + url);
@@ -570,7 +587,7 @@ const Sound = (() => {
             sound.currentTime = 0;
             sound.play();
             const isPlay = TaskQueue.isPlay(id); // isPlay :: Bool
-            // soundId :: IDNumber
+            // soundId :: NaturalNumber
             const soundId = TaskQueue.setSound(sound, id);
             sound.addEventListener('ended', () => {
                 TaskQueue.removeSound(id, soundId);
@@ -581,9 +598,9 @@ const Sound = (() => {
             dgebi('item_' + id).innerHTML +=
                     `<input id="stopButton_${id}" type="button" value="stop" onclick="parseMain('#stop $${id}', 'priv');">`;
         },
-        // Sound.stop :: (ParameterString, FlagString) -> ()
+        // Sound.stop :: (String, String) -> ()
         stop: (id, callFrom) => TaskQueue.stopSound(id, callFrom),
-        // Sound.save :: () -> [ExecString]
+        // Sound.save :: () -> [String]
         save: () => [`volume ${volume}${mute === 1 ? '' : ';mute'}`]
     };
 })();
@@ -594,44 +611,40 @@ const Base64 = (() => {
             'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
 
     return {
-        // Base64.encode :: SaveString -> Base64String
+        // Base64.encode :: String -> Base64String
         encode: str => {
-            str = encodeURIComponent(str);
-            const ret = []; // ret :: Base64Number
-            for(let i = 0; i < str.length; i += 3) { // i :: IndexNumber
+            const ret = []; // ret :: [UnicodeNumber]
+            encodeURIComponent(str).match(/.{1,3}/g).forEach(x => {
                 // c :: [Maybe UnicodeNumber]
-                const c = [0, 1, 2].map(x => str.charCodeAt(i + x));
+                const c = [...x].map(t => t.charCodeAt());
                 ret.push(c[0] >> 2);
                 const t1 = (c[0] & 3) << 4; // t1 :: UnicodeNumber
-                if(isNaN(c[1])) {
+                if(x.length === 1) {
                     ret.push(t1, 64, 64);
-                } else {
-                    ret.push(t1 | (c[1] >> 4))
-                    const t2 = (c[1] & 15) << 2; // t2 :: UnicodeNumber
-                    if(isNaN(c[2])) {
-                        ret.push(t2, 64);
-                    } else {
-                        ret.push(t2 | (c[2] >> 6), c[2] & 63);
-                    }
+                    return;
                 }
-            }
+                ret.push(t1 | (c[1] >> 4));
+                const t2 = (c[1] & 15) << 2; // t2 :: UnicodeNumber
+                if(x.length === 2) {
+                    ret.push(t2, 64);
+                } else { // x.length === 3
+                    ret.push(t2 | (c[2] >> 6), c[2] & 63);
+                }
+            });
             return ret.map(x => KEY[x]).join('');
         },
-        // Base64.decode :: Base64String -> SaveString
+        // Base64.decode :: Base64String -> String
         decode: str => {
-            str = str.replace(/[^A-Za-z\d+/=]/g, '');
             const tmp = []; // tmp :: [UnicodeNumber]
-            for(let i = 0; i < str.length; i += 4) { // i :: IndexNumber
-                // c :: [Base64Number]
-                const c = [0, 1, 2, 3].map(x => KEY.indexOf(str.charAt(i + x)));
+            str.replace(/[^A-Za-z\d+/=]/g, '').match(/.{4}/g).forEach(x => {
+                // c :: [NaturalNumber]
+                const c = [...x].map(t => KEY.indexOf(t));
                 tmp.push((c[0] << 2) | (c[1] >> 4));
-                if(c[2] < 64) {
-                    tmp.push(((c[1] & 15) << 4) | (c[2] >> 2));
-                    if(c[3] < 64) {
-                        tmp.push(((c[2] & 3) << 6) | c[3]);
-                    }
-                }
-            }
+                if(c[2] === 64) return;
+                tmp.push(((c[1] & 15) << 4) | (c[2] >> 2));
+                if(c[3] === 64) return;
+                tmp.push(((c[2] & 3) << 6) | c[3]);
+            });
             // ret :: String
             const ret = tmp.map(x => String.fromCharCode(x)).join('');
             return decodeURIComponent(ret);
@@ -640,7 +653,7 @@ const Base64 = (() => {
 })();
 
 const Save = (() => {
-    // makeData :: () -> SaveString
+    // makeData :: () -> String
     const makeData = () => {
         // obj :: [Object]
         const obj = [
@@ -672,9 +685,9 @@ const Save = (() => {
 })();
 
 const Load = (() => {
-    // parse :: (SaveString, FlagString) -> ()
+    // parse :: (String, String) -> ()
     const parse = (data, flag) => {
-        const rest = data.split(SEPARATOR); // rest :: SaveString
+        const rest = data.split(SEPARATOR); // rest :: String
         const version = rest.shift(); // version :: String
         if(Legacy.isPast(version)) {
             Legacy.convert(rest, version).forEach(x => parseMain(x, flag));
@@ -687,7 +700,7 @@ const Load = (() => {
     return {
         // Load.exec :: () -> ()
         exec: () => {
-            // data :: Maybe SaveString
+            // data :: Maybe String
             const data = window.localStorage.getItem('data');
             if(data === null) {
                 detailsToggle(dgebi('menu').children[0]);
@@ -720,10 +733,10 @@ const Load = (() => {
 })();
 
 const Button = (() => {
-    let buttonCount = 0; // buttonCount :: CountNumber
+    let buttonCount = 0; // buttonCount :: NaturalNumber
     const buttons = []; // buttons :: [ButtonObject]
 
-    // rm :: [IndexNumber] -> ()
+    // rm :: [NaturalNumber] -> ()
     const rm = indices => {
         indices = indices.filter(x => x !== undefined);
         if(indices.length === 0) return;
@@ -741,10 +754,10 @@ const Button = (() => {
     };
 
     return {
-        // Button.insert :: (ExecString, Maybe DateNumber) -> ()
+        // Button.insert :: (String, Maybe DateNumber) -> ()
         insert: (str, now = null) => {
             if(str === undefined) return;
-            // execStr :: ExecString
+            // execStr :: String
             const execStr = str.replace(/'/g, '\\\'').replace(/\\/g, '\\\\');
             const isNull = now === null; // isNull :: Bool
             // buttonItem :: ButtonObject
@@ -756,40 +769,30 @@ const Button = (() => {
             buttonCount++;
             buttonItem.saveText = `#$button ${buttonItem.time}#${str}`;
             if(!isNull) {
-                // isEq :: MacroObject -> Bool
+                // isEq :: ButtonObject -> Bool
                 const isEq = x => {
                     return x.saveText === buttonItem.saveText && x.time === now;
                 };
                 if(buttons.findIndex(isEq) >= 0) return;
             }
-            // newElement :: Element
-            const newElement = document.createElement('span');
-            newElement.innerHTML =
+            // element :: Element
+            const element = document.createElement('span');
+            element.innerHTML =
                     `<input type="button" value="${str}" onclick="parseMain('${execStr}');"> `;
-            newElement.setAttribute('id', 'button_' + buttonItem.id);
-            // i :: IndexNumber
-            const i = buttons.findIndex(x => x.time > buttonItem.time);
-            if(i >= 0) {
-                // target :: Element
-                const target = dgebi('button_' + buttons[i].id);
-                target.parentNode.insertBefore(newElement, target);
-                buttons.splice(i, 0, buttonItem);
-            } else {
-                dgebi('button_parent').appendChild(newElement);
-                buttons.push(buttonItem);
-            }
+            Util.insert(buttons, buttonItem, element,
+                    'button', 'button_parent');
             updateIndex();
         },
-        // Button.insertByData :: ParameterString -> ()
+        // Button.insertByData :: String -> ()
         insertByData: str => {
             // result :: Maybe [Maybe String]
             const result = /^(\d+)#(.+)$/.exec(str);
             Button.insert(result[2], parseInt10(result[1]));
         },
-        // Button.remove :: ParameterString -> ()
+        // Button.remove :: String -> ()
         remove: str => {
             if(str === '') return;
-            // result :: ParseObject
+            // result :: IndexObject
             const result = Util.parameterCheck(str, buttons.length);
             rm(result.data);
             if(result.isErr) {
@@ -797,7 +800,7 @@ const Button = (() => {
             }
             updateIndex();
         },
-        // Button.save :: () -> [ExecString]
+        // Button.save :: () -> [String]
         save: () => buttons.map(x => x.saveText)
     };
 })();
@@ -810,11 +813,9 @@ const Display = (() => {
     return {
         // Display.show :: () -> ()
         show: () => TaskQueue.show(),
-        /* Display.doStrike ::
-                (IndexNumber, IDString, ImportanceFlagNumber) -> () */
+        // Display.doStrike :: (NaturalNumber, String, NaturalNumber) -> ()
         doStrike: (index, id, importance) => {
-            // target :: Element
-            const target = dgebi('text_' + id);
+            const target = dgebi('text_' + id); // target :: Element
             target.innerText += '!'.repeat(importance);
             Tag.emphUp(index, importance);
             dgebi('time_' + id).removeAttribute('onclick');
@@ -846,7 +847,7 @@ const Display = (() => {
             dgebi('menu').style.display = 'none';
             isShowMenu = false;
         },
-        // Display.save :: () -> [ExecString]
+        // Display.save :: () -> [String]
         save: () => [isShowMenu ? 'show-menu' : 'hide-menu']
     };
 })();
@@ -854,12 +855,12 @@ const Display = (() => {
 const Macro = (() => {
     const regex = /^([^;]*?)->(.*)$/; // regex :: RegExp
     const macros = []; // macros :: [MacroObject]
-    let macroCount = 0; // macroCount :: CountNumber
+    let macroCount = 0; // macroCount :: NaturalNumber
     let isListShow = false; // isListShow :: Bool
 
-    // formatter :: ExecString -> DisplayString
+    // formatter :: String -> String
     const formatter = s => s.replace(regex, '$1 -> $2');
-    // rm :: [IndexNumber] -> ()
+    // rm :: [NaturalNumber] -> ()
     const rm = indices => {
         indices = indices.filter(x => x !== undefined);
         if(indices.length === 0) return;
@@ -876,11 +877,11 @@ const Macro = (() => {
     };
 
     return {
-        // Macro.isInsertSuccess :: (ExecString, Maybe DateNumber) -> Bool
+        // Macro.isInsertSuccess :: (String, Maybe DateNumber) -> Bool
         isInsertSuccess: (s, now = null) => {
             const result = regex.exec(s); // result :: Maybe [Maybe String]
             if(result === null || result[1] === '') return false;
-            const id = macroCount; // id :: IDNumber
+            const id = macroCount; // id :: NaturalNumber
             macroCount++;
             const isNull = now === null; // isNull :: Bool
             if(isNull) {
@@ -902,52 +903,41 @@ const Macro = (() => {
                 };
                 if(macros.findIndex(isEq) >= 0) return;
             }
-            // newElement :: Element
-            const newElement = document.createElement('li');
-            const formatStr = formatter(s); // formatStr :: DisplayString
-            newElement.innerHTML =
+            // element :: Element
+            const element = document.createElement('li');
+            const formatStr = formatter(s); // formatStr :: String
+            element.innerHTML =
                     `<input type="button" value="remove" onclick="parseMain('#remove-macro $${id}', 'priv');"> ${formatStr}`;
-            newElement.setAttribute('id', 'macro_' + id);
-            // i :: IndexNumber
-            const i = macros.findIndex(x => x.time > macroItem.time);
-            if(i >= 0) {
-                // target :: Element
-                const target = dgebi('macro_' + macros[i].id);
-                target.parentNode.insertBefore(newElement, target);
-                macros.splice(i, 0, macroItem);
-            } else {
-                dgebi('macro_parent').appendChild(newElement);
-                macros.push(macroItem);
-            }
+            Util.insert(macros, macroItem, element, 'macro', 'macro_parent');
             if(!isListShow && isNull) {
                 Notice.set('macro: ' + formatStr);
             }
             return true;
         },
-        // Macro.insertByData :: ParameterString -> ()
+        // Macro.insertByData :: String -> ()
         insertByData: str => {
             // result :: Maybe [Maybe String]
             const result = /^(\d+)#(.+)$/.exec(str);
             Macro.isInsertSuccess(result[2], parseInt10(result[1]));
         },
-        // Macro.replace :: ExecString -> ExecString
+        // Macro.replace :: String -> String
         replace: s => {
             macros.forEach(x => s = s.replace(x.key, x.value));
             return s;
         },
-        // Macro.remove :: (ParameterString, FlagString) -> ()
+        // Macro.remove :: (String, String) -> ()
         remove: (str, callFrom) => {
             if(str === '') return;
             if(callFrom === 'priv') {
                 // idResult :: Maybe [Maybe String]
                 const idResult = /^\$(\d+)$/.exec(str);
                 if(idResult !== null) {
-                    const id = parseInt10(idResult[1]); // id :: IDNumber
+                    const id = parseInt10(idResult[1]); // id :: NaturalNumber
                     rm([macros.findIndex(x => x.id === id)]);
                     return;
                 }
             }
-            // result :: ParseObject
+            // result :: IndexObject
             const result = Util.parameterCheck(str, macros.length);
             rm(result.data);
             if(result.isErr) {
@@ -964,9 +954,9 @@ const Macro = (() => {
             dgebi('macros').style.display = 'none';
             isListShow = false;
         },
-        // Macro.save :: () -> [ExecString]
+        // Macro.save :: () -> [String]
         save: () => {
-            // displayInst :: ExecString
+            // displayInst :: String
             const displayInst = isListShow ? 'show-macro' : 'hide-macro';
             return [displayInst, ...macros.map(x => x.saveText)];
         }
@@ -974,27 +964,27 @@ const Macro = (() => {
 })();
 
 const Task = (() => {
-    let defaultSound = '1'; // defaultSound :: SoundFlagString
-    let defaultImportance = 0; // defaultImportance :: ImportanceFlagNumber
-    let defaultDisplay = 'a'; // defaultDisplay :: DisplayFlagString
+    let defaultSound = '1'; // defaultSound :: String
+    let defaultImportance = 0; // defaultImportance :: NaturalNumber
+    let defaultDisplay = 'a'; // defaultDisplay :: String
 
-    // importanceStr :: () -> ImportanceFlagString
+    // importanceStr :: () -> String
     const importanceStr = () => ['.', '!', '!!', '!!!'][defaultImportance];
-    // format :: () -> FlagString
+    // format :: () -> String
     const format = () => defaultSound + defaultDisplay + importanceStr();
-    // timer :: (TimerString, DateNumber) -> Maybe DateNumber
+    // timer :: (String, DateNumber) -> Maybe DateNumber
     const timer = (s, now) => {
         // regex :: RegExp
         const regex = /^((?:(\d+),)?(\d*?)(\d{0,2})(?:\.(\d+))?)$|^((?:(.*)d)?(?:(.*)h)?(?:(.*)m)?(?:(.*)s)?)$/;
         const result = regex.exec(s); // result :: Maybe [Maybe String]
         if(s === '' || result === null) return null;
         let ret = 0; // ret :: DateNumber
-        // correct : IndexNumber
+        // correct : NaturalNumber
         const correct = result[1] !== undefined ? 2 : 7;
-        const table = [86400, 3600, 60, 1]; // table :: Number
-        for(let i = 0; i < 4; i++) { // i :: IndexNumber
+        const table = [86400, 3600, 60, 1]; // table :: NaturalNumber
+        for(let i = 0; i < 4; i++) { // i :: NaturalNumber
             if(result[i + correct] !== undefined) {
-                // value :: MaybeNumber
+                // value :: Maybe NaturalNumber
                 const value = Number('0' + result[i + correct], 10);
                 if(isNaN(value)) return null;
                 ret += table[i] * value;
@@ -1002,7 +992,7 @@ const Task = (() => {
         }
         return now + 1000 * ret;
     };
-    // alarm :: (AlarmString, DateNumber) -> Maybe DateNumber
+    // alarm :: (String, DateNumber) -> Maybe DateNumber
     const alarm = (s, now) => {
         // regex :: RegExp
         const regex = /^(?:(?:(\d*)-)?(\d*)-(\d*),)?(\d*):(\d*)(?::(\d*))?$/;
@@ -1010,7 +1000,7 @@ const Task = (() => {
         if(result === null) return null;
         let ret = new Date(now); // ret :: Date
         let isFind = false; // isFind :: Bool
-        const isFree = []; // isFree :: [Number]
+        const isFree = []; // isFree :: [NaturalNumber]
         // table :: [Object]
         const table = [
             {get: 'getFullYear', set: 'setFullYear', c: 0, r: 0},
@@ -1021,7 +1011,7 @@ const Task = (() => {
             {get: 'getSeconds', set: 'setSeconds', c: 0, r: 0}
         ];
         ret.setMilliseconds(500);
-        for(let i = 0; i < 6; i++) { // i :: IndexNumber
+        for(let i = 0; i < 6; i++) { // i :: NaturalNumber
             const t = table[i]; // t :: Object
             if(result[i + 1] !== '' && result[i + 1] !== undefined) {
                 ret[t.set](parseInt10(result[i + 1]) + t.c);
@@ -1044,7 +1034,7 @@ const Task = (() => {
     };
 
     return {
-        // Task.setDefault :: Maybe ConfigString -> ()
+        // Task.setDefault :: Maybe String -> ()
         setDefault: str => {
             if(str !== '') {
                 // result :: Maybe [Maybe String]
@@ -1066,9 +1056,9 @@ const Task = (() => {
             Notice.set('default: ' + format());
             return;
         },
-        // Task.parse :: (ExecString, FlagString) -> Maybe TaskObject
+        // Task.parse :: (String, String) -> Maybe TaskObject
         parse: (s, callFrom) => {
-            // regHead :: RegString
+            // regHead :: String
             const regHead = callFrom === 'global'
                     ? '^(?:()())?'
                     : '^(?:(\\d+)([at]))?';
@@ -1077,7 +1067,7 @@ const Task = (() => {
                     '([^\\/]*)((?:\\/(?:(-|\\d+)|([^\\/]*?)\\*)??([at])?(\\.|!{1,3})?(?:#([^ \\/]*))?(?:\\/(.*))?)?)$');
             const result = regex.exec(s); // result :: Maybe [Maybe String]
             const ret = new Object(); // ret :: TaskObject
-            const execs = []; // execs :: [ExecString]
+            const execs = []; // execs :: [String]
             if(result === null || result[9] === '*') return null;
             // now :: DateNumber
             const now = result[1] !== undefined
@@ -1092,12 +1082,12 @@ const Task = (() => {
             }
             // plusSplit :: Maybe [Maybe String]
             const plusSplit = /^([^\+]*?)(?:\+(.*))?$/.exec(result[3]);
-            ret.deadline = timer(plusSplit[1], now);
-            if(ret.deadline === null) {
-                ret.deadline = alarm(plusSplit[1], now);
-                if(ret.deadline === null) return null;
+            ret.time = timer(plusSplit[1], now);
+            if(ret.time === null) {
+                ret.time = alarm(plusSplit[1], now);
+                if(ret.time === null) return null;
             }
-            ret.isValid = ret.deadline - Date.now() >= -UPDATE_TIME / 2;
+            ret.isValid = ret.time - Date.now() >= -UPDATE_TIME / 2;
             ret.tipText = result[3];
             switch(plusSplit[2]) {
                 case undefined:
@@ -1152,10 +1142,10 @@ const Task = (() => {
         },
         // Task.init :: () -> ()
         init: () => {
-            // setDefault :: (IDString, a) -> ()
+            // setDefault :: (String, a) -> ()
             const setDefault = (id, value) => {
                 const elements = dgebi(id).children; // elements :: [Element]
-                for(let i = 0; i < elements.length; i++) { // i :: IndexNumber
+                for(let i = 0; i < elements.length; i++) { // i :: NaturalNumber
                     if(elements[i].value === value) {
                         elements[i].selected = true;
                         return;
@@ -1165,9 +1155,9 @@ const Task = (() => {
             setDefault('gui_sound', defaultSound);
             setDefault('gui_importance', importanceStr());
         },
-        // Task.importanceToNum :: ImportanceFlagString -> ImportanceFlagNumber
+        // Task.importanceToNum :: String -> Number
         importanceToNum: str => str === '.' ? 0 : str.length,
-        // Task.save :: () -> [ExecString]
+        // Task.save :: () -> [String]
         save: () => {
             return ['default ' + format()];
         }
@@ -1175,21 +1165,21 @@ const Task = (() => {
 })();
 
 const Tag = (() => {
-    let tagCount = 0; // tagCount :: CountNumber
+    let tagCount = 0; // tagCount :: NaturalNumber
     const tagTable = []; // tagTable :: [TagObject]
 
-    // getIndexById :: Maybe IDNumber -> Maybe IndexNumber
+    // getIndexById :: Maybe NaturalNumber -> Maybe NaturalNumber
     const getIndexById = id => {
         if(id === undefined) return undefined;
         return tagTable.findIndex(x => x.id === id);
     };
-    // parameterCheck :: ParameterString -> ParseObject
+    // parameterCheck :: String -> IDObject
     const parameterCheck = str => {
-        // ret :: [Object]
+        // ret :: [IndexObject]
         const ret = str.split(' ').map(x => {
             const result = /^#(.*)$/.exec(x); // result :: Maybe [Maybe String]
             if(result !== null) {
-                // index :: Maybe IndexNumber
+                // index :: Maybe NaturalNumber
                 const index = tagTable.findIndex(t => t.str === result[1]);
                 const isErr = index === -1; // isErr :: Bool
                 return {
@@ -1200,14 +1190,12 @@ const Tag = (() => {
             }
             return Util.parameterCheck(x, tagTable.length);
         });
-        // nubData :: [Maybe IndexNumber]
-        const nubData = [... new Set(ret.map(x => x.data).flat())];
-        // indexData :: [IndexNumber]
+        // nubData :: [Maybe NaturalNumber]
+        const nubData = [...new Set(ret.map(x => x.data).flat())];
+        // indexData :: [NaturalNumber]
         const indexData = nubData.filter(x => x !== undefined);
         return {
-            data: indexData.map(x => {
-                return {index: x, id: tagTable[x].id}
-            }),
+            data: indexData.map(x => ({index: x, id: tagTable[x].id})),
             isErr: ret.some(x => x.isErr),
             str: ret.map(x => x.str).join(' ')
         };
@@ -1219,7 +1207,7 @@ const Tag = (() => {
         const items = obj.map(x => tagTable[x.index]);
         Trash.push(items.map(item => item.saveText()).join(SEPARATOR));
         obj.forEach(x => {
-            const index = getIndexById(x.id); // index :: IndexNumber
+            const index = getIndexById(x.id); // index :: NaturalNumber
             if(!TaskQueue.isTagEmpty(x.id)) {
                 Notice.set(`#${tagTable[index].str} is not empty`);
                 return;
@@ -1228,7 +1216,7 @@ const Tag = (() => {
             tagTable.splice(index, 1);
         });
     };
-    // toggle :: ([IDObject], FlagString) -> ()
+    // toggle :: ([IDObject], String) -> ()
     const toggle = (obj, flag) => {
         if(obj.length === 0) return;
         // func :: IDObject -> ()
@@ -1265,15 +1253,15 @@ const Tag = (() => {
     };
 
     return {
-        // Tag.getLength :: () -> IndexNumber
+        // Tag.getLength :: () -> NaturalNumber
         getLength: () => tagTable.length,
-        // Tag.insert :: (TagsString, Maybe DateNumber) -> ()
+        // Tag.insert :: (String, Maybe DateNumber) -> ()
         insert: (str, now = null) => {
             const isNowNull = now === null; // isNowNull :: Bool
             if(isNowNull) {
                 now = Date.now();
             }
-            // tmp :: [CheckedDomObject]
+            // tmp :: [Object]
             const tmp = str.split(' ').map(x => {
                 // successObj :: Object
                 const successObj = {isErr: false, str: x};
@@ -1300,22 +1288,12 @@ const Tag = (() => {
                     saveText: () => `#$tag ${tagItem.time}#${x}${tagItem.isOpen ? ';#toggle-tag #' + tagItem.str : ''}`
                 };
                 tagCount++;
-                // newElement :: Element
-                const newElement = document.createElement('div');
-                newElement.innerHTML =
+                // element :: Element
+                const element = document.createElement('div');
+                element.innerHTML =
                         `<span closed><span id="tag_name_${tagItem.id}" onclick="parseMain('#toggle-tag #${x}');">#${x}</span> <input id="remove_tag_${tagItem.id}" type="button" value="remove" onclick="parseMain('#remove-tag #${x}');"></span><div style="padding-left: 0px"><ol id="parent_${tagItem.id}"></ol></div>`;
-                newElement.setAttribute('id', 'tag_parent_' + tagItem.id);
-                // i :: IndexNumber
-                const i = tagTable.findIndex(x => x.time > tagItem.time);
-                if(i >= 0) {
-                    // target :: Element
-                    const target = dgebi('tag_parent_' + tagTable[i].id);
-                    target.parentNode.insertBefore(newElement, target);
-                    tagTable.splice(i, 0, tagItem);
-                } else {
-                    dgebi('tag_parent').appendChild(newElement);
-                    tagTable.push(tagItem);
-                }
+                Util.insert(tagTable, tagItem, element,
+                        'tag_parent', 'tag_parent');
                 TaskQueue.newTag(tagItem.id);
                 return successObj;
             });
@@ -1324,43 +1302,42 @@ const Tag = (() => {
             }
             updateIndex();
         },
-        // Tag.insertByData :: ParameterString -> ()
+        // Tag.insertByData :: String -> ()
         insertByData: str => {
             // result :: Maybe [Maybe String]
-            const result = /^(\d+)(#|\$)(.*)$/.exec(str);
+            const result = /^(\d+)#(.*)$/.exec(str);
             Tag.insert(result[3], parseInt10(result[1]));
         },
-        // Tag.remove :: ParameterString -> ()
+        // Tag.remove :: String -> ()
         remove: str => {
             if(str === '') return;
-            // result :: ParseObject
-            const result = parameterCheck(str);
+            const result = parameterCheck(str); // result :: IDObject
             rm(result.data);
             if(result.isErr) {
                 Notice.set('error: remove-tag ' + result.str);
             }
             updateIndex();
         },
-        // Tag.findIndex :: Maybe TagString -> Maybe IDNumber
+        // Tag.findIndex :: Maybe String -> Maybe NaturalNumber
         findIndex: str => {
             if(str === undefined) return undefined;
-            // ret :: Maybe IndexNumber
+            // ret :: Maybe NaturalNumber
             const ret = tagTable.findIndex(x => x.str === str);
             return ret === -1 ? -1 : tagTable[ret].id;
         },
-        // Tag.showRemoveButton :: IDNumber -> ()
+        // Tag.showRemoveButton :: NaturalNumber -> ()
         showRemoveButton: id => {
             if(getIndexById(id) === -1) return;
             dgebi('remove_tag_' + id).style.display = null;
         },
-        // Tag.hideRemoveButton :: IDNumber -> ()
+        // Tag.hideRemoveButton :: NaturalNumber -> ()
         hideRemoveButton: id => {
             dgebi('remove_tag_' + id).style.display = 'none';
         },
-        // Tag.emphUp :: (Maybe IDNumber, ImportanceFlagNumber) -> ()
+        // Tag.emphUp :: (Maybe NaturalNumber, NaturalNumber) -> ()
         emphUp: (id, importance) => {
             if(id === undefined) return;
-            const index = getIndexById(id); // index :: Maybe IndexNumber
+            const index = getIndexById(id); // index :: Maybe NaturalNumber
             switch(importance) {
                 case 1:
                     tagTable[index].numYellow++;
@@ -1372,17 +1349,17 @@ const Tag = (() => {
                 default:
                     return;
             }
-            const nameId = 'tag_name_' + id; // nameId :: IDString
+            const nameId = 'tag_name_' + id; // nameId :: String
             if(tagTable[index].numRed > 0) {
                 dgebi(nameId).className = 'background-color_red';
             } else if(tagTable[index].numYellow > 0) {
                 dgebi(nameId).className = 'background-color_yellow';
             }
         },
-        // Tag.emphDown :: (Maybe IDNumber, ImportanceFlagNumber) -> ()
+        // Tag.emphDown :: (Maybe NaturalNumber, NaturalNumber) -> ()
         emphDown: (id, importance) => {
             if(id === undefined) return;
-            const index = getIndexById(id); // index :: Maybe IndexNumber
+            const index = getIndexById(id); // index :: Maybe NaturalNumber
             switch(importance) {
                 case 1:
                     tagTable[index].numYellow--;
@@ -1395,53 +1372,52 @@ const Tag = (() => {
                     return;
             }
             if(tagTable[index].numRed > 0) return;
-            const nameId = 'tag_name_' + id; // nameId :: IDString
+            const nameId = 'tag_name_' + id; // nameId :: String
             if(tagTable[index].numYellow > 0) {
                 dgebi(nameId).className = 'background-color_yellow';
             } else {
                 dgebi(nameId).className = '';
             }
         },
-        // Tag.toggle :: (ParameterString, FlagString) -> ()
+        // Tag.toggle :: (String, String) -> ()
         toggle: (str, flag) => {
             if(str === '') return;
-            // result :: ParseObject
-            const result = parameterCheck(str);
+            const result = parameterCheck(str); // result :: IDObject
             toggle(result.data, flag);
             if(result.isErr) {
                 Notice.set(`error: ${flag}-tag ${result.str}`);
             }
         },
-        // Tag.isValidName :: TagString -> Bool
+        // Tag.isValidName :: String -> Bool
         isValidName: str => !/\//.test(str) && str !== '*',
-        // Tag.save :: () -> [ExecString]
+        // Tag.save :: () -> [String]
         save: () => tagTable.map(x => x.saveText())
     };
 })();
 
 const TaskQueue = (() => {
     const taskQueue = []; // taskQueue :: [TaskObject]
-    let idCount = 0; // idCount :: CountNumber
+    let idCount = 0; // idCount :: NaturalNumber
 
     taskQueue[undefined] = [];
     taskQueue[undefined][-1] = {id: 'global', sound: [], soundCount: 0};
 
-    // deadlineStr :: (DateNumber, DateNumber) -> DisplayString
+    // deadlineStr :: (DateNumber, DateNumber) -> String
     const deadlineStr = (deadline, now) => {
         // deadlineObj :: Date;  nowObj :: Date
         const deadlineObj = new Date(deadline), nowObj = new Date(now);
-        let ret = ''; // ret :: DisplayString
+        const ret = []; // ret :: [String]
         if(Math.abs(deadline - now) >= 86400000) {
             if(Math.abs(deadline - now) >= 86400000 * 365) {
-                ret = deadlineObj.getFullYear() + '-';
+                ret.push(deadlineObj.getFullYear() + '-');
             }
-            ret += `${deadlineObj.getMonth() + 1}-${deadlineObj.getDate()},`;
+            ret.push(`${deadlineObj.getMonth() + 1}-${deadlineObj.getDate()},`);
         }
-        return ret + toHms(deadlineObj);
+        return ret.join('') + toHms(deadlineObj);
     };
     // getAllObj :: () -> [TaskObject]
     const getAllObj = () => [taskQueue[undefined], ...taskQueue].flat();
-    // parameterCheck :: ParameterString -> ParseObject
+    // parameterCheck :: String -> IDObject
     const parameterCheck = str => {
         // ret :: [Object]
         const ret = str.split(' ').map(x => {
@@ -1449,7 +1425,7 @@ const TaskQueue = (() => {
             const makeObj = items => {
                 return {
                     data: items.map(t1 => {
-                        // tagNo :: Maybe IndexNumber
+                        // tagNo :: Maybe NaturalNumber
                         const tagNo = Tag.findIndex(t1.tag);
                         // target :: [TaskObject]
                         const target = taskQueue[tagNo];
@@ -1466,13 +1442,13 @@ const TaskQueue = (() => {
             // invalidResult :: Maybe [Maybe String]
             const invalidResult = /^(\.|!{1,3})(?:#(.*))?$/.exec(x);
             if(invalidResult !== null) {
-                // filt :: ImpotanceFlagNumber -> TaskObject -> Bool
+                // filt :: NaturalNumber -> TaskObject -> Bool
                 const filt = n => t => !t.isValid && t.importance <= n;
-                // func :: Number -> ()
+                // func :: NaturalNumber -> ()
                 const func = invalidResult[2] === '*'
                         ? n => makeObj(getAllObj().filter(filt(n)))
                         : n => {
-                            // index :: Maybe IndexNumber
+                            // index :: Maybe NaturalNumber
                             const index = Tag.findIndex(invalidResult[2]);
                             return makeObj(taskQueue[index].filter(filt(n)));
                         };
@@ -1483,17 +1459,17 @@ const TaskQueue = (() => {
             const errObj = {isErr: true, str: makeErrorDom(x)};
             // decomp :: Maybe [Maybe String]
             const decomp = /^([^#]*)(?:#(.*))?$/.exec(x);
-            // tagNo :: Maybe IndexNumber
+            // tagNo :: Maybe NaturalNumber
             const tagNo = Tag.findIndex(decomp[2]);
             if(tagNo === -1) return errObj;
-            const max = taskQueue[tagNo].length; // max :: IndexNumber
+            const max = taskQueue[tagNo].length; // max :: NaturalNumber
             if(decomp[1] === '*') {
                 decomp[1] = '1-' + max;
             }
             // rangeResult :: Maybe [Maybe String]
             const rangeResult = /^(\d*)-(\d*)$/.exec(decomp[1]);
             if(x !== '-' && rangeResult !== null) {
-                // border :: [IndexNumber]
+                // border :: [NaturalNumber]
                 const border = rangeResult.slice(1).map(t => parseInt10(t));
                 if(border[0] > max || border[1] < 1) return errObj;
                 if(isNaN(border[0]) || border[0] < 1) {
@@ -1502,13 +1478,13 @@ const TaskQueue = (() => {
                 if(isNaN(border[1]) || border[1] > max) {
                     border[1] = max;
                 }
-                // newArr :: [Index]
+                // newArr :: [NaturalNumber]
                 const newArr = [...Array(border[1] - border[0] + 1).keys()];
-                // mapping :: Index -> TaskObject
+                // mapping :: NaturalNumber -> TaskObject
                 const mapping = t => taskQueue[tagNo][t + border[0] - 1];
                 return makeObj(newArr.map(mapping));
             }
-            // index :: Maybe IndexNumber
+            // index :: Maybe NaturalNumber
             const index = parseInt10(decomp[1]) - 1;
             return index >= 0 && index < max && /^\d+$/.test(decomp[1])
                     ? {
@@ -1523,7 +1499,8 @@ const TaskQueue = (() => {
                     : errObj;
         });
         const nubData = []; // nubData :: [Object]
-        [...ret.map(x => x.data).flat()].forEach(x => {
+        const tmp = [...ret.map(x => x.data).flat()]; // tmp :: [Maybe Object]
+        tmp.filter(x => x !== undefined).forEach(x => {
             // isEq :: Object -> Bool
             const isEq = t => {
                 return ['index', 'id', 'tagNo'].every(tt => x[tt] === t[tt]);
@@ -1532,33 +1509,32 @@ const TaskQueue = (() => {
             nubData.push(x);
         });
         return {
-            data: nubData.filter(x => x !== undefined),
+            data: nubData,
             isErr: ret.some(x => x.isErr),
             str: ret.map(x => x.str).join(' ')
         };
     };
-    // getTagIndex :: IDString -> Maybe Object
+    // getTagIndex :: String -> Maybe IDObject
     const getTagIndex = id => {
         if(id === 'global') return {index: -1, id: 'global', tagNo: undefined};
-        // item :: TaskElement
-        const item = getAllObj().find(x => x.id === id);
+        const item = getAllObj().find(x => x.id === id); // item :: TaskObject
         if(item === undefined) return undefined;
-        const tagNo = Tag.findIndex(item.tag); // tagNo :: Maybe IndexNumber
+        const tagNo = Tag.findIndex(item.tag); // tagNo :: Maybe NaturalNumber
         return {
             index: taskQueue[tagNo].findIndex(x => x.id === id),
             id: id,
             tagNo: tagNo
         };
     };
-    // display :: ([IDObject], FlagString) -> ()
+    // display :: ([IDObject], String) -> ()
     const display = (ids, flag) => {
         if(ids.length === 0) return;
-        // func :: FlagString -> FlagString
+        // func :: String -> String
         const func = flag === '-alarm'
                 ? (x => 'a')
                 : flag === '-timer' ? (x => 't') : (x => x === 'a' ? 't' : 'a');
         ids.forEach(x => {
-            // result :: FlagString
+            // result :: String
             const result = func(taskQueue[x.tagNo][x.index].display);
             taskQueue[x.tagNo][x.index].display = result;
         });
@@ -1576,7 +1552,7 @@ const TaskQueue = (() => {
         ids.forEach(x => {
             TaskQueue.stopSound('$' + x.id, 'priv');
             removeDom('item_' + x.id);
-            // i :: IndexNumber
+            // i :: NaturalNumber
             const i = taskQueue[x.tagNo].findIndex(t => t.id === x.id);
             const target = taskQueue[x.tagNo][i]; // target :: TaskObject
             if(!target.isValid) {
@@ -1587,13 +1563,13 @@ const TaskQueue = (() => {
             }
             taskQueue[x.tagNo].splice(i, 1);
         });
-        for(let i = 0; i < taskQueue.length; i++) { // i :: IndexNumber
-            if(taskQueue[i].length === 0) {
+        taskQueue.forEach((x, i) => {
+            if(x.length === 0) {
                 Tag.showRemoveButton(i);
             }
-        }
+        });
     };
-    // stop :: [IDString] -> ()
+    // stop :: [String] -> ()
     const stop = ids => {
         if(ids.length === 0) return;
         ids.forEach(x => {
@@ -1604,8 +1580,7 @@ const TaskQueue = (() => {
     };
 
     return {
-        /* TaskQueue.setDisplay ::
-                (ParameterString, FlagString, FlagString) -> () */
+        // TaskQueue.setDisplay :: (String, String, String) -> ()
         setDisplay: (str, flag, callFrom) => {
             if(str === '') {
                 str = '*#*';
@@ -1618,23 +1593,23 @@ const TaskQueue = (() => {
                     return;
                 }
             }
-            const result = parameterCheck(str); // result :: ParseObject
+            const result = parameterCheck(str); // result :: IDObject
             display(result.data, flag);
             if(result.isErr) {
                 Notice.set(`error: switch${flag} ${result.str}`);
             }
         },
-        // TaskQueue.setSound :: (Sound, IDString) -> IDNumber
+        // TaskQueue.setSound :: (Audio, String) -> NaturalNumber
         setSound: (sound, id) => {
-            const x = getTagIndex(id); // x :: Maybe Object
-            // count :: IDNumber
+            const x = getTagIndex(id); // x :: Maybe IDObject
+            // count :: NaturalNumber
             const count = taskQueue[x.tagNo][x.index].soundCount;
             sound.soundId = count;
             taskQueue[x.tagNo][x.index].sound.push(sound);
             taskQueue[x.tagNo][x.index].soundCount++;
             return count;
         },
-        // TaskQueue.setVolume :: VolumeNumber -> ()
+        // TaskQueue.setVolume :: NaturalNumber -> ()
         setVolume: volume => {
             getAllObj().forEach(x => {
                 const sound = x.sound; // sound :: Maybe Sound
@@ -1642,50 +1617,35 @@ const TaskQueue = (() => {
                 sound.forEach(t => t.volume = volume);
             });
         },
-        // TaskQueue.isPlay :: IDString -> Bool
+        // TaskQueue.isPlay :: String -> Bool
         isPlay: id => {
-            const x = getTagIndex(id); // x :: Maybe Object
+            const x = getTagIndex(id); // x :: Maybe IDObject
             const t = taskQueue[x.tagNo][x.index]; // t :: Maybe TaskObject
             return t !== undefined && t.sound.length > 0;
         },
-        // TaskQueue.insert :: (TaskObject, FlagString) -> ()
+        // TaskQueue.insert :: (TaskObject, String) -> ()
         insert: (taskItem, flag) => {
             if(taskItem.tag !== undefined && Tag.findIndex(taskItem.tag) < 0) {
                 Tag.insert(taskItem.tag);
             }
-            const id = taskItem.id = String(idCount); // id :: IDString
+            const id = taskItem.id = String(idCount); // id :: String
             idCount++;
-            // index :: Maybe IndexNumber
+            // index :: Maybe NaturalNumber
             const index = Tag.findIndex(taskItem.tag);
+            if(flag === 'merge') {
+                // isEq :: TaskObject -> Bool
+                const isEq = x => x.makeSaveText() === taskItem.makeSaveText();
+                if(taskQueue[index].some(isEq)) return;
+            }
             taskItem.sound = [];
             taskItem.soundCount = 0;
             // newElement :: Element
-            const newElement = document.createElement('li');
-            newElement.innerHTML =
+            const element = document.createElement('li');
+            element.innerHTML =
                     `<input type="button" value="remove" onclick="parseMain('#remove $${id}', 'priv');"> <span id="text_${id}" title="${taskItem.tipText}">${taskItem.name}</span><span id="time_${id}" onclick="parseMain('#switch $${id}', 'priv')"></span> `;
-            newElement.setAttribute('id', 'item_' + id);
-            // searchRule :: TaskObject -> Bool
-            const searchRule = x => x.deadline > taskItem.deadline;
-            // i :: IndexNumber
-            const i = taskQueue[index].findIndex(searchRule);
-            if(flag === 'merge' && i !== 0) {
-                // targetIndex :: IndexNumber
-                const targetIndex = i > 0 ? i - 1 : taskQueue[index].length - 1;
-                // target :: TaskObject
-                const target = taskQueue[index][targetIndex];
-                if(taskItem.makeSaveText() === target.makeSaveText()) return;
-            }
-            if(i >= 0) {
-                // target :: Element
-                const target = dgebi('item_' + taskQueue[index][i].id);
-                target.parentNode.insertBefore(newElement, target);
-                taskQueue[index].splice(i, 0, taskItem);
-            } else {
-                // idOpt :: String
-                const idOpt = index === undefined ? '' : '_' + index;
-                dgebi('parent' + idOpt).appendChild(newElement);
-                taskQueue[index].push(taskItem);
-            }
+            // parentId :: String
+            const parentId = `parent${index === undefined ? '' : '_' + index}`;
+            Util.insert(taskQueue[index], taskItem, element, 'item', parentId);
             if(index !== undefined) {
                 Tag.hideRemoveButton(index);
             }
@@ -1693,30 +1653,29 @@ const TaskQueue = (() => {
                 Display.doStrike(index, id, taskItem.importance);
             }
         },
-        // TaskQueue.move :: (ParameterString, Maybe TagString) -> ()
+        // TaskQueue.move :: (String, Maybe String) -> ()
         move: (str, tag) => {
             const result = parameterCheck(str); // result :: IDObject
             if(result.data.length === 0) return;
             // item :: TaskObject
             const item = result.data.map(x => taskQueue[x.tagNo][x.index]);
-            if(Tag.isValidName(tag)) {
+            const isTagValid = Tag.isValidName(tag); // isTagValid :: Bool
+            if(isTagValid) {
                 rm(result.data, false);
                 item.forEach(x => {
                     x.tag = tag;
                     TaskQueue.insert(x, 'global');
                 });
             }
-            if(result.isErr || !Tag.isValidName(tag)) {
+            if(result.isErr || !isTagValid) {
                 // tagName :: String
                 const tagName = tag === undefined ? '' : '#' + tag;
-                // htmlStr :: DOMString
-                const htmlStr = Tag.isValidName(tag)
-                        ? tagName
-                        : makeErrorDom(tagName);
+                // htmlStr :: String
+                const htmlStr = isTagValid ? tagName : makeErrorDom(tagName);
                 Notice.set(`error: move${htmlStr} ${result.str}`);
             }
         },
-        // TaskQueue.remove :: (ParameterString, FlagString) -> ()
+        // TaskQueue.remove :: (String, String) -> ()
         remove: (str, callFrom) => {
             if(callFrom === 'priv') {
                 // idResult :: Maybe [Maybe String]
@@ -1732,11 +1691,11 @@ const TaskQueue = (() => {
                 Notice.set('error: remove ' + result.str);
             }
         },
-        // TaskQueue.newTag :: IndexNumber -> ()
+        // TaskQueue.newTag :: NaturalNumber -> ()
         newTag: tagIndex => taskQueue[tagIndex] = [],
-        // TaskQueue.isTagEmpty :: IndexNumber -> Bool
+        // TaskQueue.isTagEmpty :: NaturalNumber -> Bool
         isTagEmpty: tagIndex => taskQueue[tagIndex].length === 0,
-        // TaskQueue.stopSound :: (IDString, FlagString) -> ()
+        // TaskQueue.stopSound :: (String, String) -> ()
         stopSound: (str, callFrom) => {
             if(callFrom === 'priv') {
                 if(str === '$global') {
@@ -1759,30 +1718,29 @@ const TaskQueue = (() => {
                     stop([getTagIndex('global')]);
                     break;
             }
-            const result = parameterCheck(str); // result :: IDObject
-            stop(result.data);
+            stop(parameterCheck(str).data);
         },
-        // TaskQueue.removeSound :: (IDString, IDNumber) -> ()
+        // TaskQueue.removeSound :: (String, NaturalNumber) -> ()
         removeSound: (id, soundId) => {
             const obj = getTagIndex(id); // obj :: Maybe IDObject
             if(obj === undefined) return;
             // targetSoundObj :: [Audio]
             const targetSoundObj = taskQueue[obj.tagNo][obj.index].sound;
-            // target :: IndexNumber
+            // target :: NaturalNumber
             const target = targetSoundObj.findIndex(x => x.soundId === soundId);
             taskQueue[obj.tagNo][obj.index].sound.splice(target, 1);
         },
-        // TaskQueue.checkDeadline :: (DateNumber, now) -> ()
+        // TaskQueue.checkDeadline :: (DateNumber, DateNumber) -> ()
         checkDeadline: (interval, now) => {
-            // isLoop :: (Maybe IndexNumber, IndexNumber) -> Bool
+            // isLoop :: (Maybe NaturalNumber, NaturalNumber) -> Bool
             const isLoop = (i, j) => {
                 if(taskQueue[i][j] === undefined) return false;
-                return now - taskQueue[i][j].deadline >= -interval / 2;
+                return now - taskQueue[i][j].time >= -interval / 2;
             };
-            // indices :: [Maybe IndexNumber]
+            // indices :: [Maybe NaturalNumber]
             const indices = taskQueue.map((t, i) => i);
             [undefined, ...indices.filter(t => t !== undefined)].forEach(i => {
-                for(let j = 0; isLoop(i, j); j++) { // j :: IndexNumber
+                for(let j = 0; isLoop(i, j); j++) { // j :: NaturalNumber
                     const target = taskQueue[i][j]; // target :: TaskObject
                     if(target.isValid) {
                         taskQueue[i][j].isValid = false;
@@ -1794,42 +1752,41 @@ const TaskQueue = (() => {
         },
         // TaskQueue.show :: () -> ()
         show: () => {
-            // dlStr :: (DateNumber, DateNumber) -> DisplayString
+            // dlStr :: (DateNumber, DateNumber) -> String
             const dlStr = (deadline, now) => `(${deadlineStr(deadline, now)})`;
-            // restStr :: (DateNumber, DateNumber) -> DisplayString
+            // restStr :: (DateNumber, DateNumber) -> String
             const restStr = (deadline, now) => {
                 const r = Math.ceil((deadline - now) / 1000); // r :: DateNumber
-                const d = Math.floor(r / 86400); // d :: Number
+                const d = Math.floor(r / 86400); // d :: NaturalNumber
                 // arr :: [Number]
                 const arr = [(r % 86400) / 3600, (r % 3600) / 60, r % 60];
-                const ret = makeClockStr(arr); // ret :: DisplayString
+                const ret = makeClockStr(arr); // ret :: String
                 return d > 0 ? `[${d},${ret}]` : `[${ret}]`;
             };
             const now = Date.now(); // now :: DateNumber
             getAllObj().forEach(x => {
-                // target :: Element
                 dgebi('time_' + x.id).innerText = !x.isValid
-                        ? '@' + deadlineStr(x.deadline, now)
+                        ? '@' + deadlineStr(x.time, now)
                         : x.display === 'a'
-                            ? dlStr(x.deadline, now)
-                            : restStr(x.deadline, now);
+                            ? dlStr(x.time, now)
+                            : restStr(x.time, now);
             });
         },
-        // TaskQueue.save :: () -> [ExecString]
+        // TaskQueue.save :: () -> [String]
         save: () => getAllObj().map(x => x.makeSaveText())
     };
 })();
 
 const Legacy = (() => {
-    // parseVersion :: VersionString -> [VersionNumber]
+    // parseVersion :: String -> [NaturalNumber]
     const parseVersion = version => {
         // result :: Maybe [Maybe String]
         const result = /^ver (\d+)\.(\d+)\.(\d+)$/.exec(version);
         return [result[1], result[2], result[3]].map(x => parseInt10(x));
     };
-    // lessThan :: ([VersionNumber], [VersionNumber]) -> Bool
+    // lessThan :: ([NaturalNumber], [NaturalNumber]) -> Bool
     const lessThan = (a, b) => {
-        for(let i = 0; i < 3; i++) { // i :: IndexNumber
+        for(let i = 0; i < 3; i++) { // i :: NaturalNumber
             if(a[i] < b[i]) return true;
             else if(a[i] > b[i]) return false;
         }
@@ -1837,39 +1794,29 @@ const Legacy = (() => {
     };
 
     return {
-        // Legacy.isPast :: VersionString -> Bool
+        // Legacy.isPast :: String -> Bool
         isPast: version => lessThan(parseVersion(version), VERSION),
-        // Legacy.convert :: ([ExecString], VersionString) -> [ExecString]
+        // Legacy.convert :: ([String], String) -> [String]
         convert: (data, version) => {
-            // inputVer :: [VersionNumber]
+            // inputVer :: [NaturalNumber]
             const inputVer = parseVersion(version);
             let isChecked = false; // isChecked :: Bool
-            if(isChecked || lessThan(inputVer, [0, 7, 0])) {
+            if(isChecked || lessThan(inputVer, [0, 10, 4])) {
                 isChecked = true;
                 data = data.map(x => {
-                    // rep1 :: Maybe [Maybe String]
-                    const rep1 = /^default (\d+)(.*)$/.exec(x);
-                    if(rep1 !== null) {
-                        return `default ${parseInt10(rep1[1]) + 1}${rep1[2]}`;
-                    }
-                    // regex :: RegExp
-                    const regex = /^(\d+[at][^\/]*\/)(-|(\d+)|[^\/]*?\*)((?:\.|!{1,3})(?:#[^ \/]*)?(?:\/.*)?)$/;
-                    // rep2 :: Maybe [Maybe String]
-                    const rep2 = regex.exec(x);
-                    if(rep2 === null || rep2[3] === undefined) return x;
-                    return rep2[1] + (parseInt10(rep2[3]) + 1) + rep2[4];
+                    return x.replace(/^#\$tag (\d+)\$(.*)$/, '#$tag $1#$2');
                 });
             }
             return data;
         },
-        // Legacy.save :: () -> [ExecString]
+        // Legacy.save :: () -> [String]
         save: () => ['ver ' + VERSION.join('.')]
     };
 })();
 
 dgebi('cover').addEventListener('click', () => {
     window.addEventListener('click', event => {
-        const str = window.getSelection().toString(); // str :: DisplayString
+        const str = window.getSelection().toString(); // str :: String
         if(str.length > 0 && str !== '\n') return;
         let target = event.target; // target :: Maybe Element
         while(target !== null) {
@@ -1908,8 +1855,7 @@ dgebi('cover').addEventListener('click', () => {
             return;
         }
         if(document.activeElement.id === 'text_cui_form') {
-            // target :: ExecString
-            const target = document.cui_form.input.value;
+            const target = document.cui_form.input.value; // target :: String
             switch(event.key) {
                 case 'ArrowUp':
                     document.cui_form.input.value = History.up(target);
@@ -1923,7 +1869,7 @@ dgebi('cover').addEventListener('click', () => {
         }
     });
 
-    // formCheck :: (Bool, IDString) -> ()
+    // formCheck :: (Bool, String) -> ()
     const formCheck = (cond, id) => {
         dgebi(id).className = `background-color_${cond ? 'pink' : 'white'}`;
     };
@@ -1948,14 +1894,15 @@ dgebi('cover').addEventListener('click', () => {
     dgebi('body').style.overflow = 'auto';
     Sound.init();
     Task.init();
-    window.setTimeout(window.setInterval, 200 - Date.now() % 200, (() => {
+    const wait = UPDATE_TIME - Date.now() % UPDATE_TIME; // wait :: DateNumber
+    window.setTimeout(window.setInterval, wait, (() => {
         let pre; // pre :: DateNumber
 
         return () => {
             dgebi('clock').innerText = toHms(new Date());
             Display.show();
             const subst = Date.now() - pre; // subst :: DateNumber
-            TaskQueue.checkDeadline(subst > 1000 ? 1000 : subst, Date.now());
+            TaskQueue.checkDeadline(Math.min(subst, 1000), Date.now());
             pre = Date.now();
         }
     })(), UPDATE_TIME);

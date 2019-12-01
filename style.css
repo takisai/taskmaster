@@ -6,6 +6,7 @@ https://opensource.org/licenses/mit-license.php
 
 :root {
     --red: #ff4b00;
+    --darkred: #d93f00;
     --yellow: #fff100;
     --blue: #005aff;
     --darkblue: #004bd7;
@@ -51,6 +52,7 @@ a {
 
 a:link, a:visited {
     color: var(--blue);
+    text-shadow: var(--white) 0px 0px 1px;
 }
 
 a:hover {
@@ -92,11 +94,11 @@ span[open], span[closed] {
 }
 
 span[open] {
-    background-image: url('image/open.svg');
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg viewBox='0 0 10000 10000' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='black' d='M 6000 3268 L 3000 8464 0 3268 3000 5000 Z'/%3E%3C/svg%3E");
 }
 
 span[closed] {
-    background-image: url('image/closed.svg');
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg viewBox='0 0 10000 10000' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='black' d='M 6464 5000 L 1268 8000 1268 2000 Z'/%3E%3C/svg%3E");
 }
 
 span[open] + *, span[closed] + * {
@@ -167,7 +169,12 @@ span[closed] + * {
 }
 
 a:active, .color_red {
-    color: var(--red);
+    color: var(--darkred);
+    text-shadow: var(--white) 0px 0px 2px;
+}
+
+.color_red {
+    font-weight: bold;
 }
 
 .strike {

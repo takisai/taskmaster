@@ -8,6 +8,15 @@ https://opensource.org/licenses/mit-license.php
 // HISTORY_INFO :: [Object]
 const HISTORY_INFO = [
     {
+        version: [0, 10, 5],
+        date: '2019-12-08',
+        info: [
+            'ミュートにしたときの画面の表示の不具合を修正',
+            'helpページでエラーが出ないよう修正',
+            '画面表示を微調整'
+        ]
+    },
+    {
         version: [0, 10, 4],
         date: '2019-12-01',
         info: [
@@ -321,16 +330,18 @@ const dsElements = (() => {
 dsElements.forEach(x => x.setAttribute('onclick', 'detailsToggle(this)'));
 
 do {
-    // commonData :: [String]
-    const commonData = [
+    // data :: [String]
+    const data = [
         `最新版: Version ${VERSION.join('.')} | ${HISTORY_INFO[0].date}`,
         '製作者: takisai',
         '動作確認ブラウザ: Google Chrome・Mozilla Firefox・Microsoft Edge 各最新版'
     ];
-    // commonHtml :: String
-    const commonHtml = `<ul>${commonData.map(x => `<li>${x}</li>`).join('')}</ul>`;
-    dgebi('common_info').innerHTML = commonHtml;
+    // innerHtml :: String
+    const innerHtml = `<ul>${data.map(x => `<li>${x}</li>`).join('')}</ul>`;
+    dgebi('common_info').innerHTML = innerHtml;
+} while(false);
 
+do {
     const target = dgebi('history_info'); // target :: Maybe Element
     if(target === null) break;
     // items :: [String]

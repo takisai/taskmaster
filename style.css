@@ -111,18 +111,18 @@ span[closed] + * {
 
 .background-color_red {
     background-color: var(--red);
-    text-shadow: var(--pink) 1px 1px, var(--pink) 1px 0,
-            var(--pink) 1px -1px, var(--pink) 0 -1px,
-            var(--pink) -1px -1px, var(--pink) -1px 0,
-            var(--pink) -1px 1px, var(--pink) 0 1px;
+    text-shadow: var(--pink) 0.7px 0.7px, var(--pink) 1px 0,
+            var(--pink) 0.7px -0.7px, var(--pink) 0 -1px,
+            var(--pink) -0.7px -0.7px, var(--pink) -1px 0,
+            var(--pink) -0.7px 0.7px, var(--pink) 0 1px;
 }
 
 .background-color_yellow {
     background-color: var(--yellow);
-    text-shadow: var(--lightyellow) 1px 1px, var(--lightyellow) 1px 0,
-            var(--lightyellow) 1px -1px, var(--lightyellow) 0 -1px,
-            var(--lightyellow) -1px -1px, var(--lightyellow) -1px 0,
-            var(--lightyellow) -1px 1px, var(--lightyellow) 0 1px;
+    text-shadow: var(--lightyellow) 0.7px 0.7px, var(--lightyellow) 1px 0,
+            var(--lightyellow) 0.7px -0.7px, var(--lightyellow) 0 -1px,
+            var(--lightyellow) -0.7px -0.7px, var(--lightyellow) -1px 0,
+            var(--lightyellow) -0.7px 0.7px, var(--lightyellow) 0 1px;
 }
 
 ::selection {
@@ -180,6 +180,7 @@ a:active, .color_red {
 .strike {
     color: var(--gray);
     text-decoration: line-through;
+    text-shadow: var(--white) 0px 0px 1px;
 }
 
 #body {
@@ -193,6 +194,7 @@ a:active, .color_red {
     top: 0;
     padding: 8px 0px;
     background-color: inherit;
+    z-index: 1;
 }
 
 #clock {

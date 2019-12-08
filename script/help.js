@@ -39,9 +39,9 @@ dsElements.forEach(x => x.addEventListener('click', () => {
 }));
 
 do {
-    // data :: [String]
-    const data = window.localStorage.getItem('help').split(SEPARATOR);
-    if(data === undefined) break;
+    const str = window.localStorage.getItem('help'); // str :: String
+    if(str === null) break;
+    const data = str.split(SEPARATOR); // data :: [String]
     // version :: [NaturalNumber]
     const version = data.shift().split('\.').map(x => parseInt10(x));
     if(!(version < VERSION || version > VERSION)) {

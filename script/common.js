@@ -8,6 +8,14 @@ https://opensource.org/licenses/mit-license.php
 // HISTORY_INFO :: [Object]
 const HISTORY_INFO = [
     {
+        version: [0, 10, 6],
+        date: '2019-12-16',
+        info: [
+            'エラー表示などをログに表示するよう変更',
+            'loadとミュートに関するバグを修正'
+        ]
+    },
+    {
         version: [0, 10, 5],
         date: '2019-12-08',
         info: [

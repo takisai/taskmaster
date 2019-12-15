@@ -161,12 +161,10 @@ const parseMain = (() => {
         switch(callFrom) {
             case 'merge':
                 switch(spaceSplit[1]) {
-                    case 'switch':
-                    case 'switch-alarm':
-                    case 'switch-timer':
                     case 'show-macro':
                     case 'hide-macro':
                     case 'volume':
+                    case 'mute':
                     case 'default':
                     case 'show-menu':
                     case 'hide-menu':
@@ -370,6 +368,13 @@ const Util = (() => {
                 object.push(item);
             }
         },
+        /* Util.insertByData ::
+                (String, (String, Maybe DateNumber) -> Object) -> () */
+        insertByData: (str, func) => {
+            // result :: Maybe [Maybe String]
+            const result = /^(\d+)#(.*)$/.exec(str);
+            func(result[2], parseInt10(result[1]));
+        },
         // Util.parameterCheck :: (String, NaturalNumber) -> IndexObject
         parameterCheck: (str, max) => {
             // ret :: [Object]
@@ -496,6 +501,16 @@ const Notice = (() => {
             }
             target.innerHTML += html;
             id = window.setTimeout(Notice.clear, NOTICE_CLEAR_TIME);
+            // regex :: RegExp
+            const regex = /<span class="color_red">(.*?)<\/span>/;
+            let str = ''; // str :: String
+            html = 'notice> ' + html;
+            while(regex.test(html)) {
+                str += ' '.repeat(html.search(regex) - str.length) + '^';
+                html = html.replace(regex, '$1');
+            }
+            str = `${html}${str === '' ? '' : '\n' + str}`;
+            console.log(str);
         },
         // Notice.clear :: () -> ()
         clear: () => {
@@ -716,7 +731,7 @@ const Load = (() => {
             if(text === '' || text === null) return;
             parseMain('#remove-macro *');
             parseMain('remove *#*;remove-tag *;remove-button *');
-            parseMain('default 1a.;volume 100;show-menu;hide-macro');
+            parseMain('default 1a.;volume 100;mute-off;show-menu;hide-macro');
             parseMain('empty-trash;empty-history');
             parse(Base64.decode(text), 'priv');
             Notice.set('loaded');
@@ -784,11 +799,7 @@ const Button = (() => {
             updateIndex();
         },
         // Button.insertByData :: String -> ()
-        insertByData: str => {
-            // result :: Maybe [Maybe String]
-            const result = /^(\d+)#(.+)$/.exec(str);
-            Button.insert(result[2], parseInt10(result[1]));
-        },
+        insertByData: str => Util.insertByData(str, Button.insert),
         // Button.remove :: String -> ()
         remove: str => {
             if(str === '') return;
@@ -915,11 +926,7 @@ const Macro = (() => {
             return true;
         },
         // Macro.insertByData :: String -> ()
-        insertByData: str => {
-            // result :: Maybe [Maybe String]
-            const result = /^(\d+)#(.+)$/.exec(str);
-            Macro.isInsertSuccess(result[2], parseInt10(result[1]));
-        },
+        insertByData: str => Util.insertByData(str, Macro.isInsertSuccess),
         // Macro.replace :: String -> String
         replace: s => {
             macros.forEach(x => s = s.replace(x.key, x.value));
@@ -1303,11 +1310,7 @@ const Tag = (() => {
             updateIndex();
         },
         // Tag.insertByData :: String -> ()
-        insertByData: str => {
-            // result :: Maybe [Maybe String]
-            const result = /^(\d+)#(.*)$/.exec(str);
-            Tag.insert(result[2], parseInt10(result[1]));
-        },
+        insertByData: str => Util.insertByData(str, Tag.insert),
         // Tag.remove :: String -> ()
         remove: str => {
             if(str === '') return;

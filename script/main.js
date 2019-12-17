@@ -380,7 +380,9 @@ const Util = (() => {
             // ret :: [Object]
             const ret = str.split(' ').map(x => {
                 // errObj :: Object
-                const errObj = {isErr: true, str: makeErrorDom(x)};
+                const errObj = x === '*'
+                        ? {data: [], isErr: false, str: x}
+                        : {isErr: true, str: makeErrorDom(x)};
                 if(x === '*') {
                     x = '1-' + max;
                 }
@@ -509,14 +511,20 @@ const Notice = (() => {
                 str += ' '.repeat(html.search(regex) - str.length) + '^';
                 html = html.replace(regex, '$1');
             }
-            str = `${html}${str === '' ? '' : '\n' + str}`;
-            console.log(str);
+            console.log(`${html}${str === '' ? '' : '\n' + str}`);
         },
         // Notice.clear :: () -> ()
         clear: () => {
+            if(id === undefined) return;
             dgebi('notice').innerHTML = '';
             window.clearTimeout(id);
             id = undefined;
+        },
+        // Notice.timeoutReset :: () -> ()
+        timeoutReset: () => {
+            if(id === undefined) return;
+            window.clearTimeout(id);
+            id = window.setTimeout(Notice.clear, NOTICE_CLEAR_TIME);
         }
     };
 })();
@@ -1459,7 +1467,9 @@ const TaskQueue = (() => {
             }
             if(x === '*#*') return makeObj(getAllObj());
             // errObj :: Object
-            const errObj = {isErr: true, str: makeErrorDom(x)};
+            const errObj = x === '*'
+                    ? {data: [], isErr: false, str: x}
+                    : {isErr: true, str: makeErrorDom(x)};
             // decomp :: Maybe [Maybe String]
             const decomp = /^([^#]*)(?:#(.*))?$/.exec(x);
             // tagNo :: Maybe NaturalNumber
@@ -1871,6 +1881,8 @@ dgebi('cover').addEventListener('click', () => {
             }
         }
     });
+    dgebi('notice').addEventListener('click', Notice.timeoutReset);
+    dgebi('notice').addEventListener('mousemove', Notice.timeoutReset);
 
     // formCheck :: (Bool, String) -> ()
     const formCheck = (cond, id) => {

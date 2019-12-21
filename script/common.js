@@ -35,6 +35,14 @@ const VERSION = (() => {
     // historyInfo :: [Object]
     const historyInfo = [
         {
+            version: [0, 10, 8],
+            date: '2019-12-21',
+            info: [
+                'エラー表示などを選択中のとき消さないよう変更',
+                '上下キーでコマンドを出したときenterボタンが出ない不具合を修正'
+            ]
+        },
+        {
             version: [0, 10, 7],
             date: '2019-12-17',
             info: [
@@ -320,9 +328,10 @@ const VERSION = (() => {
         return `<ul>${list.map(x => `<li>${x}</li>`).join('')}</ul>`;
     };
 
+    const ret = historyInfo[0].version; // ret :: [NaturalNumber]
     // commonInfo :: [String]
     const commonInfo = [
-        `最新版: Version ${historyInfo[0].version.join('.')} | ${historyInfo[0].date}`,
+        `最新版: Version ${ret.join('.')} | ${historyInfo[0].date}`,
         '製作者: takisai',
         '動作確認ブラウザ: Google Chrome・Mozilla Firefox・Microsoft Edge 各最新版'
     ];
@@ -332,14 +341,13 @@ const VERSION = (() => {
     if(target !== null) {
         // items :: [String]
         const items = historyInfo.map(x => {
-            // info :: String
-            const info = makeUnorderedList(x.info);
+            const info = makeUnorderedList(x.info); // info :: String
             return `Version ${x.version.join('.')} | ${x.date}${info}`;
         });
         target.innerHTML = makeUnorderedList(items);
     }
 
-    return historyInfo[0].version;
+    return ret;
 })();
 
 // detailsToggle :: Element -> ()

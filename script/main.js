@@ -516,14 +516,41 @@ const Notice = (() => {
         // Notice.clear :: () -> ()
         clear: () => {
             if(id === undefined) return;
-            dgebi('notice').innerHTML = '';
             window.clearTimeout(id);
+            if(window.getSelection().toString().length > 0) {
+                // select :: Range
+                const select = window.getSelection().getRangeAt(0);
+                const range = document.createRange(); // range :: Range
+                range.selectNodeContents(dgebi('notice'));
+                // func :: (Object, IntegerNumber) -> Bool
+                const func = (how, compare) => {
+                    return range.compareBoundaryPoints(how, select) === compare;
+                };
+                // isSSAfter :: Bool;  isESAfter :: Bool;  isForward :: Bool
+                const isSSAfter = func(Range.START_TO_START, 1);
+                const isESAfter = func(Range.END_TO_START, 1);
+                const isForward = isSSAfter && isESAfter;
+                // isEEBefore :: Bool;  isSEBefore :: Bool;  isBackward :: Bool
+                const isEEBefore = func(Range.END_TO_END, -1);
+                const isSEBefore = func(Range.START_TO_END, -1);
+                const isBackward = isEEBefore && isSEBefore;
+                if(!(isForward || isBackward)) {
+                    Notice.stopTimer();
+                    return;
+                }
+            }
+            dgebi('notice').innerHTML = '';
             id = undefined;
         },
-        // Notice.timeoutReset :: () -> ()
-        timeoutReset: () => {
+        // Notice.stopTimer :: () -> ()
+        stopTimer: () => {
             if(id === undefined) return;
             window.clearTimeout(id);
+            id = -1;
+        },
+        // Notice.resumeTimer :: () -> ()
+        resumeTimer: () => {
+            if(id !== -1) return;
             id = window.setTimeout(Notice.clear, NOTICE_CLEAR_TIME);
         }
     };
@@ -1872,17 +1899,19 @@ dgebi('cover').addEventListener('click', () => {
             switch(event.key) {
                 case 'ArrowUp':
                     document.cui_form.input.value = History.up(target);
+                    submitButtonControl();
                     event.preventDefault();
                     break;
                 case 'ArrowDown':
                     document.cui_form.input.value = History.down(target);
+                    submitButtonControl();
                     event.preventDefault();
                     break;
             }
         }
     });
-    dgebi('notice').addEventListener('click', Notice.timeoutReset);
-    dgebi('notice').addEventListener('mousemove', Notice.timeoutReset);
+    dgebi('notice').addEventListener('mouseenter', Notice.stopTimer);
+    dgebi('notice').addEventListener('mouseleave', Notice.resumeTimer);
 
     // formCheck :: (Bool, String) -> ()
     const formCheck = (cond, id) => {
@@ -1912,12 +1941,21 @@ dgebi('cover').addEventListener('click', () => {
     const wait = UPDATE_TIME - Date.now() % UPDATE_TIME; // wait :: DateNumber
     window.setTimeout(window.setInterval, wait, (() => {
         let pre; // pre :: DateNumber
+        let isSelected = false; // isSelected :: Bool
 
         return () => {
             dgebi('clock').innerText = toHms(new Date());
             Display.show();
             const subst = Date.now() - pre; // subst :: DateNumber
             TaskQueue.checkDeadline(Math.min(subst, 1000), Date.now());
+            // isSelect :: Bool
+            const isSelect = window.getSelection().toString().length > 0;
+            if(!isSelected && isSelect) {
+                isSelected = true;
+            } else if(isSelected && !isSelect) {
+                isSelected = false;
+                Notice.resumeTimer();
+            }
             pre = Date.now();
         }
     })(), UPDATE_TIME);

@@ -39,7 +39,7 @@ dsElements.forEach(x => x.addEventListener('click', () => {
 }));
 
 do {
-    const str = window.localStorage.getItem('help'); // str :: String
+    const str = window.localStorage.getItem('help'); // str :: Maybe String
     if(str === null) break;
     const data = str.split(SEPARATOR); // data :: [String]
     // version :: [NaturalNumber]

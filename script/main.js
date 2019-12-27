@@ -33,6 +33,24 @@ const removeDom = id => {
     return true;
 };
 
+// htmlEscape :: String -> String
+const htmlEscape = str => {
+    return str.replace(/&/g, '&amp;')
+              .replace(/"/g, '&quot;')
+              .replace(/'/g, '&#27;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/`/g, '&#60;');
+};
+
+// quotEscape :: String -> String
+const quotEscape = str => {
+    return str.replace(/\\/g, '\\\\')
+              .replace(/"/g, '\"')
+              .replace(/'/g, '\'')
+              .replace(/`/g, '\`');
+};
+
 // makeErrorDom :: String -> String
 const makeErrorDom = str => `<span class="color_red">${str}</span>`;
 
@@ -381,7 +399,7 @@ const Util = (() => {
             const ret = str.split(' ').map(x => {
                 // errObj :: Object
                 const errObj = x === '*'
-                        ? {data: [], isErr: false, str: x}
+                        ? {data: [], isErr: false, str: '*'}
                         : {isErr: true, str: makeErrorDom(x)};
                 if(x === '*') {
                     x = '1-' + max;
@@ -496,22 +514,42 @@ const Notice = (() => {
     return {
         // Notice.set :: String -> ()
         set: html => {
+            // regex :: RegExp
+            const regex = /^(.*?)(<span class="color_red">(.*?)<\/span>(.*))?$/;
             const target = dgebi('notice'); // target :: Element
             if(id !== undefined) {
                 window.clearTimeout(id);
                 target.innerHTML += ' ; ';
             }
-            target.innerHTML += html;
+            target.innerHTML += (tmp => {
+                const ret = []; // ret :: [String]
+                while(tmp !== '') {
+                    // result :: Maybe [Maybe String]
+                    const result = regex.exec(html);
+                    ret.push(htmlEscape(result[1]));
+                    if(result[2] === undefined) break;
+                    const res3 = htmlEscape(result[3]); // res3 :: String
+                    ret.push(`<span class="color_red">${res3}</span>`);
+                    tmp = result[4];
+                }
+                return ret.join('');
+            })(html);
             id = window.setTimeout(Notice.clear, NOTICE_CLEAR_TIME);
-            // regex :: RegExp
-            const regex = /<span class="color_red">(.*?)<\/span>/;
-            let str = ''; // str :: String
             html = 'notice> ' + html;
-            while(regex.test(html)) {
-                str += ' '.repeat(html.search(regex) - str.length) + '^';
-                html = html.replace(regex, '$1');
+            const log = [], line = []; // log :: [String];  line :: [String]
+            while(html !== '') {
+                // result :: Maybe [Maybe String]
+                const result = regex.exec(html);
+                log.push(result[1]);
+                if(result[2] === undefined) break;
+                line.push(' '.repeat(result[1].length));
+                log.push(result[3]);
+                line.push('^' + '~'.repeat(result[3].length - 1));
+                html = result[4];
             }
-            console.log(`${html}${str === '' ? '' : '\n' + str}`);
+            // lineJoin :: String
+            const lineJoin = line === [] ? '' : '\n' + line.join('');
+            console.log(`${log.join('')}${lineJoin}`);
         },
         // Notice.clear :: () -> ()
         clear: () => {
@@ -807,8 +845,6 @@ const Button = (() => {
         // Button.insert :: (String, Maybe DateNumber) -> ()
         insert: (str, now = null) => {
             if(str === undefined) return;
-            // execStr :: String
-            const execStr = str.replace(/'/g, '\\\'').replace(/\\/g, '\\\\');
             const isNull = now === null; // isNull :: Bool
             // buttonItem :: ButtonObject
             const buttonItem = {
@@ -816,7 +852,6 @@ const Button = (() => {
                 str: str,
                 time: isNull ? Date.now() : now
             };
-            buttonCount++;
             buttonItem.saveText = `#$button ${buttonItem.time}#${str}`;
             if(!isNull) {
                 // isEq :: ButtonObject -> Bool
@@ -825,6 +860,8 @@ const Button = (() => {
                 };
                 if(buttons.findIndex(isEq) >= 0) return;
             }
+            buttonCount++;
+            const execStr = quotEscape(str); // execStr :: String
             // element :: Element
             const element = document.createElement('span');
             element.innerHTML =
@@ -904,8 +941,6 @@ const Macro = (() => {
     let macroCount = 0; // macroCount :: NaturalNumber
     let isListShow = false; // isListShow :: Bool
 
-    // formatter :: String -> String
-    const formatter = s => s.replace(regex, '$1 -> $2');
     // rm :: [NaturalNumber] -> ()
     const rm = indices => {
         indices = indices.filter(x => x !== undefined);
@@ -928,7 +963,6 @@ const Macro = (() => {
             const result = regex.exec(s); // result :: Maybe [Maybe String]
             if(result === null || result[1] === '') return false;
             const id = macroCount; // id :: NaturalNumber
-            macroCount++;
             const isNull = now === null; // isNull :: Bool
             if(isNull) {
                 now = Date.now();
@@ -947,13 +981,15 @@ const Macro = (() => {
                 const isEq = x => {
                     return x.saveText === macroItem.saveText && x.time === now;
                 };
-                if(macros.findIndex(isEq) >= 0) return;
+                if(macros.findIndex(isEq) >= 0) return true;
             }
-            // element :: Element
-            const element = document.createElement('li');
-            const formatStr = formatter(s); // formatStr :: String
+            macroCount++;
+            const element = document.createElement('li'); // element :: Element
+            // formatStr :: String
+            const formatStr = s.replace(regex, '$1 -> $2');
+            const escapeStr = htmlEscape(formatStr); // escapeStr :: String
             element.innerHTML =
-                    `<input type="button" value="remove" onclick="parseMain('#remove-macro $${id}', 'priv');"> ${formatStr}`;
+                    `<input type="button" value="remove" onclick="parseMain('#remove-macro $${id}', 'priv');"> ${escapeStr}`;
             Util.insert(macros, macroItem, element, 'macro', 'macro_parent');
             if(!isListShow && isNull) {
                 Notice.set('macro: ' + formatStr);
@@ -1162,7 +1198,7 @@ const Task = (() => {
             }
             ret.tag = result[9];
             if(result[10] !== undefined) {
-                ret.name = result[10];
+                ret.name = htmlEscape(result[10]);
                 ret.saveRawName = '/' + result[10];
             } else {
                 ret.name = plusSplit[1];
@@ -1242,21 +1278,22 @@ const Tag = (() => {
             str: ret.map(x => x.str).join(' ')
         };
     };
-    // rm :: [IDObject] -> ()
+    // rm :: [IDObject] -> String
     const rm = obj => {
         if(obj.length === 0) return;
         // items :: [TagObject]
         const items = obj.map(x => tagTable[x.index]);
         Trash.push(items.map(item => item.saveText()).join(SEPARATOR));
-        obj.forEach(x => {
+        const ret = obj.map(x => {
             const index = getIndexById(x.id); // index :: NaturalNumber
             if(!TaskQueue.isTagEmpty(x.id)) {
-                Notice.set(`#${tagTable[index].str} is not empty`);
-                return;
+                return `#${tagTable[index].str} is not empty`;
             }
             removeDom('tag_parent_' + x.id);
             tagTable.splice(index, 1);
+            return '';
         });
+        return ret.filter(x => x !== '').join(' , ');
     };
     // toggle :: ([IDObject], String) -> ()
     const toggle = (obj, flag) => {
@@ -1327,13 +1364,20 @@ const Tag = (() => {
                     isOpen: false,
                     numYellow: 0,
                     numRed: 0,
-                    saveText: () => `#$tag ${tagItem.time}#${x}${tagItem.isOpen ? ';#toggle-tag #' + tagItem.str : ''}`
+                    saveText: () => {
+                        // head :: String
+                        const head = `#$tag ${tagItem.time}#${x}`;
+                        if(!tagItem.isOpen) return head;
+                        return head + ';#toggle-tag #' + tagItem.str;
+                    }
                 };
                 tagCount++;
+                const qEscape = '#' + quotEscape(x); // qEscape :: String
+                const hEscape = '#' + htmlEscape(x); // hEscape :: String
                 // element :: Element
                 const element = document.createElement('div');
                 element.innerHTML =
-                        `<span closed><span id="tag_name_${tagItem.id}" onclick="parseMain('#toggle-tag #${x}');">#${x}</span> <input id="remove_tag_${tagItem.id}" type="button" value="remove" onclick="parseMain('#remove-tag #${x}');"></span><div style="padding-left: 0px"><ol id="parent_${tagItem.id}"></ol></div>`;
+                        `<span closed><span id="tag_name_${tagItem.id}" onclick="parseMain('#toggle-tag ${qEscape}');">${hEscape}</span> <input id="remove_tag_${tagItem.id}" type="button" value="remove" onclick="parseMain('#remove-tag ${qEscape}');"></span><div style="padding-left: 0px"><ol id="parent_${tagItem.id}"></ol></div>`;
                 Util.insert(tagTable, tagItem, element,
                         'tag_parent', 'tag_parent');
                 TaskQueue.newTag(tagItem.id);
@@ -1350,9 +1394,10 @@ const Tag = (() => {
         remove: str => {
             if(str === '') return;
             const result = parameterCheck(str); // result :: IDObject
-            rm(result.data);
-            if(result.isErr) {
-                Notice.set('error: remove-tag ' + result.str);
+            const info = rm(result.data); // info :: String
+            if(result.isErr || info !== '') {
+                const t = info === '' ? '' : ' , ' + info; // t :: String
+                Notice.set('error: remove-tag ' + result.str + t);
             }
             updateIndex();
         },
@@ -1495,7 +1540,7 @@ const TaskQueue = (() => {
             if(x === '*#*') return makeObj(getAllObj());
             // errObj :: Object
             const errObj = x === '*'
-                    ? {data: [], isErr: false, str: x}
+                    ? {data: [], isErr: false, str: '*'}
                     : {isErr: true, str: makeErrorDom(x)};
             // decomp :: Maybe [Maybe String]
             const decomp = /^([^#]*)(?:#(.*))?$/.exec(x);
@@ -1669,7 +1714,6 @@ const TaskQueue = (() => {
                 Tag.insert(taskItem.tag);
             }
             const id = taskItem.id = String(idCount); // id :: String
-            idCount++;
             // index :: Maybe NaturalNumber
             const index = Tag.findIndex(taskItem.tag);
             if(flag === 'merge') {
@@ -1677,6 +1721,7 @@ const TaskQueue = (() => {
                 const isEq = x => x.makeSaveText() === taskItem.makeSaveText();
                 if(taskQueue[index].some(isEq)) return;
             }
+            idCount++;
             taskItem.sound = [];
             taskItem.soundCount = 0;
             // newElement :: Element

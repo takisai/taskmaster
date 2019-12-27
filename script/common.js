@@ -35,6 +35,15 @@ const VERSION = (() => {
     // historyInfo :: [Object]
     const historyInfo = [
         {
+            version: [0, 10, 9],
+            date: '2019-12-27',
+            info: [
+                'ログのエラー表示を変更',
+                'エスケープ処理の不具合を修正',
+                '<kbd>remove-tag</kbd>のエラー表示を修正'
+            ]
+        },
+        {
             version: [0, 10, 8],
             date: '2019-12-21',
             info: [

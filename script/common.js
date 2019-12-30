@@ -35,6 +35,13 @@ const VERSION = (() => {
     // historyInfo :: [Object]
     const historyInfo = [
         {
+            version: [1, 0, 0],
+            date: '2019-12-30',
+            info: [
+                '正式版公開'
+            ]
+        }/*,
+        {
             version: [0, 10, 10],
             date: '2019-12-30',
             info: [
@@ -338,7 +345,7 @@ const VERSION = (() => {
             info: [
                 'β版'
             ]
-        }
+        }*/
     ];
     // makeUnorderedList :: [String] -> String
     const makeUnorderedList = list => {

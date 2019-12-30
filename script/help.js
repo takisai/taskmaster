@@ -12,7 +12,8 @@ const hrefOpen = id => {
     let target = dgebi(id); // target :: Maybe Element
     if(target === null) return;
     while(target !== null) {
-        const firstChild = target.children[0]; // firstChild :: Element
+        const firstChild = target.children[0]; // firstChild :: Maybe Element
+        // console.assert(firstChild !== undefined);
         if(firstChild.hasAttribute('closed')) {
             detailsToggle(firstChild);
         }
@@ -42,8 +43,9 @@ do {
     const str = window.localStorage.getItem('help'); // str :: Maybe String
     if(str === null) break;
     const data = str.split(SEPARATOR); // data :: [String]
-    // version :: [NaturalNumber]
+    // version :: [Maybe NaturalNumber]
     const version = data.shift().split('\.').map(x => parseInt10(x));
+    // console.assert(version.every(x => isNaN(x)));
     if(!(version < VERSION || version > VERSION)) {
         for(let i = 0; i < dsElements.length; i++) { // i :: NaturalNumber
             // hasOpen :: Bool;  hasClosed :: Bool

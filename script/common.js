@@ -6,7 +6,7 @@ https://opensource.org/licenses/mit-license.php
 'use strict';
 
 // *** polyfill ***
-if (!Array.prototype.flat) {
+if(Array.prototype.flat === undefined) {
     Array.prototype.flat = function(depth) {
         depth = Math.floor(depth);
         // flat :: ([Object], NaturalNumber) -> [Object]
@@ -27,13 +27,21 @@ if (!Array.prototype.flat) {
 
 // dgebi :: String -> Maybe Element
 const dgebi = id => document.getElementById(id);
-// parseInt10 :: String -> Maybe IntegerNumber
+// parseInt10 :: Maybe String -> Maybe IntegerNumber
 const parseInt10 = str => parseInt(str, 10);
 
 // VERSION :: [NaturalNumber]
 const VERSION = (() => {
     // historyInfo :: [Object]
     const historyInfo = [
+        {
+            version: [0, 10, 10],
+            date: '2019-12-30',
+            info: [
+                '空白だけの文字列を履歴に残さないよう修正',
+                'エラー表示に関する不具合を修正'
+            ]
+        },
         {
             version: [0, 10, 9],
             date: '2019-12-27',

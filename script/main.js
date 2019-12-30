@@ -8,6 +8,7 @@ const UPDATE_TIME = 200; // UPDATE_TIME :: DateNumber
 const SEPARATOR = '\v'; // SEPARATOR :: String
 const NOTICE_CLEAR_TIME = 5000; // NOTICE_CLEAR_TIME :: DateNumber
 const RECURSION_LIMIT = 5; // RECURSION_LIMIT :: NaturalNumber
+const AUTO_REMOVE_TIME = 15000; // AUTO_REMOVE_TIME :: DateNumber
 
 const NUMBER_OF_SOUNDS = 15; // NUMBER_OF_SOUNDS :: NaturalNumber
 /*  NUMBER_OF_SOUNDSの数だけmp3ファイルを登録して音を鳴らすことができます。
@@ -117,10 +118,10 @@ const parseMain = (() => {
 
     // evaluate :: String -> String
     const evaluate = str => {
-        // safeEval :: String -> String
+        // safeEval :: Maybe String -> String
         const safeEval = str => {
             try {
-                return Function(`'use strict';return(${str})`)();
+                return String(Function(`'use strict';return(${str})`)());
             } catch(e) {
                 return '';
             }
@@ -174,6 +175,7 @@ const parseMain = (() => {
         }
         // spaceSplit :: Maybe [Maybe String]
         const spaceSplit = /^([^ ]*)(?: (.*))?$/.exec(text);
+        // console.assert(spaceSplit !== null);
         // parameter :: String
         const parameter = spaceSplit[2] === undefined ? '' : spaceSplit[2];
         switch(callFrom) {
@@ -377,8 +379,9 @@ const Util = (() => {
             // i :: NaturalNumber
             const i = object.findIndex(x => x.time > item.time);
             if(i >= 0) {
-                // target :: Element
+                // target :: Maybe Element
                 const target = dgebi(`${preId}_${object[i].id}`);
+                // console.assert(target !== null);
                 target.parentNode.insertBefore(element, target);
                 object.splice(i, 0, item);
             } else {
@@ -391,6 +394,7 @@ const Util = (() => {
         insertByData: (str, func) => {
             // result :: Maybe [Maybe String]
             const result = /^(\d+)#(.*)$/.exec(str);
+            // console.assert(result !== null || result[2] !== undefined);
             func(result[2], parseInt10(result[1]));
         },
         // Util.parameterCheck :: (String, NaturalNumber) -> IndexObject
@@ -407,7 +411,7 @@ const Util = (() => {
                 // rangeResult :: Maybe [Maybe String]
                 const rangeResult = /^(\d*)-(\d*)$/.exec(x);
                 if(x !== '-' && rangeResult !== null) {
-                    // border :: [NaturalNumber]
+                    // border :: [Maybe NaturalNumber]
                     const border = rangeResult.slice(1).map(t => parseInt10(t));
                     if(border[0] > max || border[1] < 1) return errObj;
                     if(isNaN(border[0]) || border[0] < 1) {
@@ -476,7 +480,7 @@ const History = (() => {
     return {
         // History.push :: String -> ()
         push: str => {
-            if(str === '') return;
+            if(/^\s*$/.test(str)) return;
             strs.push(str);
             if(index < strs.length - 1 && strs[index] === str) {
                 strs.splice(index, 1);
@@ -516,7 +520,8 @@ const Notice = (() => {
         set: html => {
             // regex :: RegExp
             const regex = /^(.*?)(<span class="color_red">(.*?)<\/span>(.*))?$/;
-            const target = dgebi('notice'); // target :: Element
+            const target = dgebi('notice'); // target :: Maybe Element
+            // console.assert(target !== null);
             if(id !== undefined) {
                 window.clearTimeout(id);
                 target.innerHTML += ' ; ';
@@ -525,9 +530,12 @@ const Notice = (() => {
                 const ret = []; // ret :: [String]
                 while(tmp !== '') {
                     // result :: Maybe [Maybe String]
-                    const result = regex.exec(html);
+                    const result = regex.exec(tmp);
+                    // console.assert(result !== null);
+                    // console.assert(result[1] !== undefined);
                     ret.push(htmlEscape(result[1]));
                     if(result[2] === undefined) break;
+                    // console.assert(result[3] !== undefined);
                     const res3 = htmlEscape(result[3]); // res3 :: String
                     ret.push(`<span class="color_red">${res3}</span>`);
                     tmp = result[4];
@@ -540,9 +548,12 @@ const Notice = (() => {
             while(html !== '') {
                 // result :: Maybe [Maybe String]
                 const result = regex.exec(html);
+                // console.assert(result !== null);
+                // console.assert(result[1] !== undefined);
                 log.push(result[1]);
                 if(result[2] === undefined) break;
                 line.push(' '.repeat(result[1].length));
+                // console.assert(result[3] !== undefined);
                 log.push(result[3]);
                 line.push('^' + '~'.repeat(result[3].length - 1));
                 html = result[4];
@@ -620,7 +631,7 @@ const Sound = (() => {
     return {
         // Sound.setVolume :: String -> ()
         setVolume: str => {
-            const n = parseInt10(str); // n :: NaturalNumber
+            const n = parseInt10(str); // n :: Maybe NaturalNumber
             if(n < 0 || n > 100 || !/^\d+$/.test(str)) {
                 Notice.set('error: volume ' + makeErrorDom(str));
                 return;
@@ -725,8 +736,9 @@ const Base64 = (() => {
         decode: str => {
             const tmp = []; // tmp :: [UnicodeNumber]
             str.replace(/[^A-Za-z\d+/=]/g, '').match(/.{4}/g).forEach(x => {
-                // c :: [NaturalNumber]
+                // c :: [Maybe NaturalNumber]
                 const c = [...x].map(t => KEY.indexOf(t));
+                // console.assert(c.every(t => t >= 0));
                 tmp.push((c[0] << 2) | (c[1] >> 4));
                 if(c[2] === 64) return;
                 tmp.push(((c[1] & 15) << 4) | (c[2] >> 2));
@@ -824,7 +836,7 @@ const Button = (() => {
     let buttonCount = 0; // buttonCount :: NaturalNumber
     const buttons = []; // buttons :: [ButtonObject]
 
-    // rm :: [NaturalNumber] -> ()
+    // rm :: [Maybe NaturalNumber] -> ()
     const rm = indices => {
         indices = indices.filter(x => x !== undefined);
         if(indices.length === 0) return;
@@ -890,7 +902,6 @@ const Button = (() => {
 
 const Display = (() => {
     const ALERT_WAIT_TIME = 1000; // ALERT_WAIT_TIME :: DateNumber
-    const AUTO_REMOVE_TIME = 15000; // AUTO_REMOVE_TIME :: DateNumber
     let isShowMenu = true; // isShowMenu :: Bool
 
     return {
@@ -898,7 +909,8 @@ const Display = (() => {
         show: () => TaskQueue.show(),
         // Display.doStrike :: (NaturalNumber, String, NaturalNumber) -> ()
         doStrike: (index, id, importance) => {
-            const target = dgebi('text_' + id); // target :: Element
+            const target = dgebi('text_' + id); // target :: Maybe Element
+            // console.assert(target !== null);
             target.innerText += '!'.repeat(importance);
             Tag.emphUp(index, importance);
             dgebi('time_' + id).removeAttribute('onclick');
@@ -941,7 +953,7 @@ const Macro = (() => {
     let macroCount = 0; // macroCount :: NaturalNumber
     let isListShow = false; // isListShow :: Bool
 
-    // rm :: [NaturalNumber] -> ()
+    // rm :: [Maybe NaturalNumber] -> ()
     const rm = indices => {
         indices = indices.filter(x => x !== undefined);
         if(indices.length === 0) return;
@@ -962,6 +974,7 @@ const Macro = (() => {
         isInsertSuccess: (s, now = null) => {
             const result = regex.exec(s); // result :: Maybe [Maybe String]
             if(result === null || result[1] === '') return false;
+            // console.assert(result[2] !== null);
             const id = macroCount; // id :: NaturalNumber
             const isNull = now === null; // isNull :: Bool
             if(isNull) {
@@ -1010,7 +1023,9 @@ const Macro = (() => {
                 // idResult :: Maybe [Maybe String]
                 const idResult = /^\$(\d+)$/.exec(str);
                 if(idResult !== null) {
-                    const id = parseInt10(idResult[1]); // id :: NaturalNumber
+                    // id :: Maybe NaturalNumber
+                    const id = parseInt10(idResult[1]);
+                    // console.assert(isNaN(id));
                     rm([macros.findIndex(x => x.id === id)]);
                     return;
                 }
@@ -1053,7 +1068,8 @@ const Task = (() => {
     // timer :: (String, DateNumber) -> Maybe DateNumber
     const timer = (s, now) => {
         // regex :: RegExp
-        const regex = /^((?:(\d+),)?(\d*?)(\d{0,2})(?:\.(\d+))?)$|^((?:(.*)d)?(?:(.*)h)?(?:(.*)m)?(?:(.*)s)?)$/;
+        const regex =
+                /^((?:(\d+),)?(\d*?)(\d{0,2})(?:\.(\d+))?)$|^((?:(.*)d)?(?:(.*)h)?(?:(.*)m)?(?:(.*)s)?)$/;
         const result = regex.exec(s); // result :: Maybe [Maybe String]
         if(s === '' || result === null) return null;
         let ret = 0; // ret :: DateNumber
@@ -1062,6 +1078,7 @@ const Task = (() => {
         const table = [86400, 3600, 60, 1]; // table :: NaturalNumber
         for(let i = 0; i < 4; i++) { // i :: NaturalNumber
             if(result[i + correct] !== undefined) {
+                // console.assert(result[i + correct] !== undefined);
                 // value :: Maybe NaturalNumber
                 const value = Number('0' + result[i + correct], 10);
                 if(isNaN(value)) return null;
@@ -1147,10 +1164,11 @@ const Task = (() => {
             const ret = new Object(); // ret :: TaskObject
             const execs = []; // execs :: [String]
             if(result === null || result[9] === '*') return null;
-            // now :: DateNumber
+            // now :: Maybe DateNumber
             const now = result[1] !== undefined
                     ? parseInt10(result[1])
                     : Date.now();
+            // console.assert(isNaN(now));
             if(result[1] !== undefined) {
                 ret.when = result[1];
                 ret.display = result[2];
@@ -1160,6 +1178,7 @@ const Task = (() => {
             }
             // plusSplit :: Maybe [Maybe String]
             const plusSplit = /^([^\+]*?)(?:\+(.*))?$/.exec(result[3]);
+            // console.assert(plusSplit !== null || plusSplit[1] !== undefined);
             ret.time = timer(plusSplit[1], now);
             if(ret.time === null) {
                 ret.time = alarm(plusSplit[1], now);
@@ -1233,12 +1252,10 @@ const Task = (() => {
             setDefault('gui_sound', defaultSound);
             setDefault('gui_importance', importanceStr());
         },
-        // Task.importanceToNum :: String -> Number
+        // Task.importanceToNum :: String -> NaturalNumber
         importanceToNum: str => str === '.' ? 0 : str.length,
         // Task.save :: () -> [String]
-        save: () => {
-            return ['default ' + format()];
-        }
+        save: () => (['default ' + format()])
     };
 })();
 
@@ -1281,8 +1298,7 @@ const Tag = (() => {
     // rm :: [IDObject] -> String
     const rm = obj => {
         if(obj.length === 0) return;
-        // items :: [TagObject]
-        const items = obj.map(x => tagTable[x.index]);
+        const items = obj.map(x => tagTable[x.index]); // items :: [TagObject]
         Trash.push(items.map(item => item.saveText()).join(SEPARATOR));
         const ret = obj.map(x => {
             const index = getIndexById(x.id); // index :: NaturalNumber
@@ -1304,16 +1320,18 @@ const Tag = (() => {
                 case 'open':
                     return x => {
                         tagTable[x.index].isOpen = true;
-                        // target :: Element
+                        // target :: Maybe Element
                         const target = dgebi('tag_parent_' + x.id).children[0];
+                        // console.assert(target !== undefined);
                         target.removeAttribute('closed');
                         target.setAttribute('open', '');
                     };
                 case 'close':
                     return x => {
                         tagTable[x.index].isOpen = false;
-                        // target :: Element
+                        // target :: Maybe Element
                         const target = dgebi('tag_parent_' + x.id).children[0];
+                        // console.assert(target !== undefined);
                         target.removeAttribute('open');
                         target.setAttribute('closed', '');
                     };
@@ -1347,9 +1365,7 @@ const Tag = (() => {
                 if(!isNowNull) {
                     // isEq :: TagObject -> Bool
                     const isEq = t => t.time === now && t.str === x;
-                    if(tagTable.findIndex(isEq) >= 0) {
-                        return successObj;
-                    }
+                    if(tagTable.findIndex(isEq) >= 0) return successObj;
                 }
                 // isExist :: Bool
                 const isExist = tagTable.find(t => t.str === x) !== undefined;
@@ -1432,11 +1448,12 @@ const Tag = (() => {
                 default:
                     return;
             }
-            const nameId = 'tag_name_' + id; // nameId :: String
+            const target = dgebi('tag_name_' + id); // nameId :: Maybe String
+            // console.assert(target !== null);
             if(tagTable[index].numRed > 0) {
-                dgebi(nameId).className = 'background-color_red';
+                target.className = 'background-color_red';
             } else if(tagTable[index].numYellow > 0) {
-                dgebi(nameId).className = 'background-color_yellow';
+                target.className = 'background-color_yellow';
             }
         },
         // Tag.emphDown :: (Maybe NaturalNumber, NaturalNumber) -> ()
@@ -1455,11 +1472,12 @@ const Tag = (() => {
                     return;
             }
             if(tagTable[index].numRed > 0) return;
-            const nameId = 'tag_name_' + id; // nameId :: String
+            const target = dgebi('tag_name_' + id); // nameId :: Maybe String
+            // console.assert(target !== null);
             if(tagTable[index].numYellow > 0) {
-                dgebi(nameId).className = 'background-color_yellow';
+                target.className = 'background-color_yellow';
             } else {
-                dgebi(nameId).className = '';
+                target.className = '';
             }
         },
         // Tag.toggle :: (String, String) -> ()
@@ -1487,8 +1505,7 @@ const TaskQueue = (() => {
 
     // deadlineStr :: (DateNumber, DateNumber) -> String
     const deadlineStr = (deadline, now) => {
-        // deadlineObj :: Date;  nowObj :: Date
-        const deadlineObj = new Date(deadline), nowObj = new Date(now);
+        const deadlineObj = new Date(deadline); // deadlineObj :: Date
         const ret = []; // ret :: [String]
         if(Math.abs(deadline - now) >= 86400000) {
             if(Math.abs(deadline - now) >= 86400000 * 365) {
@@ -1554,7 +1571,7 @@ const TaskQueue = (() => {
             // rangeResult :: Maybe [Maybe String]
             const rangeResult = /^(\d*)-(\d*)$/.exec(decomp[1]);
             if(x !== '-' && rangeResult !== null) {
-                // border :: [NaturalNumber]
+                // border :: [Maybe NaturalNumber]
                 const border = rangeResult.slice(1).map(t => parseInt10(t));
                 if(border[0] > max || border[1] < 1) return errObj;
                 if(isNaN(border[0]) || border[0] < 1) {
@@ -1602,7 +1619,8 @@ const TaskQueue = (() => {
     // getTagIndex :: String -> Maybe IDObject
     const getTagIndex = id => {
         if(id === 'global') return {index: -1, id: 'global', tagNo: undefined};
-        const item = getAllObj().find(x => x.id === id); // item :: TaskObject
+        // item :: Maybe TaskObject
+        const item = getAllObj().find(x => x.id === id);
         if(item === undefined) return undefined;
         const tagNo = Tag.findIndex(item.tag); // tagNo :: Maybe NaturalNumber
         return {
@@ -1624,7 +1642,7 @@ const TaskQueue = (() => {
             taskQueue[x.tagNo][x.index].display = result;
         });
     };
-    // rm :: ([IDObject], Bool) -> ()
+    // rm :: ([Maybe IDObject], Bool) -> ()
     const rm = (ids, isNeedTrashPush = true) => {
         ids = ids.filter(x => x !== undefined);
         if(ids.length === 0) return;
@@ -1637,8 +1655,9 @@ const TaskQueue = (() => {
         ids.forEach(x => {
             TaskQueue.stopSound('$' + x.id, 'priv');
             removeDom('item_' + x.id);
-            // i :: NaturalNumber
+            // i :: Maybe NaturalNumber
             const i = taskQueue[x.tagNo].findIndex(t => t.id === x.id);
+            // console.assert(i >= 0);
             const target = taskQueue[x.tagNo][i]; // target :: TaskObject
             if(!target.isValid) {
                 Tag.emphDown(x.tagNo, target.importance);
@@ -1674,6 +1693,7 @@ const TaskQueue = (() => {
                 // idResult :: Maybe [Maybe String]
                 const idResult = /^\$(\d+)$/.exec(str);
                 if(idResult !== null) {
+                    // console.assert(idResult[1] !== undefined);
                     display([getTagIndex(idResult[1])], flag);
                     return;
                 }
@@ -1705,6 +1725,7 @@ const TaskQueue = (() => {
         // TaskQueue.isPlay :: String -> Bool
         isPlay: id => {
             const x = getTagIndex(id); // x :: Maybe IDObject
+            // console.assert(x !== undefined);
             const t = taskQueue[x.tagNo][x.index]; // t :: Maybe TaskObject
             return t !== undefined && t.sound.length > 0;
         },
@@ -1742,7 +1763,7 @@ const TaskQueue = (() => {
         move: (str, tag) => {
             const result = parameterCheck(str); // result :: IDObject
             if(result.data.length === 0) return;
-            // item :: TaskObject
+            // item :: [TaskObject]
             const item = result.data.map(x => taskQueue[x.tagNo][x.index]);
             const isTagValid = Tag.isValidName(tag); // isTagValid :: Bool
             if(isTagValid) {
@@ -1766,6 +1787,7 @@ const TaskQueue = (() => {
                 // idResult :: Maybe [Maybe String]
                 const idResult = /^\$(\d+)$/.exec(str);
                 if(idResult !== null) {
+                    // console.assert(idResult[1] !== undefined);
                     rm([getTagIndex(idResult[1])]);
                     return;
                 }
@@ -1790,6 +1812,7 @@ const TaskQueue = (() => {
                 // idResult :: Maybe [Maybe String]
                 const idResult = /^\$(\d+)$/.exec(str);
                 if(idResult !== null) {
+                    // console.assert(idResult[1] !== undefined);
                     stop([getTagIndex(idResult[1])]);
                     return;
                 }
@@ -1867,6 +1890,7 @@ const Legacy = (() => {
     const parseVersion = version => {
         // result :: Maybe [Maybe String]
         const result = /^ver (\d+)\.(\d+)\.(\d+)$/.exec(version);
+        // console.assert(result !== null);
         return [result[1], result[2], result[3]].map(x => parseInt10(x));
     };
     // lessThan :: ([NaturalNumber], [NaturalNumber]) -> Bool
@@ -1971,7 +1995,7 @@ dgebi('cover').addEventListener('click', () => {
                 // isValid :: Bool
                 const isValid = func(value) || Number(value) < 0;
                 formCheck(isValid, event.target.id);
-            })
+            });
         });
     };
     setEvent('timer', x => isNaN(Number(x)));

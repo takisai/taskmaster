@@ -1924,9 +1924,15 @@ const Legacy = (() => {
 })();
 
 dgebi('cover').addEventListener('click', () => {
+    let mouseDownTime; // mouseDownTime :: DateNumber
+    window.addEventListener('mousedown', event => {
+        mouseDownTime = Date.now();
+    });
     window.addEventListener('click', event => {
+        const SHORT_TIME = 250; // SHORT_TIME :: DateNumber
         const str = window.getSelection().toString(); // str :: String
-        if(str.length > 0 && str !== '\n') return;
+        const interval = Date.now() - mouseDownTime; // interval :: DateNumber
+        if(interval > SHORT_TIME && str.length > 0 && str !== '\n') return;
         let target = event.target; // target :: Maybe Element
         while(target !== null) {
             if(target.id === 'menu') return;

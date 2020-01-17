@@ -35,6 +35,13 @@ const VERSION = (() => {
     // historyInfo :: [Object]
     const historyInfo = [
         {
+            version: [1, 0, 1],
+            date: '2020-01-17',
+            info: [
+                'クリックしたつもりでもテキストが選択されてしまう不具合を修正'
+            ]
+        },
+        {
             version: [1, 0, 0],
             date: '2019-12-30',
             info: [

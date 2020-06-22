@@ -35,6 +35,13 @@ const VERSION = (() => {
     // historyInfo :: [Object]
     const historyInfo = [
         {
+            version: [1, 0, 2],
+            date: '2020-06-22',
+            info: [
+                '特定状態での不自然なスクロールを修正'
+            ]
+        },
+        {
             version: [1, 0, 1],
             date: '2020-01-17',
             info: [
@@ -381,14 +388,60 @@ const VERSION = (() => {
     return ret;
 })();
 
+// offsetManage :: (() -> ()) -> ()
+const offsetManage = (() => {
+    let padding = 0; // padding :: Number
+    const html = document.getElementsByTagName('html')[0]; // html :: Element
+    // setPadding :: () -> ()
+    const setPadding = () => html.style.paddingBottom = padding + 'px';
+    // modifyPadding :: () -> ()
+    const modifyPadding = () => {
+        if(padding === 0) return;
+        if(window.pageYOffset === 0) {
+            padding = 0;
+            setPadding();
+            return;
+        }
+        // bottom :: Number;  locate :: Number
+        const bottom = html.getBoundingClientRect().height;
+        const locate = window.pageYOffset + window.innerHeight;
+        if(bottom <= locate) return;
+        padding -= bottom - locate;
+        if(padding < 0) {
+            padding = 0;
+        }
+        setPadding();
+    };
+    window.addEventListener('scroll', modifyPadding);
+
+    return work => {
+        const before = window.pageYOffset; // before :: Number
+        work();
+        const after =  window.pageYOffset; // after :: Number
+        modifyPadding();
+        if(before <= after) return;
+        const height = html.getBoundingClientRect().height; // height :: Number
+        if(window.innerHeight > height) {
+            padding += window.innerHeight - height;
+        }
+        padding += before - after;
+        setPadding();
+        window.scrollBy(0, padding);
+    };
+})();
+
 // detailsToggle :: Element -> ()
 const detailsToggle = target => {
     if(target.hasAttribute('open')) {
-        target.removeAttribute('open');
-        target.setAttribute('closed', '');
+        offsetManage(() => {
+            target.removeAttribute('open');
+            target.setAttribute('closed', '');
+        });
     } else { // target.hasAttribute('closed')
-        target.removeAttribute('closed');
-        target.setAttribute('open', '');
+        offsetManage(() => {
+            target.removeAttribute('closed');
+            target.setAttribute('open', '');
+        });
     }
 };
 

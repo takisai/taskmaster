@@ -30,7 +30,9 @@ const toHms = obj => {
 const removeDom = id => {
     const target = dgebi(id); // target :: Maybe Element
     if(target === null) return false;
-    target.parentNode.removeChild(target);
+    offsetManage(() => {
+        target.parentNode.removeChild(target);
+    });
     return true;
 };
 
@@ -382,10 +384,14 @@ const Util = (() => {
                 // target :: Maybe Element
                 const target = dgebi(`${preId}_${object[i].id}`);
                 // console.assert(target !== null);
-                target.parentNode.insertBefore(element, target);
+                offsetManage(() => {
+                    target.parentNode.insertBefore(element, target);
+                });
                 object.splice(i, 0, item);
             } else {
-                dgebi(parentId).appendChild(element);
+                offsetManage(() => {
+                    dgebi(parentId).appendChild(element);
+                });
                 object.push(item);
             }
         },
@@ -1323,8 +1329,10 @@ const Tag = (() => {
                         // target :: Maybe Element
                         const target = dgebi('tag_parent_' + x.id).children[0];
                         // console.assert(target !== undefined);
-                        target.removeAttribute('closed');
-                        target.setAttribute('open', '');
+                        offsetManage(() => {
+                            target.removeAttribute('closed');
+                            target.setAttribute('open', '');
+                        });
                     };
                 case 'close':
                     return x => {
@@ -1332,8 +1340,10 @@ const Tag = (() => {
                         // target :: Maybe Element
                         const target = dgebi('tag_parent_' + x.id).children[0];
                         // console.assert(target !== undefined);
-                        target.removeAttribute('open');
-                        target.setAttribute('closed', '');
+                        offsetManage(() => {
+                            target.removeAttribute('open');
+                            target.setAttribute('closed', '');
+                        });
                     };
                 case 'toggle':
                     return x => {

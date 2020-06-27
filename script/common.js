@@ -405,7 +405,7 @@ const offsetManage = (() => {
         // bottom :: Number;  locate :: Number
         const bottom = html.getBoundingClientRect().height;
         const locate = window.pageYOffset + window.innerHeight;
-        if(bottom <= locate) return;
+        if(bottom <= locate + 0.75) return;
         padding -= bottom - locate;
         if(padding < 0) {
             padding = 0;

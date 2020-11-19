@@ -2020,7 +2020,7 @@ dgebi('cover').addEventListener('click', () => {
         formCheck(/;|->/.test(document.gui_form.gui_text.value), 'gui_text');
     });
     dgebi('cover').style.display = 'none';
-    dgebi('body').style.overflow = 'auto';
+    dgebi('body').style.overflow = 'auto scroll';
     Sound.init();
     Task.init();
     const wait = UPDATE_TIME - Date.now() % UPDATE_TIME; // wait :: DateNumber

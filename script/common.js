@@ -35,6 +35,15 @@ const VERSION = (() => {
     // historyInfo :: [Object]
     const historyInfo = [
         {
+            version: [1, 0, 3],
+            date: '2021-02-23',
+            info: [
+                '特定のタイミングでのアラーム設定の不具合を修正',
+                'アラームの繰り返しに関する挙動を修正',
+                'helpの文章を微修正'
+            ]
+        },
+        {
             version: [1, 0, 2],
             date: '2020-06-22',
             info: [

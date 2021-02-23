@@ -1115,7 +1115,11 @@ const Task = (() => {
         for(let i = 0; i < 6; i++) { // i :: NaturalNumber
             const t = table[i]; // t :: Object
             if(result[i + 1] !== '' && result[i + 1] !== undefined) {
-                ret[t.set](parseInt10(result[i + 1]) + t.c);
+                // target :: NaturalNumber
+                const target = parseInt10(result[i + 1]) + t.c;
+                do {
+                    ret[t.set](target);
+                } while(ret[t.get]() !== target);
                 isFind = true;
             } else if(isFind) {
                 ret[t.set](t.r);
@@ -1123,7 +1127,7 @@ const Task = (() => {
                 isFree.push(i);
             }
         }
-        while(now >= ret.getTime() && isFree.length > 0) {
+        while(now >= ret.getTime() - UPDATE_TIME / 2 && isFree.length > 0) {
             const tmp = ret; // tmp :: DateNumber
             const t = table[isFree.pop()]; // t :: Object
             tmp[t.set](ret[t.get]() + 1);

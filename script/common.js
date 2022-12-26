@@ -5,35 +5,55 @@ https://opensource.org/licenses/mit-license.php
 */
 'use strict';
 
-// *** polyfill ***
-if(Array.prototype.flat === undefined) {
-    Array.prototype.flat = function(depth) {
-        depth = Math.floor(depth);
-        // flat :: ([Object], NaturalNumber) -> [Object]
-        const flat = (array, dep) => {
-            const ret = []; // ret :: [Object]
-            array.forEach(x => {
-                if(Array.isArray(x) && dep > 0) {
-                    ret.push(...flat(x, dep - 1));
-                } else {
-                    ret.push(x);
-                }
-            });
-            return ret;
-        };
-        return flat(this, isNaN(depth) || depth === 0 ? 1 : depth);
-    };
-}
-
 // dgebi :: String -> Maybe Element
 const dgebi = id => document.getElementById(id);
 // parseInt10 :: Maybe String -> Maybe IntegerNumber
 const parseInt10 = str => parseInt(str, 10);
 
+// unique :: [Object] -> [Object]
+const unique = list => [...new Set(list)];
+
+// range :: (IntegerNumber, Maybe IntegerNumber) -> [IntegerNumber]
+const range = (begin, end) => {
+    if(end === undefined) {
+        end   = begin;
+        begin = 0;
+    }
+    if(end - begin < 0) {
+        return [];
+    } else {
+        return [...Array(end - begin)].map((_, i) => i + begin);
+    }
+};
+
+// makeTagString :: (String, Maybe Object, Maybe String) -> String
+const makeTagString = (tagName, obj = {}, str = null) => {
+    // t :: String
+    const t = `${Object.entries(obj).map(x => `${x[0]}="${x[1]}"`).join(' ')}`;
+    return `<${tagName} ${t}>${str === null ? '' : `${str}</${tagName}>`}`;
+};
+
 // VERSION :: [NaturalNumber]
 const VERSION = (() => {
     // historyInfo :: [Object]
     const historyInfo = [
+        {
+            version: [1, 1, 0],
+            date: '2022-12-26',
+            info: [
+                '<kbd>edit</kbd>・<kbd>modify</kbd>・<kbd>order</kbd>コマンドの追加',
+                '<kbd>input</kbd>コマンドの追加',
+                '<kbd>find</kbd>・<kbd>rfind</kbd>・<kbd>filter</kbd>関数の追加',
+                '<kbd>help</kbd>コマンドの機能追加',
+                'リマインダー機能に<kbd>++</kbd>を追加',
+                'evalの仕様を変更',
+                '一部の出力メッセージを変更',
+                'フォーカス機能の仕様変更',
+                '入力文字列が正しく表示されない不具合を修正',
+                '一部のエラー表示が正しく表示されない不具合を修正',
+                'ヘルプのデザインを変更'
+            ]
+        },
         {
             version: [1, 0, 3],
             date: '2021-02-23',
@@ -386,12 +406,10 @@ const VERSION = (() => {
 
     const target = dgebi('history_info'); // target :: Maybe Element
     if(target !== null) {
-        // items :: [String]
-        const items = historyInfo.map(x => {
+        target.innerHTML = makeUnorderedList(historyInfo.map(x => {
             const info = makeUnorderedList(x.info); // info :: String
             return `Version ${x.version.join('.')} | ${x.date}${info}`;
-        });
-        target.innerHTML = makeUnorderedList(items);
+        }));
     }
 
     return ret;
@@ -402,7 +420,7 @@ const offsetManage = (() => {
     let padding = 0; // padding :: Number
     const html = document.getElementsByTagName('html')[0]; // html :: Element
     // setPadding :: () -> ()
-    const setPadding = () => html.style.paddingBottom = padding + 'px';
+    const setPadding = () => html.style.paddingBottom = `${padding}px`;
     // modifyPadding :: () -> ()
     const modifyPadding = () => {
         if(padding === 0) return;
@@ -455,19 +473,8 @@ const detailsToggle = target => {
 };
 
 // dsElements :: [Element]
-const dsElements = (() => {
-    // spanElements :: [Element]
-    const spanElements = document.getElementsByTagName('span');
-    const ret = []; // ret :: [Element]
-    for(let i = 0; i < spanElements.length; i++) { // i :: NaturalNumber
-        // isOpen :: Bool;  isClosed :: Bool
-        const isOpen = spanElements[i].hasAttribute('open');
-        const isClosed = spanElements[i].hasAttribute('closed');
-        if(isOpen || isClosed) {
-            ret.push(spanElements[i]);
-        }
-    }
-    return ret;
-})();
+const dsElements = [...document.getElementsByTagName('span')].filter(it => {
+    return it.hasAttribute('open') || it.hasAttribute('closed');
+});
 
 dsElements.forEach(x => x.setAttribute('onclick', 'detailsToggle(this)'));

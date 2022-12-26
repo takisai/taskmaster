@@ -10,11 +10,19 @@ https://opensource.org/licenses/mit-license.php
     --yellow: #fff100;
     --blue: #005aff;
     --darkblue: #004bd7;
+    --darkwhite: #f0f1f1;
     --pink: #ff8082;
     --lightpink: #ffcabf;
     --lightyellow: #ffff80;
     --white: white;
     --gray: #6f798d;
+    --navigation_width: 256px;
+}
+
+@media (max-width: 312px) {
+    :root {
+        --navigation_width: calc(100vw - 56px);
+    }
 }
 
 body {
@@ -22,10 +30,6 @@ body {
     width: 100%;
     margin: 8px 0px 0px;
     padding: 0px 8px;
-}
-
-body#document {
-    overflow: auto scroll;
 }
 
 h1 {
@@ -37,6 +41,7 @@ h1 {
 
 kbd {
     background-color: #f0f1f1;
+    border-radius: 3px;
     padding: 0.1em 0.4em;
     font-size: 0.9em;
     font-family: monospace, monospace;
@@ -44,6 +49,41 @@ kbd {
 
 code {
     font-family: monospace, monospace;
+}
+
+div.indent {
+    padding-left: 1em;
+}
+
+div[id^="index_"] {
+    display: block;
+    margin: 1.245em 0px;
+}
+
+div[id^="index_"] > span:first-child {
+    font-size: 1.5em;
+    font-weight: bold;
+}
+
+div[id^="index_"] div[id^="index_"] {
+    display: block;
+    margin: 1.17em 0px;
+    padding-left: 1em;
+}
+
+div[id^="index_"] div[id^="index_"] > span:first-child {
+    font-size: 1.17em;
+    font-weight: bold;
+}
+
+div[id^="index_"] div[id^="index_"] div[id^="index_"] {
+    display: block;
+    margin: 1.33em 0px;
+    padding-left: 1em;
+}
+
+div[id^="index_"] div[id^="index_"] div[id^="index_"] > span:first-child {
+    font-weight: bold;
 }
 
 h5 {
@@ -75,6 +115,20 @@ input[type=range][disabled] {
     opacity: 0.5;
 }
 
+input#drawer {
+    display: none;
+}
+
+input#drawer:checked ~ label#drawer_close {
+    display: block;
+    pointer-events: auto;
+    opacity: 0.32;
+}
+
+input#drawer:checked ~ nav {
+    transform: translateX(100%);
+}
+
 form[name=gui_form], #macros {
     margin: 8px 0px;
 }
@@ -88,6 +142,101 @@ form[name=gui_form] {
 
 label, span[onclick] {
     cursor: pointer;
+}
+
+label#drawer_open {
+    display: block;
+    height: 56px;
+    left: 0px;
+    position: fixed;
+    top: 0px;
+    width: 56px;
+}
+
+label#drawer_close {
+    background: black;
+    display: block;
+    height: 100%;
+    opacity: 0;
+    pointer-events: none;
+    position: fixed;
+    top: 0px;
+    transition: opacity 0.2s ease;
+    width: 100%;
+    z-index: 1;
+}
+
+label#drawer_open > span {
+    display: block;
+    padding: 16px;
+}
+
+label#drawer_open > span > span {
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='black' d='M27 8a1 1 0 0 1 0 2H5a1 1 0 0 1 0 -2Zm0 7a1 1 0 0 1 0 2H5a1 1 0 0 1 0 -2Zm0 7a1 1 0 0 1 0 2H5a1 1 0 0 1 0 -2Z'/%3E%3C/svg%3E");
+    display: block;
+    height: 24px;
+    width: 24px;
+}
+
+nav {
+    background: white;
+    height: 100%;
+    left: calc(0px - var(--navigation_width));
+    line-height: 1.375em;
+    overflow-y: auto;
+    position: fixed;
+    top: 0px;
+    transform: translateX(0%);
+    transition: transform 0.2s ease;
+    width: var(--navigation_width);
+    z-index: 2;
+}
+
+nav > * {
+    margin: 0;
+    padding: 0;
+}
+
+nav span {
+    align-items: center;
+    display: flex;
+    height: 64px;
+    padding-left: 16px;
+}
+
+nav a {
+    display: block;
+    overflow-wrap: break-word;
+    padding: calc((48px - 1.375em) / 2) 16px;
+}
+
+nav a:link, nav a:visited {
+    color: black;
+    text-decoration: none;
+}
+
+nav ul a {
+    padding-left: 16px;
+}
+
+nav ul ul a {
+    padding-left: 32px;
+}
+
+nav ul ul ul a {
+    padding-left: 48px;
+}
+nav a:hover, nav a:active {
+    background: var(--darkwhite);
+}
+
+nav ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+nav ~ div {
+    padding-left: 48px;
 }
 
 span[open], span[closed] {
@@ -115,6 +264,7 @@ span[closed] + * {
 
 .background-color_red {
     background-color: var(--red);
+    border-radius: 3px;
     text-shadow: var(--pink) 0.7px 0.7px, var(--pink) 1px 0,
             var(--pink) 0.7px -0.7px, var(--pink) 0 -1px,
             var(--pink) -0.7px -0.7px, var(--pink) -1px 0,
@@ -123,6 +273,7 @@ span[closed] + * {
 
 .background-color_yellow {
     background-color: var(--yellow);
+    border-radius: 3px;
     text-shadow: var(--lightyellow) 0.7px 0.7px, var(--lightyellow) 1px 0,
             var(--lightyellow) 0.7px -0.7px, var(--lightyellow) 0 -1px,
             var(--lightyellow) -0.7px -0.7px, var(--lightyellow) -1px 0,
@@ -141,35 +292,6 @@ span[closed] + * {
 
 .background-color_pink {
     background-color: var(--lightpink);
-}
-
-.h2 {
-    display: block;
-    margin: 1.245em 0px;
-}
-
-.h2 > span {
-    font-size: 1.5em;
-    font-weight: bold;
-}
-
-.h3 {
-    display: block;
-    margin: 1.17em 0px;
-}
-
-.h3 > span {
-    font-size: 1.17em;
-    font-weight: bold;
-}
-
-.h4 {
-    display: block;
-    margin: 1.33em 0px;
-}
-
-.h4 > span {
-    font-weight: bold;
 }
 
 a:active, .color_red {

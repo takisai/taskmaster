@@ -5,57 +5,60 @@ https://opensource.org/licenses/mit-license.php
 */
 'use strict';
 
-const SEPARATOR = '|'; // SEPARATOR :: String
-
-// hrefOpen :: String -> ()
-const hrefOpen = id => {
-    let target = dgebi(id); // target :: Maybe Element
-    if(target === null) return;
-    while(target !== null) {
-        const firstChild = target.children[0]; // firstChild :: Maybe Element
-        // console.assert(firstChild !== undefined);
-        if(firstChild.hasAttribute('closed')) {
-            detailsToggle(firstChild);
-        }
-        target = target.parentNode;
-    }
-    window.location.href = '#' + id;
-};
-
-do {
-    // aElements :: [Element]
-    const aElements = document.getElementsByTagName('a');
-    for(let i = 0; i < aElements.length; i++) { // i :: NaturalNumber
-        const link = aElements[i].getAttribute('href'); // link :: String
-        if(!/^#/.test(link)) continue;
-        aElements[i].setAttribute('onclick', `hrefOpen('${link.slice(1)}')`);
-        aElements[i].setAttribute('href', 'javascript:void(0)');
-    }
-} while(false);
-
-dsElements.forEach(x => x.addEventListener('click', () => {
-    const ret = [VERSION.join('.')]; // ret :: [String]
-    dsElements.forEach(t => ret.push(t.hasAttribute('open')));
-    window.localStorage.setItem('help', ret.join(SEPARATOR));
-}));
-
-do {
-    const str = window.localStorage.getItem('help'); // str :: Maybe String
-    if(str === null) break;
-    const data = str.split(SEPARATOR); // data :: [String]
-    // version :: [Maybe NaturalNumber]
-    const version = data.shift().split('\.').map(x => parseInt10(x));
-    // console.assert(version.every(x => isNaN(x)));
-    if(!(version < VERSION || version > VERSION)) {
-        for(let i = 0; i < dsElements.length; i++) { // i :: NaturalNumber
-            // hasOpen :: Bool;  hasClosed :: Bool
-            const hasOpen = dsElements[i].hasAttribute('open');
-            const hasClosed = dsElements[i].hasAttribute('closed');
-            const isTrue = data[i] === 'true'; // isTrue :: Bool
-            const isFalse = data[i] === 'false'; // isFalse :: Bool
-            if(isTrue && hasClosed || isFalse && hasOpen) {
-                detailsToggle(dsElements[i]);
+[...document.getElementsByTagName('div')].forEach(it => {
+    // isIndexId :: Element -> Bool
+    const isIndexId = element => /^index_/.test(element.id);
+    if(!isIndexId(it)) return;
+    // makeUlId :: Element -> String
+    const makeUlId = element => `navigation_${element.id.slice(6)}`;
+    // parentNavigation :: Element
+    const parentNavigation = (() => {
+        // f :: Element -> Element
+        const f = element => {
+            // parent :: Element
+            const parent = element.parentNode;
+            if(parent.id === 'document') {
+                return dgebi('navigation');
+            } else if(isIndexId(parent)) {
+                return dgebi(makeUlId(parent));
+            } else {
+                return f(parent);
             }
+        };
+        return f(it);
+    })();
+    // index :: String
+    const index = (() => {
+        // num :: Number
+        const num = parentNavigation.children.length / 2 + 1;
+        if(parentNavigation.id === 'navigation') {
+            return String(num);
+        } else {
+            // text :: String
+            const text = parentNavigation.previousElementSibling.innerText;
+            return `${text.split(' ')[0]}.${num}`;
         }
-    }
-} while(false);
+    })();
+    it.children[0].innerText = `${index} ${it.children[0].innerText}`;
+    // liELement :: Element
+    const liElement = document.createElement('li');
+    liElement.innerHTML = (() => {
+        // text :: String
+        const text = it.children[0].innerText;
+        return makeTagString('a', {href: `#${it.id}`}, text);
+    })();
+    parentNavigation.appendChild(liElement);
+
+    // ulELement :: Element
+    const ulElement = document.createElement('ul');
+    ulElement.setAttribute('id', makeUlId(it));
+    parentNavigation.appendChild(ulElement);
+});
+
+[...document.getElementsByTagName('a')].forEach(it => {
+    if(it.innerText !== 'here') return;
+    // href :: String
+    const href = it.getAttribute('href');
+    if(href[0] !== '#') return;
+    it.innerText = dgebi(href.slice(1)).children[0].innerText.split(' ')[0];
+});
